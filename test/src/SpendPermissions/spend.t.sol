@@ -123,7 +123,7 @@ contract SpendTest is SpendPermissionManagerBase {
         vm.warp(start);
 
         vm.startPrank(spender);
-        mockSpendPermissionManager.permit(spendPermission, signature);
+        mockSpendPermissionManager.approveWithSignature(spendPermission, signature);
         mockSpendPermissionManager.spend(spendPermission, recipient, spend);
 
         assertEq(address(account).balance, allowance - spend);
