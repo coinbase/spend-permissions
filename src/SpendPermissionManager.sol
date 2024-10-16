@@ -229,7 +229,7 @@ contract SpendPermissionManager is EIP712 {
     ///
     /// @param spendPermission Details of the spend permission.
     ///
-    /// @return currentPeriod Currently active period with spend (struct).
+    /// @return currentPeriod Currently active period with cumulative spend (struct).
     function getCurrentPeriod(SpendPermission memory spendPermission) public view returns (PeriodSpend memory) {
         // check current timestamp is within spend permission time range
         uint48 currentTimestamp = uint48(block.timestamp);
@@ -325,6 +325,8 @@ contract SpendPermissionManager is EIP712 {
     }
 
     /// @notice Transfer assets from an account to a recipient.
+    ///
+    /// @dev Assumes ERC-20 contract will revert if transfer fails. If silently fails, spend still marked as used.
     ///
     /// @param token Address of the token contract.
     /// @param account Address of the user account.
