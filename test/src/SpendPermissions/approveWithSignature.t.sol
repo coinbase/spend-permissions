@@ -6,14 +6,14 @@ import {SpendPermissionManager} from "../../../src/SpendPermissionManager.sol";
 import {SpendPermissionManagerBase} from "../../base/SpendPermissionManagerBase.sol";
 import {CoinbaseSmartWallet} from "smart-wallet/CoinbaseSmartWallet.sol";
 
-contract PermitTest is SpendPermissionManagerBase {
+contract ApproveWithSignatureTest is SpendPermissionManagerBase {
     function setUp() public {
         _initializeSpendPermissionManager();
         vm.prank(owner);
         account.addOwnerAddress(address(mockSpendPermissionManager));
     }
 
-    function test_permit_revert_unauthorizedSpendPermission(
+    function test_approveWithSignature_revert_invalidSignature(
         uint128 invalidPk,
         address spender,
         address token,
@@ -35,11 +35,11 @@ contract PermitTest is SpendPermissionManagerBase {
         });
 
         bytes memory invalidSignature = _signSpendPermission(spendPermission, invalidPk, 0);
-        vm.expectRevert(abi.encodeWithSelector(SpendPermissionManager.UnauthorizedSpendPermission.selector));
-        mockSpendPermissionManager.permit(spendPermission, invalidSignature);
+        vm.expectRevert(abi.encodeWithSelector(SpendPermissionManager.InvalidSignature.selector));
+        mockSpendPermissionManager.approveWithSignature(spendPermission, invalidSignature);
     }
 
-    function test_permit_revert_invalidStartEnd(
+    function test_approveWithSignature_revert_invalidStartEnd(
         address spender,
         uint48 start,
         uint48 end,
@@ -60,10 +60,12 @@ contract PermitTest is SpendPermissionManagerBase {
 
         bytes memory signature = _signSpendPermission(spendPermission, ownerPk, 0);
         vm.expectRevert(abi.encodeWithSelector(SpendPermissionManager.InvalidStartEnd.selector, start, end));
-        mockSpendPermissionManager.permit(spendPermission, signature);
+        mockSpendPermissionManager.approveWithSignature(spendPermission, signature);
     }
 
-    function test_permit_revert_zeroPeriod(address spender, uint48 start, uint48 end, uint160 allowance) public {
+    function test_approveWithSignature_revert_zeroPeriod(address spender, uint48 start, uint48 end, uint160 allowance)
+        public
+    {
         vm.assume(start < end);
 
         SpendPermissionManager.SpendPermission memory spendPermission = SpendPermissionManager.SpendPermission({
@@ -78,10 +80,12 @@ contract PermitTest is SpendPermissionManagerBase {
 
         bytes memory signature = _signSpendPermission(spendPermission, ownerPk, 0);
         vm.expectRevert(abi.encodeWithSelector(SpendPermissionManager.ZeroPeriod.selector));
-        mockSpendPermissionManager.permit(spendPermission, signature);
+        mockSpendPermissionManager.approveWithSignature(spendPermission, signature);
     }
 
-    function test_permit_revert_zeroAllowance(address spender, uint48 start, uint48 end, uint48 period) public {
+    function test_approveWithSignature_revert_zeroAllowance(address spender, uint48 start, uint48 end, uint48 period)
+        public
+    {
         vm.assume(start < end);
         vm.assume(period > 0);
 
@@ -97,10 +101,10 @@ contract PermitTest is SpendPermissionManagerBase {
 
         bytes memory signature = _signSpendPermission(spendPermission, ownerPk, 0);
         vm.expectRevert(abi.encodeWithSelector(SpendPermissionManager.ZeroAllowance.selector));
-        mockSpendPermissionManager.permit(spendPermission, signature);
+        mockSpendPermissionManager.approveWithSignature(spendPermission, signature);
     }
 
-    function test_permit_success_isApproved(
+    function test_approveWithSignature_success_isApproved(
         address spender,
         address token,
         uint48 start,
@@ -123,11 +127,11 @@ contract PermitTest is SpendPermissionManagerBase {
         });
 
         bytes memory signature = _signSpendPermission(spendPermission, ownerPk, 0);
-        mockSpendPermissionManager.permit(spendPermission, signature);
+        mockSpendPermissionManager.approveWithSignature(spendPermission, signature);
         vm.assertTrue(mockSpendPermissionManager.isApproved(spendPermission));
     }
 
-    function test_permit_success_emitsEvent(
+    function test_approveWithSignature_success_emitsEvent(
         address spender,
         address token,
         uint48 start,
@@ -156,10 +160,10 @@ contract PermitTest is SpendPermissionManagerBase {
             account: address(account),
             spendPermission: spendPermission
         });
-        mockSpendPermissionManager.permit(spendPermission, signature);
+        mockSpendPermissionManager.approveWithSignature(spendPermission, signature);
     }
 
-    function test_permit_success_erc6492SignaturePreDeploy(
+    function test_approveWithSignature_success_erc6492SignaturePreDeploy(
         uint128 ownerPk,
         address spender,
         address token,
@@ -194,14 +198,14 @@ contract PermitTest is SpendPermissionManagerBase {
         vm.assertEq(counterfactualAccount.code.length, 0);
 
         // submit the spend permission with the signature, see permit succeed
-        mockSpendPermissionManager.permit(spendPermission, signature);
+        mockSpendPermissionManager.approveWithSignature(spendPermission, signature);
 
         // verify that the account is now deployed (has code) and that a call to isValidSignature returns true
         vm.assertGt(counterfactualAccount.code.length, 0);
         vm.assertTrue(mockSpendPermissionManager.isApproved(spendPermission));
     }
 
-    function test_permit_success_erc6492SignatureAlreadyDeployed(
+    function test_approveWithSignature_success_erc6492SignatureAlreadyDeployed(
         uint128 ownerPk,
         address spender,
         address token,
@@ -237,7 +241,7 @@ contract PermitTest is SpendPermissionManagerBase {
         vm.assertGt(counterfactualAccount.code.length, 0);
 
         // submit the spend permission with the signature, see permit succeed
-        mockSpendPermissionManager.permit(spendPermission, signature);
+        mockSpendPermissionManager.approveWithSignature(spendPermission, signature);
         vm.assertTrue(mockSpendPermissionManager.isApproved(spendPermission));
     }
 }

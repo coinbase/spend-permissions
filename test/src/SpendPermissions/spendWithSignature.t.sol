@@ -7,7 +7,7 @@ import {SpendPermissionManager} from "../../../src/SpendPermissionManager.sol";
 
 import {SpendPermissionManagerBase} from "../../base/SpendPermissionManagerBase.sol";
 
-contract PermitAndSpendTest is SpendPermissionManagerBase {
+contract SpendWithSignatureTest is SpendPermissionManagerBase {
     MockERC20 mockERC20 = new MockERC20("mockERC20", "TEST", 18);
 
     function setUp() public {
@@ -16,7 +16,7 @@ contract PermitAndSpendTest is SpendPermissionManagerBase {
         account.addOwnerAddress(address(mockSpendPermissionManager));
     }
 
-    function test_permitAndSpend_revert_invalidSender(
+    function test_spendWithSignature_revert_invalidSender(
         address sender,
         address spender,
         address recipient,
@@ -45,11 +45,11 @@ contract PermitAndSpendTest is SpendPermissionManagerBase {
         bytes memory signature = _signSpendPermission(spendPermission, ownerPk, 0);
         vm.startPrank(sender);
         vm.expectRevert(abi.encodeWithSelector(SpendPermissionManager.InvalidSender.selector, sender, spender));
-        mockSpendPermissionManager.permitAndSpend(spendPermission, signature, recipient, spend);
+        mockSpendPermissionManager.spendWithSignature(spendPermission, signature, recipient, spend);
         vm.stopPrank();
     }
 
-    function test_permitAndSpend_revert_unauthorizedSpendPermission(
+    function test_spendWithSignature_revert_invalidSignature(
         uint128 invalidPk,
         address sender,
         address recipient,
@@ -79,12 +79,12 @@ contract PermitAndSpendTest is SpendPermissionManagerBase {
         bytes memory invalidSignature = _signSpendPermission(spendPermission, invalidPk, 0);
         vm.warp(start);
         vm.startPrank(sender);
-        vm.expectRevert(abi.encodeWithSelector(SpendPermissionManager.UnauthorizedSpendPermission.selector));
-        mockSpendPermissionManager.permitAndSpend(spendPermission, invalidSignature, recipient, spend);
+        vm.expectRevert(abi.encodeWithSelector(SpendPermissionManager.InvalidSignature.selector));
+        mockSpendPermissionManager.spendWithSignature(spendPermission, invalidSignature, recipient, spend);
         vm.stopPrank();
     }
 
-    function test_permitAndSpend_success_ether(
+    function test_spendWithSignature_success_ether(
         address sender,
         address recipient,
         uint48 start,
@@ -121,7 +121,7 @@ contract PermitAndSpendTest is SpendPermissionManagerBase {
         vm.warp(start);
 
         vm.startPrank(sender);
-        mockSpendPermissionManager.permitAndSpend(spendPermission, signature, recipient, spend);
+        mockSpendPermissionManager.spendWithSignature(spendPermission, signature, recipient, spend);
 
         assertEq(address(account).balance, allowance - spend);
         assertEq(recipient.balance, spend);
@@ -131,7 +131,7 @@ contract PermitAndSpendTest is SpendPermissionManagerBase {
         assertEq(usage.spend, spend);
     }
 
-    function test_permitAndSpend_success_ether_alreadyInitialized(
+    function test_spendWithSignature_success_ether_alreadyInitialized(
         address sender,
         address recipient,
         uint48 start,
@@ -169,7 +169,7 @@ contract PermitAndSpendTest is SpendPermissionManagerBase {
         assertEq(recipient.balance, 0);
         bytes memory signature = _signSpendPermission(spendPermission, ownerPk, 0);
         vm.prank(sender);
-        mockSpendPermissionManager.permitAndSpend(spendPermission, signature, recipient, spend);
+        mockSpendPermissionManager.spendWithSignature(spendPermission, signature, recipient, spend);
         assertEq(address(account).balance, allowance - spend);
         assertEq(recipient.balance, spend);
         SpendPermissionManager.PeriodSpend memory usage = mockSpendPermissionManager.getCurrentPeriod(spendPermission);
@@ -178,7 +178,7 @@ contract PermitAndSpendTest is SpendPermissionManagerBase {
         assertEq(usage.spend, spend);
     }
 
-    function test_permitAndSpend_success_ERC20(
+    function test_spendWithSignature_success_ERC20(
         address sender,
         address recipient,
         uint48 start,
@@ -213,7 +213,7 @@ contract PermitAndSpendTest is SpendPermissionManagerBase {
         assertEq(mockERC20.balanceOf(recipient), 0);
 
         vm.prank(sender);
-        mockSpendPermissionManager.permitAndSpend(spendPermission, signature, recipient, spend);
+        mockSpendPermissionManager.spendWithSignature(spendPermission, signature, recipient, spend);
 
         assertEq(mockERC20.balanceOf(address(account)), allowance - spend);
         assertEq(mockERC20.balanceOf(recipient), spend);
@@ -223,7 +223,7 @@ contract PermitAndSpendTest is SpendPermissionManagerBase {
         assertEq(usage.spend, spend);
     }
 
-    function test_permitAndSpend_success_ether_erc6492PreDeploy(
+    function test_spendWithSignature_success_ether_erc6492PreDeploy(
         uint128 ownerPk,
         address spender,
         address recipient,
@@ -271,7 +271,7 @@ contract PermitAndSpendTest is SpendPermissionManagerBase {
         vm.warp(start);
 
         vm.startPrank(spender);
-        mockSpendPermissionManager.permitAndSpend(spendPermission, signature, recipient, spend);
+        mockSpendPermissionManager.spendWithSignature(spendPermission, signature, recipient, spend);
 
         assertEq(counterfactualAccount.balance, allowance - spend);
         assertEq(recipient.balance, spend);
