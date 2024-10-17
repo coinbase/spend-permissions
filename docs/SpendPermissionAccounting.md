@@ -17,7 +17,7 @@ A spend permission contains 4 accounting values:
 1. `period`: duration of a recurring interval that resets the `spender`'s allowance
 1. `allowance`: amount of tokens spendable per period
 
-### Recurring Accounting
+## Recurring Accounting
 
 Spend permissions allow an app to request to spend user assets on a recurring basis (e.g. 10 USDC / month). As apps spend user assets, the recurring logic automatically increments and enforces the allowance for the current period. Once enough time passes to enter the next period, the allowance usage is reset to zero and the app can keep spending up to the same allowance.
 
