@@ -25,12 +25,12 @@ contract SpendPermissionManager is EIP712 {
         address token;
         /// @dev Maximum allowed value to spend within each `period`.
         uint160 allowance;
+        /// @dev Time duration for resetting used `allowance` on a recurring basis (seconds).
+        uint48 period;
         /// @dev Timestamp this spend permission is valid after (unix seconds).
         uint48 start;
         /// @dev Timestamp this spend permission is valid until (unix seconds).
         uint48 end;
-        /// @dev Time duration for resetting used `allowance` on a recurring basis (seconds).
-        uint48 period;
     }
 
     /// @notice Spend Permission usage for a certain period.
