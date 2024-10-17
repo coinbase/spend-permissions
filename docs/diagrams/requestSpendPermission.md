@@ -21,8 +21,7 @@ sequenceDiagram
     U-->>WF: signature
     WF->>WB: get account status
     WB-->>WF: deploy status, initCode, current + pending owners
-    alt account deployed && manager is owner
-    else account not deployed && manager in initCode
+    alt  account not deployed && manager in initCode
         Note right of WF: wrap signature in ERC-6492
     else manager not in initCode && manager not owner
         WF->>U: add manager

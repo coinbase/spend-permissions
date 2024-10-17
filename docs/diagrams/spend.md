@@ -25,8 +25,8 @@ sequenceDiagram
     alt token is ERC-7528 address
         A->>S: call{value}()
         Note over A,S: transfer native token to spender
-    else else is ERC20 contract
+    else else is ERC-20 contract
         A->>ERC20: transfer(spender, value)
-        Note over A,ERC20: transfer ERC20 to spender
+        Note over A,ERC20: transfer ERC-20 to spender
     end
 ```

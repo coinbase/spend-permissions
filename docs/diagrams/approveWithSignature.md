@@ -1,6 +1,6 @@
 # Approve Permission With Signature
 
-Spenders (apps) approve their permission by calling `SpendPermissionManager.approveWithSignature` using the signature returned from the wallet when [requesting spend permissions](requestSpendPermission.md).
+Apps approve their permission by calling `SpendPermissionManager.approveWithSignature` using the signature returned from the wallet when [requesting spend permissions](requestSpendPermission.md).
 
 If the signature is [ERC-6492](https://eips.ethereum.org/EIPS/eip-6492) formatted, `SpendPermissionManager` will automatically detect this and deploy the account on behalf of the app. Afterwards, it will call `isValidSignature` to verify the account signed the permission.
 
