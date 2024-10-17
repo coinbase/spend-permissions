@@ -42,11 +42,12 @@ This configuration would produce the following period-size ranges each with thei
 When a new spend is attempted, the contract first determines what the current period range is. If the current time falls within the period of last stored use, we simply check if this new usage will exceed the allowance.
 
 ```
-t = 0, spend = 25
+new spend=25 @ t=0
 period = [0, 99]
 allowance = 0 + 25 = 25,
 overspend = 25 > 100 = false
-t = 10, spend = 25
+
+new spend=25 @ t=50
 period = [0, 99]
 allowance = 25 + 25 = 50
 overspend = 50 > 100 = false
@@ -55,11 +56,12 @@ overspend = 50 > 100 = false
 If the current time exceeds the period of last stored use, that means we are in a new period and should reset the allowance to zero and then add our new attempted spend.
 
 ```
-t = 0, spend = 25
+new spend=25 @ t=0
 period = [0, 99]
 allowance = 0 + 25 = 25,
 overspend = 25 > 100 = false
-t = 110, spend = 25
+
+new spend=25 @ t=150
 period = [100, 199]
 allowance = 0 + 25 = 25
 overspend = 25 > 100 = false

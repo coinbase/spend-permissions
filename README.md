@@ -8,25 +8,27 @@
 
 ### 1. Periphery addition to Coinbase Smart Wallet V1
 
-While implementing this feature as a new V2 wallet implementation was tempting, we decided to leverage the modular owner system from [Smart Wallet V1](https://github.com/coinbase/smart-wallet) and avoid a hard upgrade. This helped reduce our launch timeline and also reduced the risk of introducing this unique account authentication paradigm.
+While implementing this feature as a new V2 wallet implementation was tempting, we decided to leverage the modular owner system from [Smart Wallet V1](https://github.com/coinbase/smart-wallet) and avoid a hard upgrade.
 
 ### 2. Only Native and ERC-20 token support
 
-Spend Permissions only support spending Native (e.g. ETH) and ERC-20 (e.g. USDC) tokens with a recurring allowance refresh. This enables use cases like subscriptins (e.g 10 USDC per month) out of the box and also can support apps that want to limit asking users for spend permissions every session.
+Spend Permissions only supports spending Native (e.g. ETH) and ERC-20 (e.g. USDC) tokens on a recurring period. This enables use cases like subscriptions out of the box (e.g 10 USDC per month) and also can support apps that want to avoid asking users for spend permissions every session.
 
-Compared to an approach that enables apps to make arbitrary external calls from user accounts, we consider this implementation safer given the tighter and fully-known scope of account control.
+This approach does **not** enable apps to make arbitrary external calls from user accounts, improving security by having a tighter and fully-known scope of account control.
 
 ### 3. Spender-originated calls
 
-Spend Permissions allow users to delegate token spending to a `spender` address, presumably controlled by the app. When an app wants to spend user tokens, it has `spender` call into the user account through a middleware contract, `SpendPermissionManager`, which validates the spend is within the approved allowance.
+Spend Permissions allow users to delegate token spending to a `spender` address, presumably controlled by the app. When an app wants to spend user tokens, it calls into `SpendPermissionManager` from this `spender` address. `SpendPermissionManager` will then validate the spend is within the approved permission's allowance and calls into the user's account to transfer tokens.
 
-Compared to an approach that uses the ERC-4337 EntryPoint to prompt external calls from user accounts, we consider this implementation safer given the avoided edge case of accounting for when ERC-4337 Paymasters spend user tokens.
+This approach does **not** use the ERC-4337 EntryPoint to prompt external calls from user accounts, improving security by avoiding the possibility of ERC-4337 Paymasters spending users' tokens on gas fees.
 
 ## End-to-end Journey
 
-### 1. App requests permissions from user (offchain)
+### 1. App requests and user signs permissions (offchain)
 
-Apps request spend permissions from users by sending an `eth_signTypedData` request containing the permission details.
+Apps request spend permissions for users to sign by sending an `eth_signTypedData` RPC request containing the permission details.
+
+Read more details [here](./docs/diagrams/signSpendPermission.md).
 
 ```mermaid
 sequenceDiagram
@@ -52,7 +54,11 @@ sequenceDiagram
 
 ### 2. App approves and spends (onchain)
 
-Apps approve their permission by calling `SpendPermissionManager.approveWithSignature` using the signature returned from the wallet when [requesting spend permissions](requestSpendPermission.md).
+Spenders (apps) spend tokens by calling `SpendPermissionManager.spend` with their spend permission values, a recipient, and an amount of tokens to spend.
+
+Spenders may want to batch this call with an additionally prepended call to [approve their permission via user signature](./approveWithSignature.md) or the convenience function `SpendPermissionManager.spendWithSignature`.
+
+Read more details [here](./docs/diagrams/spend.md).
 
 ```mermaid
 sequenceDiagram
@@ -60,22 +66,30 @@ sequenceDiagram
     participant S as Spender
     participant PM as Permission Manager
     participant A as Account
-    participant F as Factory
+    participant ERC20
 
-    S->>PM: approveWithSignature
-    Note over PM: validate signature
-    opt if 6492 initCode
-        PM->>F: createAccount
-        F->>A: create2
+    opt
+        S->>PM: approveWithSignature
+    Note over PM: validate signature and store approval
     end
-    PM->>A: isValidSignature
-    A-->>PM: EIP-1271 magic value
-    Note over PM: revert or store approval
+    S->>PM: spend
+    Note over PM: validate permission approved <br> and spend value within allowance
+    PM->>A: execute
+    Note over PM,A: transfer tokens
+    alt token is ERC-7528 address
+        A->>S: call{value}()
+        Note over A,S: transfer native token to spender
+    else else is ERC-20 contract
+        A->>ERC20: transfer(spender, value)
+        Note over A,ERC20: transfer ERC-20 to spender
+    end
 ```
 
 ### 3. User revokes permission (onchain)
 
 Users can revoke permissions at any time by calling `SpendPermissionManager.revoke`, which can also be batched via `CoinbaseSmartWallet.executeBatch`.
+
+Read more details [here](./docs/diagrams/revoke.md).
 
 ```mermaid
 sequenceDiagram
