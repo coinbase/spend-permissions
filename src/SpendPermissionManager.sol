@@ -23,14 +23,14 @@ contract SpendPermissionManager is EIP712 {
         address spender;
         /// @dev Token address (ERC-7528 native token address or ERC-20 contract).
         address token;
+        /// @dev Maximum allowed value to spend within each `period`.
+        uint160 allowance;
+        /// @dev Time duration for resetting used `allowance` on a recurring basis (seconds).
+        uint48 period;
         /// @dev Timestamp this spend permission is valid after (unix seconds).
         uint48 start;
         /// @dev Timestamp this spend permission is valid until (unix seconds).
         uint48 end;
-        /// @dev Time duration for resetting used `allowance` on a recurring basis (seconds).
-        uint48 period;
-        /// @dev Maximum allowed value to spend within each `period`.
-        uint160 allowance;
     }
 
     /// @notice Spend Permission usage for a certain period.
@@ -44,7 +44,7 @@ contract SpendPermissionManager is EIP712 {
     }
 
     bytes32 constant MESSAGE_TYPEHASH = keccak256(
-        "SpendPermission(address account,address spender,address token,uint48 start,uint48 end,uint48 period,uint160 allowance)"
+        "SpendPermission(address account,address spender,address token,uint160 allowance,uint48 period,uint48 start,uint48 end)"
     );
 
     /// @notice ERC-7528 address convention for native token (https://eips.ethereum.org/EIPS/eip-7528).
