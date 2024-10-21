@@ -18,8 +18,8 @@ contract SpendPermissionManagerBase is Base {
 
     function _initializeSpendPermissionManager() internal {
         _initialize(); // Base
-        mockSpendPermissionManager = new MockSpendPermissionManager();
         mockCoinbaseSmartWalletFactory = new CoinbaseSmartWalletFactory(address(account));
+        mockSpendPermissionManager = new MockSpendPermissionManager(mockCoinbaseSmartWalletFactory);
     }
 
     /**

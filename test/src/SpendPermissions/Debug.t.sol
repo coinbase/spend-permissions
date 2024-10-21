@@ -5,24 +5,22 @@ import {Test, console2} from "forge-std/Test.sol";
 
 import {SpendPermissionManager} from "../../../src/SpendPermissionManager.sol";
 
-import {Base} from "../../base/Base.sol";
+import {SpendPermissionManagerBase} from "../../base/SpendPermissionManagerBase.sol";
 
-contract DebugTest is Test, Base {
-    address public constant NATIVE_TOKEN = 0xEeeeeEeeeEeEeeEeEeEeeEEEeeeeEeeeeeeeEEeE;
-
+contract DebugTest is Test, SpendPermissionManagerBase {
     SpendPermissionManager spendPermissionManager;
 
     function setUp() public {
         _initialize();
 
-        spendPermissionManager = new SpendPermissionManager();
+        spendPermissionManager = new SpendPermissionManager(mockCoinbaseSmartWalletFactory);
 
         vm.prank(owner);
         account.addOwnerAddress(address(spendPermissionManager));
     }
 
     function test_approve() public {
-        SpendPermissionManager.SpendPermission memory spendPermission = _createSpendPermission();
+        SpendPermissionManager.SpendPermission memory spendPermission = _createSpendPermissionDebug();
 
         vm.prank(address(account));
         spendPermissionManager.approve(spendPermission);
@@ -30,7 +28,7 @@ contract DebugTest is Test, Base {
 
     function test_withdraw(address recipient) public {
         assumePayable(recipient);
-        SpendPermissionManager.SpendPermission memory spendPermission = _createSpendPermission();
+        SpendPermissionManager.SpendPermission memory spendPermission = _createSpendPermissionDebug();
 
         vm.prank(address(account));
         spendPermissionManager.approve(spendPermission);
@@ -40,7 +38,7 @@ contract DebugTest is Test, Base {
         spendPermissionManager.spend(spendPermission, recipient, 1 ether / 2);
     }
 
-    function _createSpendPermission() internal view returns (SpendPermissionManager.SpendPermission memory) {
+    function _createSpendPermissionDebug() internal view returns (SpendPermissionManager.SpendPermission memory) {
         return SpendPermissionManager.SpendPermission({
             account: address(account),
             spender: owner,

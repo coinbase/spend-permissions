@@ -80,8 +80,10 @@ contract GetHashTest is SpendPermissionManagerBase {
             period: period,
             allowance: allowance
         });
-        MockSpendPermissionManager mockSpendPermissionManager1 = new MockSpendPermissionManager();
-        MockSpendPermissionManager mockSpendPermissionManager2 = new MockSpendPermissionManager();
+        MockSpendPermissionManager mockSpendPermissionManager1 =
+            new MockSpendPermissionManager(mockCoinbaseSmartWalletFactory);
+        MockSpendPermissionManager mockSpendPermissionManager2 =
+            new MockSpendPermissionManager(mockCoinbaseSmartWalletFactory);
         bytes32 hash1 = mockSpendPermissionManager1.getHash(spendPermission);
         bytes32 hash2 = mockSpendPermissionManager2.getHash(spendPermission);
         assertNotEq(hash1, hash2);

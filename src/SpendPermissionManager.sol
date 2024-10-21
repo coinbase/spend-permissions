@@ -4,6 +4,7 @@ pragma solidity ^0.8.0;
 import {IERC1271} from "openzeppelin-contracts/contracts/interfaces/IERC1271.sol";
 import {IERC20} from "openzeppelin-contracts/contracts/token/ERC20/IERC20.sol";
 import {CoinbaseSmartWallet} from "smart-wallet/CoinbaseSmartWallet.sol";
+import {CoinbaseSmartWalletFactory} from "smart-wallet/CoinbaseSmartWalletFactory.sol";
 import {EIP712} from "solady/utils/EIP712.sol";
 import {SignatureCheckerLib} from "solady/utils/SignatureCheckerLib.sol";
 
@@ -43,9 +44,14 @@ contract SpendPermissionManager is EIP712 {
         uint160 spend;
     }
 
+    CoinbaseSmartWalletFactory public coinbaseSmartWalletFactory;
+
     bytes32 constant MESSAGE_TYPEHASH = keccak256(
         "SpendPermission(address account,address spender,address token,uint48 start,uint48 end,uint48 period,uint160 allowance)"
     );
+
+    bytes32 private constant ERC6492_DETECTION_SUFFIX =
+        0x6492649264926492649264926492649264926492649264926492649264926492;
 
     /// @notice ERC-7528 address convention for native token (https://eips.ethereum.org/EIPS/eip-7528).
     address public constant NATIVE_TOKEN = 0xEeeeeEeeeEeEeeEeEeEeeEEEeeeeEeeeeeeeEEeE;
@@ -63,6 +69,17 @@ contract SpendPermissionManager is EIP712 {
     ///
     /// @param sender Expected sender to be valid.
     error InvalidSender(address sender, address expected);
+
+    /// @notice Invalid factory address provided in ERC-6492 signature.
+    ///
+    /// @param factory Address of the factory contract that was provided.
+    /// @param expected Expected factory address.
+    error InvalidFactory(address factory, address expected);
+
+    /// @notice Deployment of counterfactual account failed.
+    ///
+    /// @param error Error message from failed deployment.
+    error ERC6492DeployFailed(bytes error);
 
     /// @notice Invalid signature.
     error InvalidSignature();
@@ -137,6 +154,10 @@ contract SpendPermissionManager is EIP712 {
         _;
     }
 
+    constructor(CoinbaseSmartWalletFactory _coinbaseSmartWalletFactory) {
+        coinbaseSmartWalletFactory = _coinbaseSmartWalletFactory;
+    }
+
     /// @notice Approve a spend permission via a direct call from the account.
     ///
     /// @param spendPermission Details of the spend permission.
@@ -162,8 +183,8 @@ contract SpendPermissionManager is EIP712 {
     /// @param recipient Address to spend tokens to.
     /// @param value Amount of token attempting to spend (wei).
     function spendWithSignature(
-        SpendPermission memory spendPermission,
-        bytes memory signature,
+        SpendPermission calldata spendPermission,
+        bytes calldata signature,
         address recipient,
         uint160 value
     ) external requireSender(spendPermission.spender) {
@@ -178,16 +199,52 @@ contract SpendPermissionManager is EIP712 {
     ///
     /// @param spendPermission Details of the spend permission.
     /// @param signature Signed approval from the user.
-    function approveWithSignature(SpendPermission memory spendPermission, bytes memory signature) public {
-        // validate signature over spend permission data and optionally deploy account
+    function approveWithSignature(SpendPermission calldata spendPermission, bytes calldata signature) public {
+        _validateSignature(spendPermission, signature);
+        _approve(spendPermission);
+    }
+
+    /// @notice Validates a signature over spend permission data and optionally deploy account.
+    /// @dev Compatible with ERC-6492 signatures (https://eips.ethereum.org/EIPS/eip-6492), factory deployment path
+    /// only. i.e. if initCode is present in signature, account will be deployed, but if validation of the inner
+    /// signature fails, no further `prepareTo` attempts will be made and the transaction will revert.
+    /// @dev Only one specific factory address can be used for deployment, and the deployed account must match the
+    /// signing account of the spendPermission.
+    ///
+    /// @param spendPermission Details of the spend permission.
+    /// @param signature Signed approval from the user.
+    function _validateSignature(SpendPermission calldata spendPermission, bytes calldata signature) internal {
+        address signingAccount = spendPermission.account;
+        bytes memory signatureToValidate;
+        bool isCounterfactual = bytes32(signature[signature.length - 32:signature.length]) == ERC6492_DETECTION_SUFFIX;
+        if (isCounterfactual) {
+            address factoryAddress;
+            bytes memory factoryCalldata;
+            (factoryAddress, factoryCalldata, signatureToValidate) =
+                abi.decode(signature[0:signature.length - 32], (address, bytes, bytes));
+            if (factoryAddress != address(coinbaseSmartWalletFactory)) {
+                revert InvalidFactory(factoryAddress, address(coinbaseSmartWalletFactory));
+            }
+
+            uint256 contractCodeLength = address(signingAccount).code.length;
+            if (contractCodeLength == 0) {
+                (bool success, bytes memory data) = address(coinbaseSmartWalletFactory).call(factoryCalldata);
+                if (!success) revert ERC6492DeployFailed(data);
+                address newAccount = abi.decode(data, (address));
+                if (address(signingAccount).code.length == 0 || newAccount != address(signingAccount)) {
+                    revert ERC6492DeployFailed("Deployed account does not match expected account");
+                }
+            }
+        } else {
+            signatureToValidate = signature;
+        }
+
         if (
-            !SignatureCheckerLib.isValidERC6492SignatureNowAllowSideEffects(
-                spendPermission.account, getHash(spendPermission), signature
-            )
+            IERC1271(spendPermission.account).isValidSignature(getHash(spendPermission), signatureToValidate)
+                != IERC1271.isValidSignature.selector
         ) {
             revert InvalidSignature();
         }
-        _approve(spendPermission);
     }
 
     /// @notice Spend tokens using a spend permission.
