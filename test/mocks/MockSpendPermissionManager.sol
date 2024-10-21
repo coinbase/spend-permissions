@@ -10,4 +10,8 @@ contract MockSpendPermissionManager is SpendPermissionManager {
     function useSpendPermission(SpendPermission memory spendPermission, uint256 value) public {
         _useSpendPermission(spendPermission, value);
     }
+
+    function validateSignature(SpendPermission calldata spendPermission, bytes calldata signature) public {
+        _validateSignature(spendPermission, signature);
+    }
 }

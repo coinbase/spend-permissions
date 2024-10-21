@@ -204,49 +204,6 @@ contract SpendPermissionManager is EIP712 {
         _approve(spendPermission);
     }
 
-    /// @notice Validates a signature over spend permission data and optionally deploy account.
-    /// @dev Compatible with ERC-6492 signatures (https://eips.ethereum.org/EIPS/eip-6492), factory deployment path
-    /// only. i.e. if initCode is present in signature, account will be deployed, but if validation of the inner
-    /// signature fails, no further `prepareTo` attempts will be made and the transaction will revert.
-    /// @dev Only one specific factory address can be used for deployment, and the deployed account must match the
-    /// signing account of the spendPermission.
-    ///
-    /// @param spendPermission Details of the spend permission.
-    /// @param signature Signed approval from the user.
-    function _validateSignature(SpendPermission calldata spendPermission, bytes calldata signature) internal {
-        address signingAccount = spendPermission.account;
-        bytes memory signatureToValidate;
-        bool isCounterfactual = bytes32(signature[signature.length - 32:signature.length]) == ERC6492_DETECTION_SUFFIX;
-        if (isCounterfactual) {
-            address factoryAddress;
-            bytes memory factoryCalldata;
-            (factoryAddress, factoryCalldata, signatureToValidate) =
-                abi.decode(signature[0:signature.length - 32], (address, bytes, bytes));
-            if (factoryAddress != address(coinbaseSmartWalletFactory)) {
-                revert InvalidFactory(factoryAddress, address(coinbaseSmartWalletFactory));
-            }
-
-            uint256 contractCodeLength = address(signingAccount).code.length;
-            if (contractCodeLength == 0) {
-                (bool success, bytes memory data) = address(coinbaseSmartWalletFactory).call(factoryCalldata);
-                if (!success) revert ERC6492DeployFailed(data);
-                address newAccount = abi.decode(data, (address));
-                if (address(signingAccount).code.length == 0 || newAccount != address(signingAccount)) {
-                    revert ERC6492DeployFailed("Deployed account does not match expected account");
-                }
-            }
-        } else {
-            signatureToValidate = signature;
-        }
-
-        if (
-            IERC1271(spendPermission.account).isValidSignature(getHash(spendPermission), signatureToValidate)
-                != IERC1271.isValidSignature.selector
-        ) {
-            revert InvalidSignature();
-        }
-    }
-
     /// @notice Spend tokens using a spend permission.
     ///
     /// @param spendPermission Details of the spend permission.
@@ -344,6 +301,49 @@ contract SpendPermissionManager is EIP712 {
         bytes32 hash = getHash(spendPermission);
         _isApproved[hash][spendPermission.account] = true;
         emit SpendPermissionApproved(hash, spendPermission.account, spendPermission);
+    }
+
+    /// @notice Validates a signature over spend permission data and optionally deploy account.
+    /// @dev Compatible with ERC-6492 signatures (https://eips.ethereum.org/EIPS/eip-6492), factory deployment path
+    /// only. i.e. if initCode is present in signature, account will be deployed, but if validation of the inner
+    /// signature fails, no further `prepareTo` attempts will be made and the transaction will revert.
+    /// @dev Only one specific factory address can be used for deployment, and the deployed account must match the
+    /// signing account of the spendPermission.
+    ///
+    /// @param spendPermission Details of the spend permission.
+    /// @param signature Signed approval from the user.
+    function _validateSignature(SpendPermission calldata spendPermission, bytes calldata signature) internal {
+        address signingAccount = spendPermission.account;
+        bytes memory signatureToValidate;
+        bool isCounterfactual = bytes32(signature[signature.length - 32:signature.length]) == ERC6492_DETECTION_SUFFIX;
+        if (isCounterfactual) {
+            address factoryAddress;
+            bytes memory factoryCalldata;
+            (factoryAddress, factoryCalldata, signatureToValidate) =
+                abi.decode(signature[0:signature.length - 32], (address, bytes, bytes));
+            if (factoryAddress != address(coinbaseSmartWalletFactory)) {
+                revert InvalidFactory(factoryAddress, address(coinbaseSmartWalletFactory));
+            }
+
+            uint256 contractCodeLength = address(signingAccount).code.length;
+            if (contractCodeLength == 0) {
+                (bool success, bytes memory data) = address(coinbaseSmartWalletFactory).call(factoryCalldata);
+                if (!success) revert ERC6492DeployFailed(data);
+                address newAccount = abi.decode(data, (address));
+                if (address(signingAccount).code.length == 0 || newAccount != address(signingAccount)) {
+                    revert ERC6492DeployFailed("Deployed account does not match expected account");
+                }
+            }
+        } else {
+            signatureToValidate = signature;
+        }
+
+        if (
+            IERC1271(spendPermission.account).isValidSignature(getHash(spendPermission), signatureToValidate)
+                != IERC1271.isValidSignature.selector
+        ) {
+            revert InvalidSignature();
+        }
     }
 
     /// @notice Use a spend permission.
