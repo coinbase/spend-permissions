@@ -79,6 +79,9 @@ contract SpendPermissionManager is EIP712 {
     /// @notice Spend Permission has zero period.
     error ZeroPeriod();
 
+    /// @notice Attempting to spend zero value.
+    error ZeroValue();
+
     /// @notice Unauthorized spend permission.
     error UnauthorizedSpendPermission();
 
@@ -294,8 +297,8 @@ contract SpendPermissionManager is EIP712 {
     /// @param spendPermission Details of the spend permission.
     /// @param value Amount of token attempting to spend (wei).
     function _useSpendPermission(SpendPermission memory spendPermission, uint256 value) internal {
-        // early return if no value spent
-        if (value == 0) return;
+        // check value is non-zero
+        if (value == 0) revert ZeroValue();
 
         // require spend permission is approved and not revoked
         if (!isApproved(spendPermission)) revert UnauthorizedSpendPermission();
