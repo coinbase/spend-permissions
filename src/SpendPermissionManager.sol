@@ -5,7 +5,6 @@ import {IERC1271} from "openzeppelin-contracts/contracts/interfaces/IERC1271.sol
 import {IERC20} from "openzeppelin-contracts/contracts/token/ERC20/IERC20.sol";
 import {CoinbaseSmartWallet} from "smart-wallet/CoinbaseSmartWallet.sol";
 import {EIP712} from "solady/utils/EIP712.sol";
-import {SignatureCheckerLib} from "solady/utils/SignatureCheckerLib.sol";
 
 /// @title SpendPermissionManager
 ///
