@@ -159,16 +159,13 @@ contract SpendPermissionManager is EIP712 {
     ///
     /// @param spendPermission Details of the spend permission.
     /// @param signature Signed approval from the user.
-    /// @param recipient Address to spend tokens to.
     /// @param value Amount of token attempting to spend (wei).
-    function spendWithSignature(
-        SpendPermission memory spendPermission,
-        bytes memory signature,
-        address recipient,
-        uint160 value
-    ) external requireSender(spendPermission.spender) {
+    function spendWithSignature(SpendPermission memory spendPermission, bytes memory signature, uint160 value)
+        external
+        requireSender(spendPermission.spender)
+    {
         approveWithSignature(spendPermission, signature);
-        spend(spendPermission, recipient, value);
+        spend(spendPermission, value);
     }
 
     /// @notice Approve a spend permission via a signature from the account.
@@ -190,17 +187,16 @@ contract SpendPermissionManager is EIP712 {
         _approve(spendPermission);
     }
 
-    /// @notice Spend tokens using a spend permission.
+    /// @notice Spend tokens using a spend permission, transferring them from `account` to `spender`.
     ///
     /// @param spendPermission Details of the spend permission.
-    /// @param recipient Address to spend tokens to.
     /// @param value Amount of token attempting to spend (wei).
-    function spend(SpendPermission memory spendPermission, address recipient, uint160 value)
+    function spend(SpendPermission memory spendPermission, uint160 value)
         public
         requireSender(spendPermission.spender)
     {
         _useSpendPermission(spendPermission, value);
-        _transferFrom(spendPermission.token, spendPermission.account, recipient, value);
+        _transferFrom(spendPermission.token, spendPermission.account, spendPermission.spender, value);
     }
 
     /// @notice Hash a SpendPermission struct for signing in accordance with EIP-712.
