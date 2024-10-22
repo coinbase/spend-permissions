@@ -20,7 +20,6 @@ contract SpendTest is SpendPermissionManagerBase {
         address sender,
         address account,
         address spender,
-        address recipient,
         uint48 start,
         uint48 end,
         uint48 period,
@@ -47,14 +46,13 @@ contract SpendTest is SpendPermissionManagerBase {
         mockSpendPermissionManager.approve(spendPermission);
         vm.startPrank(sender);
         vm.expectRevert(abi.encodeWithSelector(SpendPermissionManager.InvalidSender.selector, sender, spender));
-        mockSpendPermissionManager.spend(spendPermission, recipient, spend);
+        mockSpendPermissionManager.spend(spendPermission, spend);
         vm.stopPrank();
     }
 
     function test_spend_revert_unauthorizedSpendPermission(
         uint128 invalidPk,
         address spender,
-        address recipient,
         uint48 start,
         uint48 end,
         uint48 period,
@@ -82,21 +80,20 @@ contract SpendTest is SpendPermissionManagerBase {
         vm.warp(start);
         vm.startPrank(spender);
         vm.expectRevert(abi.encodeWithSelector(SpendPermissionManager.UnauthorizedSpendPermission.selector));
-        mockSpendPermissionManager.spend(spendPermission, recipient, spend);
+        mockSpendPermissionManager.spend(spendPermission, spend);
         vm.stopPrank();
     }
 
     function test_spend_success_ether(
         address spender,
-        address recipient,
         uint48 start,
         uint48 end,
         uint48 period,
         uint160 allowance,
         uint160 spend
     ) public {
-        vm.assume(recipient != address(account)); // otherwise balance checks can fail
-        assumePayable(recipient);
+        vm.assume(spender != address(account)); // otherwise balance checks can fail
+        assumePayable(spender);
         vm.assume(start > 0);
         vm.assume(end > 0);
         vm.assume(start < end);
@@ -114,9 +111,8 @@ contract SpendTest is SpendPermissionManagerBase {
             allowance: allowance
         });
         vm.deal(address(account), allowance);
-        vm.deal(recipient, 0);
         assertEq(address(account).balance, allowance);
-        assertEq(recipient.balance, 0);
+        assertEq(spender.balance, 0);
 
         bytes memory signature = _signSpendPermission(spendPermission, ownerPk, 0);
 
@@ -124,10 +120,10 @@ contract SpendTest is SpendPermissionManagerBase {
 
         vm.startPrank(spender);
         mockSpendPermissionManager.approveWithSignature(spendPermission, signature);
-        mockSpendPermissionManager.spend(spendPermission, recipient, spend);
+        mockSpendPermissionManager.spend(spendPermission, spend);
 
         assertEq(address(account).balance, allowance - spend);
-        assertEq(recipient.balance, spend);
+        assertEq(spender.balance, spend);
         SpendPermissionManager.PeriodSpend memory usage = mockSpendPermissionManager.getCurrentPeriod(spendPermission);
         assertEq(usage.start, start);
         assertEq(usage.end, _safeAddUint48(start, period));
@@ -136,15 +132,14 @@ contract SpendTest is SpendPermissionManagerBase {
 
     function test_spend_success_ether_alreadyInitialized(
         address spender,
-        address recipient,
         uint48 start,
         uint48 end,
         uint48 period,
         uint160 allowance,
         uint160 spend
     ) public {
-        vm.assume(recipient != address(account)); // otherwise balance checks can fail
-        assumePayable(recipient);
+        vm.assume(spender != address(account)); // otherwise balance checks can fail
+        assumePayable(spender);
         vm.assume(start > 0);
         vm.assume(end > 0);
         vm.assume(start < end);
@@ -162,17 +157,17 @@ contract SpendTest is SpendPermissionManagerBase {
             allowance: allowance
         });
         vm.deal(address(account), allowance);
-        vm.deal(recipient, 0);
+        vm.deal(spender, 0);
         vm.prank(address(account));
         mockSpendPermissionManager.approve(spendPermission);
         vm.warp(start);
 
         assertEq(address(account).balance, allowance);
-        assertEq(recipient.balance, 0);
+        assertEq(spender.balance, 0);
         vm.prank(spender);
-        mockSpendPermissionManager.spend(spendPermission, recipient, spend);
+        mockSpendPermissionManager.spend(spendPermission, spend);
         assertEq(address(account).balance, allowance - spend);
-        assertEq(recipient.balance, spend);
+        assertEq(spender.balance, spend);
         SpendPermissionManager.PeriodSpend memory usage = mockSpendPermissionManager.getCurrentPeriod(spendPermission);
         assertEq(usage.start, start);
         assertEq(usage.end, _safeAddUint48(start, period));
@@ -181,14 +176,13 @@ contract SpendTest is SpendPermissionManagerBase {
 
     function test_spend_success_ERC20(
         address spender,
-        address recipient,
         uint48 start,
         uint48 end,
         uint48 period,
         uint160 allowance,
         uint160 spend
     ) public {
-        vm.assume(recipient != address(account)); // otherwise balance checks can fail
+        vm.assume(spender != address(account)); // otherwise balance checks can fail
         vm.assume(start > 0);
         vm.assume(end > 0);
         vm.assume(start < end);
@@ -211,11 +205,11 @@ contract SpendTest is SpendPermissionManagerBase {
         vm.warp(start);
 
         assertEq(mockERC20.balanceOf(address(account)), allowance);
-        assertEq(mockERC20.balanceOf(recipient), 0);
+        assertEq(mockERC20.balanceOf(spender), 0);
         vm.prank(spender);
-        mockSpendPermissionManager.spend(spendPermission, recipient, spend);
+        mockSpendPermissionManager.spend(spendPermission, spend);
         assertEq(mockERC20.balanceOf(address(account)), allowance - spend);
-        assertEq(mockERC20.balanceOf(recipient), spend);
+        assertEq(mockERC20.balanceOf(spender), spend);
         SpendPermissionManager.PeriodSpend memory usage = mockSpendPermissionManager.getCurrentPeriod(spendPermission);
         assertEq(usage.start, start);
         assertEq(usage.end, _safeAddUint48(start, period));
