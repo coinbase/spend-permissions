@@ -22,14 +22,14 @@ contract SpendPermissionManager is EIP712 {
         address spender;
         /// @dev Token address (ERC-7528 native token address or ERC-20 contract).
         address token;
+        /// @dev Maximum allowed value to spend within each `period`.
+        uint160 allowance;
+        /// @dev Time duration for resetting used `allowance` on a recurring basis (seconds).
+        uint48 period;
         /// @dev Timestamp this spend permission is valid after (unix seconds).
         uint48 start;
         /// @dev Timestamp this spend permission is valid until (unix seconds).
         uint48 end;
-        /// @dev Time duration for resetting used `allowance` on a recurring basis (seconds).
-        uint48 period;
-        /// @dev Maximum allowed value to spend within each `period`.
-        uint160 allowance;
     }
 
     /// @notice Spend Permission usage for a certain period.
@@ -43,7 +43,7 @@ contract SpendPermissionManager is EIP712 {
     }
 
     bytes32 constant MESSAGE_TYPEHASH = keccak256(
-        "SpendPermission(address account,address spender,address token,uint48 start,uint48 end,uint48 period,uint160 allowance)"
+        "SpendPermission(address account,address spender,address token,uint160 allowance,uint48 period,uint48 start,uint48 end)"
     );
 
     /// @notice ERC-7528 address convention for native token (https://eips.ethereum.org/EIPS/eip-7528).
@@ -77,6 +77,9 @@ contract SpendPermissionManager is EIP712 {
 
     /// @notice Spend Permission has zero period.
     error ZeroPeriod();
+
+    /// @notice Attempting to spend zero value.
+    error ZeroValue();
 
     /// @notice Unauthorized spend permission.
     error UnauthorizedSpendPermission();
@@ -158,16 +161,13 @@ contract SpendPermissionManager is EIP712 {
     ///
     /// @param spendPermission Details of the spend permission.
     /// @param signature Signed approval from the user.
-    /// @param recipient Address to spend tokens to.
     /// @param value Amount of token attempting to spend (wei).
-    function spendWithSignature(
-        SpendPermission memory spendPermission,
-        bytes memory signature,
-        address recipient,
-        uint160 value
-    ) external requireSender(spendPermission.spender) {
+    function spendWithSignature(SpendPermission memory spendPermission, bytes memory signature, uint160 value)
+        external
+        requireSender(spendPermission.spender)
+    {
         approveWithSignature(spendPermission, signature);
-        spend(spendPermission, recipient, value);
+        spend(spendPermission, value);
     }
 
     /// @notice Approve a spend permission via a signature from the account.
@@ -186,17 +186,16 @@ contract SpendPermissionManager is EIP712 {
         _approve(spendPermission);
     }
 
-    /// @notice Spend tokens using a spend permission.
+    /// @notice Spend tokens using a spend permission, transferring them from `account` to `spender`.
     ///
     /// @param spendPermission Details of the spend permission.
-    /// @param recipient Address to spend tokens to.
     /// @param value Amount of token attempting to spend (wei).
-    function spend(SpendPermission memory spendPermission, address recipient, uint160 value)
+    function spend(SpendPermission memory spendPermission, uint160 value)
         public
         requireSender(spendPermission.spender)
     {
         _useSpendPermission(spendPermission, value);
-        _transferFrom(spendPermission.token, spendPermission.account, recipient, value);
+        _transferFrom(spendPermission.token, spendPermission.account, spendPermission.spender, value);
     }
 
     /// @notice Hash a SpendPermission struct for signing in accordance with EIP-712.
@@ -256,10 +255,10 @@ contract SpendPermissionManager is EIP712 {
             uint48 start = currentTimestamp - currentPeriodProgress;
 
             // current period end will overflow if period is sufficiently large
-            bool endOverflow = uint256(start) + uint256(spendPermission.period) > type(uint48).max;
+            bool endOverflow = uint256(start) + uint256(spendPermission.period) > spendPermission.end;
 
-            // end is one period after start or maximum uint48 if overflow
-            uint48 end = endOverflow ? type(uint48).max : start + spendPermission.period;
+            // end is one period after start or spend permission's end if overflow
+            uint48 end = endOverflow ? spendPermission.end : start + spendPermission.period;
 
             return PeriodSpend({start: start, end: end, spend: 0});
         }
@@ -290,8 +289,8 @@ contract SpendPermissionManager is EIP712 {
     /// @param spendPermission Details of the spend permission.
     /// @param value Amount of token attempting to spend (wei).
     function _useSpendPermission(SpendPermission memory spendPermission, uint256 value) internal {
-        // early return if no value spent
-        if (value == 0) return;
+        // check value is non-zero
+        if (value == 0) revert ZeroValue();
 
         // require spend permission is approved and not revoked
         if (!isApproved(spendPermission)) revert UnauthorizedSpendPermission();

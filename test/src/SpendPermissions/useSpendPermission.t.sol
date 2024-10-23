@@ -123,6 +123,7 @@ contract UseSpendPermissionTest is SpendPermissionManagerBase {
         vm.assume(start < end);
         vm.assume(period > 0);
         vm.assume(allowance > 0);
+        vm.assume(firstSpend > 0);
         vm.assume(firstSpend < allowance);
         vm.assume(secondSpend > allowance - firstSpend);
         vm.assume(secondSpend < type(uint160).max - firstSpend);
@@ -153,10 +154,11 @@ contract UseSpendPermissionTest is SpendPermissionManagerBase {
         mockSpendPermissionManager.useSpendPermission(spendPermission, secondSpend);
     }
 
-    function test_useSpendPermission_success_noSpend() public {
+    function test_useSpendPermission_revert_zeroValue() public {
         SpendPermissionManager.SpendPermission memory spendPermission = _createSpendPermission();
         vm.prank(spendPermission.account);
         mockSpendPermissionManager.approve(spendPermission);
+        vm.expectRevert(SpendPermissionManager.ZeroValue.selector);
         mockSpendPermissionManager.useSpendPermission(spendPermission, 0);
     }
 

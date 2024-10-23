@@ -37,7 +37,7 @@ contract DebugTest is Test, Base {
 
         vm.deal(address(account), 1 ether);
         vm.prank(owner);
-        spendPermissionManager.spend(spendPermission, recipient, 1 ether / 2);
+        spendPermissionManager.spend(spendPermission, 1 ether / 2);
     }
 
     function _createSpendPermission() internal view returns (SpendPermissionManager.SpendPermission memory) {

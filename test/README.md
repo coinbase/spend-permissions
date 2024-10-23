@@ -1,3 +1,0 @@
-# Tests Overview
-
-## Invariants
