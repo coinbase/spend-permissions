@@ -256,10 +256,10 @@ contract SpendPermissionManager is EIP712 {
             uint48 start = currentTimestamp - currentPeriodProgress;
 
             // current period end will overflow if period is sufficiently large
-            bool endOverflow = uint256(start) + uint256(spendPermission.period) > type(uint48).max;
+            bool endOverflow = uint256(start) + uint256(spendPermission.period) > spendPermission.end;
 
-            // end is one period after start or maximum uint48 if overflow
-            uint48 end = endOverflow ? type(uint48).max : start + spendPermission.period;
+            // end is one period after start or spend permission's end if overflow
+            uint48 end = endOverflow ? spendPermission.end : start + spendPermission.period;
 
             return PeriodSpend({start: start, end: end, spend: 0});
         }

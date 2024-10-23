@@ -188,16 +188,17 @@ contract GetCurrentPeriodTest is SpendPermissionManagerBase {
         assertEq(usage.spend, 0);
     }
 
-    function test_getCurrentPeriod_success_maxValueForEnd(
+    function test_getCurrentPeriod_success_periodEndWithinPermissionEnd(
         address permissionSigner,
         uint48 start,
+        uint48 end,
         uint48 period,
         uint160 allowance
     ) public {
-        vm.assume(start > 0);
+        vm.assume(end > 0 && end < type(uint48).max);
         vm.assume(period > 0);
-        vm.assume(start < type(uint48).max);
-        vm.assume(uint256(start) + uint256(period) > type(uint48).max); // force overflow
+        vm.assume(start < end);
+        vm.assume(uint256(start) + uint256(period) > end);
         vm.assume(allowance > 0);
 
         SpendPermissionManager.SpendPermission memory spendPermission = SpendPermissionManager.SpendPermission({
@@ -205,7 +206,7 @@ contract GetCurrentPeriodTest is SpendPermissionManagerBase {
             spender: permissionSigner,
             token: NATIVE_TOKEN,
             start: start,
-            end: type(uint48).max,
+            end: end,
             period: period,
             allowance: allowance
         });
@@ -213,7 +214,36 @@ contract GetCurrentPeriodTest is SpendPermissionManagerBase {
         vm.warp(start);
         SpendPermissionManager.PeriodSpend memory usage = mockSpendPermissionManager.getCurrentPeriod(spendPermission);
         assertEq(usage.start, start);
-        assertEq(usage.end, type(uint48).max);
+        assertEq(usage.end, end);
+        assertEq(usage.spend, 0);
+    }
+
+    function test_getCurrentPeriod_success_periodEndWithinPermissionEnd_maxValue(
+        address permissionSigner,
+        uint48 start,
+        uint48 period,
+        uint160 allowance
+    ) public {
+        uint48 end = type(uint48).max;
+        vm.assume(period > 0);
+        vm.assume(start < end);
+        vm.assume(uint256(start) + uint256(period) > end); // force overflow
+        vm.assume(allowance > 0);
+
+        SpendPermissionManager.SpendPermission memory spendPermission = SpendPermissionManager.SpendPermission({
+            account: address(account),
+            spender: permissionSigner,
+            token: NATIVE_TOKEN,
+            start: start,
+            end: end,
+            period: period,
+            allowance: allowance
+        });
+
+        vm.warp(start);
+        SpendPermissionManager.PeriodSpend memory usage = mockSpendPermissionManager.getCurrentPeriod(spendPermission);
+        assertEq(usage.start, start);
+        assertEq(usage.end, end);
         assertEq(usage.spend, 0);
     }
 }
