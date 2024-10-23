@@ -123,7 +123,7 @@ contract SpendWithSignatureTest is SpendPermissionManagerBase {
         assertEq(spender.balance, spend);
         SpendPermissionManager.PeriodSpend memory usage = mockSpendPermissionManager.getCurrentPeriod(spendPermission);
         assertEq(usage.start, start);
-        assertEq(usage.end, _safeAddUint48(start, period));
+        assertEq(usage.end, _safeAddUint48(start, period, end));
         assertEq(usage.spend, spend);
     }
 
@@ -167,7 +167,7 @@ contract SpendWithSignatureTest is SpendPermissionManagerBase {
         assertEq(spender.balance, spend);
         SpendPermissionManager.PeriodSpend memory usage = mockSpendPermissionManager.getCurrentPeriod(spendPermission);
         assertEq(usage.start, start);
-        assertEq(usage.end, _safeAddUint48(start, period));
+        assertEq(usage.end, _safeAddUint48(start, period, end));
         assertEq(usage.spend, spend);
     }
 
@@ -211,7 +211,7 @@ contract SpendWithSignatureTest is SpendPermissionManagerBase {
         assertEq(mockERC20.balanceOf(spender), spend);
         SpendPermissionManager.PeriodSpend memory usage = mockSpendPermissionManager.getCurrentPeriod(spendPermission);
         assertEq(usage.start, start);
-        assertEq(usage.end, _safeAddUint48(start, period));
+        assertEq(usage.end, _safeAddUint48(start, period, end));
         assertEq(usage.spend, spend);
     }
 }

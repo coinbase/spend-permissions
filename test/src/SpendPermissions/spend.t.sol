@@ -53,7 +53,6 @@ contract SpendTest is SpendPermissionManagerBase {
     function test_spend_revert_zeroValue(
         uint128 invalidPk,
         address spender,
-        address recipient,
         uint48 start,
         uint48 end,
         uint48 period,
@@ -80,7 +79,7 @@ contract SpendTest is SpendPermissionManagerBase {
         vm.warp(start);
         vm.startPrank(spender);
         vm.expectRevert(abi.encodeWithSelector(SpendPermissionManager.ZeroValue.selector));
-        mockSpendPermissionManager.spend(spendPermission, recipient, spend);
+        mockSpendPermissionManager.spend(spendPermission, spend);
         vm.stopPrank();
     }
 
@@ -160,7 +159,7 @@ contract SpendTest is SpendPermissionManagerBase {
         assertEq(spender.balance, spend);
         SpendPermissionManager.PeriodSpend memory usage = mockSpendPermissionManager.getCurrentPeriod(spendPermission);
         assertEq(usage.start, start);
-        assertEq(usage.end, _safeAddUint48(start, period));
+        assertEq(usage.end, _safeAddUint48(start, period, end));
         assertEq(usage.spend, spend);
     }
 
@@ -204,7 +203,7 @@ contract SpendTest is SpendPermissionManagerBase {
         assertEq(spender.balance, spend);
         SpendPermissionManager.PeriodSpend memory usage = mockSpendPermissionManager.getCurrentPeriod(spendPermission);
         assertEq(usage.start, start);
-        assertEq(usage.end, _safeAddUint48(start, period));
+        assertEq(usage.end, _safeAddUint48(start, period, end));
         assertEq(usage.spend, spend);
     }
 
@@ -246,7 +245,7 @@ contract SpendTest is SpendPermissionManagerBase {
         assertEq(mockERC20.balanceOf(spender), spend);
         SpendPermissionManager.PeriodSpend memory usage = mockSpendPermissionManager.getCurrentPeriod(spendPermission);
         assertEq(usage.start, start);
-        assertEq(usage.end, _safeAddUint48(start, period));
+        assertEq(usage.end, _safeAddUint48(start, period, end));
         assertEq(usage.spend, spend);
     }
 }

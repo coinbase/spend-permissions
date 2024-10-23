@@ -197,7 +197,11 @@ contract UseSpendPermissionTest is SpendPermissionManagerBase {
             hash: mockSpendPermissionManager.getHash(spendPermission),
             account: account,
             token: NATIVE_TOKEN,
-            newUsage: SpendPermissionManager.PeriodSpend({start: start, end: _safeAddUint48(start, period), spend: spend})
+            newUsage: SpendPermissionManager.PeriodSpend({
+                start: start,
+                end: _safeAddUint48(start, period, end),
+                spend: spend
+            })
         });
         mockSpendPermissionManager.useSpendPermission(spendPermission, spend);
     }
@@ -235,7 +239,7 @@ contract UseSpendPermissionTest is SpendPermissionManagerBase {
         mockSpendPermissionManager.useSpendPermission(spendPermission, spend);
         SpendPermissionManager.PeriodSpend memory usage = mockSpendPermissionManager.getCurrentPeriod(spendPermission);
         assertEq(usage.start, start);
-        assertEq(usage.end, _safeAddUint48(start, period));
+        assertEq(usage.end, _safeAddUint48(start, period, end));
         assertEq(usage.spend, spend);
     }
 
@@ -269,7 +273,7 @@ contract UseSpendPermissionTest is SpendPermissionManagerBase {
         mockSpendPermissionManager.useSpendPermission(spendPermission, allowance); // spend full allowance
         SpendPermissionManager.PeriodSpend memory usage = mockSpendPermissionManager.getCurrentPeriod(spendPermission);
         assertEq(usage.start, start);
-        assertEq(usage.end, _safeAddUint48(start, period));
+        assertEq(usage.end, _safeAddUint48(start, period, end));
         assertEq(usage.spend, allowance);
     }
 
@@ -311,7 +315,7 @@ contract UseSpendPermissionTest is SpendPermissionManagerBase {
             SpendPermissionManager.PeriodSpend memory usage =
                 mockSpendPermissionManager.getCurrentPeriod(spendPermission);
             assertEq(usage.start, start);
-            assertEq(usage.end, _safeAddUint48(start, period));
+            assertEq(usage.end, _safeAddUint48(start, period, end));
             assertEq(usage.spend, expectedTotalSpend);
         }
     }

@@ -43,9 +43,9 @@ contract SpendPermissionManagerBase is Base {
         return wrappedSignature;
     }
 
-    function _safeAddUint48(uint48 a, uint48 b) internal pure returns (uint48 c) {
-        bool overflow = uint256(a) + uint256(b) > type(uint48).max;
-        return overflow ? type(uint48).max : a + b;
+    function _safeAddUint48(uint48 a, uint48 b, uint48 end) internal pure returns (uint48 c) {
+        bool overflow = uint256(a) + uint256(b) > end;
+        return overflow ? end : a + b;
     }
 
     function _safeAddUint160(uint160 a, uint160 b) internal pure returns (uint160 c) {
