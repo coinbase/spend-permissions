@@ -87,6 +87,7 @@ contract GetCurrentPeriodTest is SpendPermissionManagerBase {
         vm.assume(start < end);
         vm.assume(period > 0);
         vm.assume(allowance > 0);
+        vm.assume(spend > 0);
         vm.assume(spend <= allowance);
 
         SpendPermissionManager.SpendPermission memory spendPermission = SpendPermissionManager.SpendPermission({
@@ -124,6 +125,7 @@ contract GetCurrentPeriodTest is SpendPermissionManagerBase {
         vm.assume(period > 0);
         vm.assume(period <= end - start);
         vm.assume(allowance > 0);
+        vm.assume(spend > 0);
         vm.assume(spend <= allowance);
 
         SpendPermissionManager.SpendPermission memory spendPermission = SpendPermissionManager.SpendPermission({
@@ -163,6 +165,7 @@ contract GetCurrentPeriodTest is SpendPermissionManagerBase {
         vm.assume(period > 0);
         vm.assume(period < end - start);
         vm.assume(allowance > 0);
+        vm.assume(spend > 0);
         vm.assume(spend <= allowance);
 
         SpendPermissionManager.SpendPermission memory spendPermission = SpendPermissionManager.SpendPermission({

@@ -50,6 +50,40 @@ contract SpendTest is SpendPermissionManagerBase {
         vm.stopPrank();
     }
 
+    function test_spend_revert_zeroValue(
+        uint128 invalidPk,
+        address spender,
+        address recipient,
+        uint48 start,
+        uint48 end,
+        uint48 period,
+        uint160 allowance
+    ) public {
+        vm.assume(invalidPk != 0);
+        vm.assume(start > 0);
+        vm.assume(end > 0);
+        vm.assume(start < end);
+        vm.assume(period > 0);
+        vm.assume(allowance > 0);
+        uint160 spend = 0;
+
+        SpendPermissionManager.SpendPermission memory spendPermission = SpendPermissionManager.SpendPermission({
+            account: address(account),
+            spender: spender,
+            token: NATIVE_TOKEN,
+            start: start,
+            end: end,
+            period: period,
+            allowance: allowance
+        });
+
+        vm.warp(start);
+        vm.startPrank(spender);
+        vm.expectRevert(abi.encodeWithSelector(SpendPermissionManager.ZeroValue.selector));
+        mockSpendPermissionManager.spend(spendPermission, recipient, spend);
+        vm.stopPrank();
+    }
+
     function test_spend_revert_unauthorizedSpendPermission(
         uint128 invalidPk,
         address spender,
