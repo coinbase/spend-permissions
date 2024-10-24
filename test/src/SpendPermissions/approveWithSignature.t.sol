@@ -19,7 +19,8 @@ contract ApproveWithSignatureTest is SpendPermissionManagerBase {
         uint48 start,
         uint48 end,
         uint48 period,
-        uint160 allowance
+        uint160 allowance,
+        uint256 salt
     ) public {
         vm.assume(invalidPk != 0);
 
@@ -30,7 +31,8 @@ contract ApproveWithSignatureTest is SpendPermissionManagerBase {
             start: start,
             end: end,
             period: period,
-            allowance: allowance
+            allowance: allowance,
+            salt: salt
         });
 
         bytes memory invalidSignature = _signSpendPermission(spendPermission, invalidPk, 0);
@@ -43,7 +45,8 @@ contract ApproveWithSignatureTest is SpendPermissionManagerBase {
         uint48 start,
         uint48 end,
         uint48 period,
-        uint160 allowance
+        uint160 allowance,
+        uint256 salt
     ) public {
         vm.assume(start >= end);
 
@@ -54,7 +57,8 @@ contract ApproveWithSignatureTest is SpendPermissionManagerBase {
             start: start,
             end: end,
             period: period,
-            allowance: allowance
+            allowance: allowance,
+            salt: salt
         });
 
         bytes memory signature = _signSpendPermission(spendPermission, ownerPk, 0);
@@ -62,9 +66,13 @@ contract ApproveWithSignatureTest is SpendPermissionManagerBase {
         mockSpendPermissionManager.approveWithSignature(spendPermission, signature);
     }
 
-    function test_approveWithSignature_revert_zeroPeriod(address spender, uint48 start, uint48 end, uint160 allowance)
-        public
-    {
+    function test_approveWithSignature_revert_zeroPeriod(
+        address spender,
+        uint48 start,
+        uint48 end,
+        uint160 allowance,
+        uint256 salt
+    ) public {
         vm.assume(start < end);
 
         SpendPermissionManager.SpendPermission memory spendPermission = SpendPermissionManager.SpendPermission({
@@ -74,7 +82,8 @@ contract ApproveWithSignatureTest is SpendPermissionManagerBase {
             start: start,
             end: end,
             period: 0,
-            allowance: allowance
+            allowance: allowance,
+            salt: salt
         });
 
         bytes memory signature = _signSpendPermission(spendPermission, ownerPk, 0);
@@ -82,9 +91,13 @@ contract ApproveWithSignatureTest is SpendPermissionManagerBase {
         mockSpendPermissionManager.approveWithSignature(spendPermission, signature);
     }
 
-    function test_approveWithSignature_revert_zeroAllowance(address spender, uint48 start, uint48 end, uint48 period)
-        public
-    {
+    function test_approveWithSignature_revert_zeroAllowance(
+        address spender,
+        uint48 start,
+        uint48 end,
+        uint48 period,
+        uint256 salt
+    ) public {
         vm.assume(start < end);
         vm.assume(period > 0);
 
@@ -95,7 +108,8 @@ contract ApproveWithSignatureTest is SpendPermissionManagerBase {
             start: start,
             end: end,
             period: period,
-            allowance: 0
+            allowance: 0,
+            salt: salt
         });
 
         bytes memory signature = _signSpendPermission(spendPermission, ownerPk, 0);
@@ -109,7 +123,8 @@ contract ApproveWithSignatureTest is SpendPermissionManagerBase {
         uint48 start,
         uint48 end,
         uint48 period,
-        uint160 allowance
+        uint160 allowance,
+        uint256 salt
     ) public {
         vm.assume(start < end);
         vm.assume(period > 0);
@@ -122,7 +137,8 @@ contract ApproveWithSignatureTest is SpendPermissionManagerBase {
             start: start,
             end: end,
             period: period,
-            allowance: allowance
+            allowance: allowance,
+            salt: salt
         });
 
         bytes memory signature = _signSpendPermission(spendPermission, ownerPk, 0);
@@ -136,7 +152,8 @@ contract ApproveWithSignatureTest is SpendPermissionManagerBase {
         uint48 start,
         uint48 end,
         uint48 period,
-        uint160 allowance
+        uint160 allowance,
+        uint256 salt
     ) public {
         vm.assume(start < end);
         vm.assume(period > 0);
@@ -149,7 +166,8 @@ contract ApproveWithSignatureTest is SpendPermissionManagerBase {
             start: start,
             end: end,
             period: period,
-            allowance: allowance
+            allowance: allowance,
+            salt: salt
         });
 
         bytes memory signature = _signSpendPermission(spendPermission, ownerPk, 0);

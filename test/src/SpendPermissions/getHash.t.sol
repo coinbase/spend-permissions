@@ -18,7 +18,8 @@ contract GetHashTest is SpendPermissionManagerBase {
         uint48 start,
         uint48 end,
         uint48 period,
-        uint160 allowance
+        uint160 allowance,
+        uint256 salt
     ) public view {
         SpendPermissionManager.SpendPermission memory spendPermission = SpendPermissionManager.SpendPermission({
             account: account,
@@ -27,7 +28,8 @@ contract GetHashTest is SpendPermissionManagerBase {
             start: start,
             end: end,
             period: period,
-            allowance: allowance
+            allowance: allowance,
+            salt: salt
         });
         mockSpendPermissionManager.getHash(spendPermission);
     }
@@ -40,6 +42,7 @@ contract GetHashTest is SpendPermissionManagerBase {
         uint48 end,
         uint48 period,
         uint160 allowance,
+        uint256 salt,
         uint64 chainId1,
         uint64 chainId2
     ) public {
@@ -53,7 +56,8 @@ contract GetHashTest is SpendPermissionManagerBase {
             start: start,
             end: end,
             period: period,
-            allowance: allowance
+            allowance: allowance,
+            salt: salt
         });
         vm.chainId(chainId1);
         bytes32 hash1 = mockSpendPermissionManager.getHash(spendPermission);
@@ -69,7 +73,8 @@ contract GetHashTest is SpendPermissionManagerBase {
         uint48 start,
         uint48 end,
         uint48 period,
-        uint160 allowance
+        uint160 allowance,
+        uint256 salt
     ) public {
         SpendPermissionManager.SpendPermission memory spendPermission = SpendPermissionManager.SpendPermission({
             account: account,
@@ -78,7 +83,8 @@ contract GetHashTest is SpendPermissionManagerBase {
             start: start,
             end: end,
             period: period,
-            allowance: allowance
+            allowance: allowance,
+            salt: salt
         });
         MockSpendPermissionManager mockSpendPermissionManager1 = new MockSpendPermissionManager();
         MockSpendPermissionManager mockSpendPermissionManager2 = new MockSpendPermissionManager();
