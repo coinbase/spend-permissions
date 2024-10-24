@@ -41,13 +41,15 @@ contract SpendPermissionManager is EIP712 {
         address token;
         /// @dev Maximum allowed value to spend within a recurring period.
         uint160 allowance;
+        /// @dev Entity that can spend user funds.
+        address spender;
+        /// @dev An arbitrary salt to differentiate unique spend permissions with otherwise identical data.
+        uint256 salt;
     }
 
     struct SpendPermissionBatch {
         /// @dev Smart account this spend permission is valid for.
         address account;
-        /// @dev Entity that can spend user funds.
-        address spender;
         /// @dev Timestamp this spend permission is valid after (unix seconds).
         uint48 start;
         /// @dev Timestamp this spend permission is valid until (unix seconds).
@@ -68,7 +70,7 @@ contract SpendPermissionManager is EIP712 {
         uint160 spend;
     }
 
-    bytes32 constant MESSAGE_TYPEHASH = keccak256(
+    bytes32 constant PERMISSION_TYPEHASH = keccak256(
         "SpendPermission(address account,address spender,address token,uint160 allowance,uint48 period,uint48 start,uint48 end,uint256 salt,bytes extraData)"
     );
 
@@ -76,7 +78,8 @@ contract SpendPermissionManager is EIP712 {
         "SpendPermissionBatch(address account,address spender,uint48 start,uint48 end,uint48 period,TokenAllowance[] tokenAllowances)TokenAllowance(address token,uint160 allowance)"
     );
 
-    bytes32 constant TOKEN_ALLOWANCE_TYPEHASH = keccak256("TokenAllowance(address token,uint160 allowance)");
+    bytes32 constant TOKEN_ALLOWANCE_TYPEHASH =
+        keccak256("TokenAllowance(address token,uint160 allowance,address spender,uint256 salt)");
 
     /// @notice ERC-7528 address convention for native token (https://eips.ethereum.org/EIPS/eip-7528).
     address public constant NATIVE_TOKEN = 0xEeeeeEeeeEeEeeEeEeEeeEEEeeeeEeeeeeeeEEeE;
@@ -251,12 +254,13 @@ contract SpendPermissionManager is EIP712 {
             _approve(
                 SpendPermission({
                     account: spendPermissionBatch.account,
-                    spender: spendPermissionBatch.spender,
+                    spender: spendPermissionBatch.tokenAllowances[i].spender,
                     start: spendPermissionBatch.start,
                     end: spendPermissionBatch.end,
                     period: spendPermissionBatch.period,
                     token: spendPermissionBatch.tokenAllowances[i].token,
-                    allowance: spendPermissionBatch.tokenAllowances[i].allowance
+                    allowance: spendPermissionBatch.tokenAllowances[i].allowance,
+                    salt: spendPermissionBatch.tokenAllowances[i].salt
                 })
             );
         }
@@ -276,16 +280,17 @@ contract SpendPermissionManager is EIP712 {
         bytes calldata signature,
         uint256 index,
         uint160 value
-    ) public requireSender(spendPermissionBatch.spender) {
+    ) public {
         approveBatchWithSignature(spendPermissionBatch, signature);
         SpendPermission memory spendPermission = SpendPermission({
             account: spendPermissionBatch.account,
-            spender: spendPermissionBatch.spender,
+            spender: spendPermissionBatch.tokenAllowances[index].spender,
             start: spendPermissionBatch.start,
             end: spendPermissionBatch.end,
             period: spendPermissionBatch.period,
             token: spendPermissionBatch.tokenAllowances[index].token,
-            allowance: spendPermissionBatch.tokenAllowances[index].allowance
+            allowance: spendPermissionBatch.tokenAllowances[index].allowance,
+            salt: spendPermissionBatch.tokenAllowances[index].salt
         });
         spend(spendPermission, value);
     }
@@ -317,7 +322,6 @@ contract SpendPermissionManager is EIP712 {
                 abi.encode(
                     PERMISSION_BATCH_TYPEHASH,
                     spendPermissionBatch.account,
-                    spendPermissionBatch.spender,
                     spendPermissionBatch.start,
                     spendPermissionBatch.end,
                     spendPermissionBatch.period,
