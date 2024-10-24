@@ -34,7 +34,31 @@ contract SpendPermissionManager is EIP712 {
         uint256 salt;
     }
 
-    /// @notice Spend Permission usage for a certain period.
+    struct TokenAllowance {
+        /// @dev Token address (ERC-7528 ether address or ERC-20 contract).
+        address token;
+        /// @dev Maximum allowed value to spend within a recurring period.
+        uint160 allowance;
+        /// @dev Entity that can spend user funds.
+        address spender;
+        /// @dev An arbitrary salt to differentiate unique spend permissions with otherwise identical data.
+        uint256 salt;
+    }
+
+    struct SpendPermissionBatch {
+        /// @dev Smart account this spend permission is valid for.
+        address account;
+        /// @dev Timestamp this spend permission is valid after (unix seconds).
+        uint48 start;
+        /// @dev Timestamp this spend permission is valid until (unix seconds).
+        uint48 end;
+        /// @dev Time duration for resetting used allowance on a recurring basis (seconds).
+        uint48 period;
+        /// @dev Array of (token, allowance) tuples applied to this batch.
+        TokenAllowance[] tokenAllowances;
+    }
+
+    /// @notice Period parameters and spend usage.
     struct PeriodSpend {
         /// @dev Start time of the period (unix seconds).
         uint48 start;
@@ -44,9 +68,16 @@ contract SpendPermissionManager is EIP712 {
         uint160 spend;
     }
 
-    bytes32 constant MESSAGE_TYPEHASH = keccak256(
+    bytes32 constant PERMISSION_TYPEHASH = keccak256(
         "SpendPermission(address account,address spender,address token,uint160 allowance,uint48 period,uint48 start,uint48 end,uint256 salt)"
     );
+
+    bytes32 constant PERMISSION_BATCH_TYPEHASH = keccak256(
+        "SpendPermissionBatch(address account,address spender,uint48 start,uint48 end,uint48 period,TokenAllowance[] tokenAllowances)TokenAllowance(address token,uint160 allowance)"
+    );
+
+    bytes32 constant TOKEN_ALLOWANCE_TYPEHASH =
+        keccak256("TokenAllowance(address token,uint160 allowance,address spender,uint256 salt)");
 
     /// @notice ERC-7528 address convention for native token (https://eips.ethereum.org/EIPS/eip-7528).
     address public constant NATIVE_TOKEN = 0xEeeeeEeeeEeEeeEeEeEeeEEEeeeeEeeeeeeeEEeE;
@@ -157,26 +188,11 @@ contract SpendPermissionManager is EIP712 {
         emit SpendPermissionRevoked(hash, spendPermission.account, spendPermission);
     }
 
-    /// @notice Approve a spend permission with signature and spend tokens in one call.
-    ///
-    /// @dev After initially approving a spend permission, it is more gas efficient to call `spend` for repeated use.
-    ///
-    /// @param spendPermission Details of the spend permission.
-    /// @param signature Signed approval from the user.
-    /// @param value Amount of token attempting to spend (wei).
-    function spendWithSignature(SpendPermission memory spendPermission, bytes memory signature, uint160 value)
-        external
-        requireSender(spendPermission.spender)
-    {
-        approveWithSignature(spendPermission, signature);
-        spend(spendPermission, value);
-    }
-
     /// @notice Approve a spend permission via a signature from the account.
     ///
     /// @param spendPermission Details of the spend permission.
     /// @param signature Signed approval from the user.
-    function approveWithSignature(SpendPermission memory spendPermission, bytes memory signature) public {
+    function approveWithSignature(SpendPermission calldata spendPermission, bytes calldata signature) public {
         // validate signature over spend permission data
         if (
             IERC1271(spendPermission.account).isValidSignature(getHash(spendPermission), signature)
@@ -186,6 +202,22 @@ contract SpendPermissionManager is EIP712 {
         }
 
         _approve(spendPermission);
+    }
+
+    /// @notice Approve a spend permission with signature and spend tokens in one call, transferring them from `account`
+    /// to `spender`.
+    ///
+    /// @dev After initially approving a spend permission, it is more gas efficient to call `spend` for repeated use.
+    ///
+    /// @param spendPermission Details of the spend permission.
+    /// @param signature Signed approval from the user.
+    /// @param value Amount of token attempting to spend (wei).
+    function spendWithSignature(SpendPermission calldata spendPermission, bytes calldata signature, uint160 value)
+        external
+        requireSender(spendPermission.spender)
+    {
+        approveWithSignature(spendPermission, signature);
+        spend(spendPermission, value);
     }
 
     /// @notice Spend tokens using a spend permission, transferring them from `account` to `spender`.
@@ -200,13 +232,101 @@ contract SpendPermissionManager is EIP712 {
         _transferFrom(spendPermission.token, spendPermission.account, spendPermission.spender, value);
     }
 
+    /// @notice Approve a spend permission batch via a signature from the account.
+    ///
+    /// @param spendPermissionBatch Details of the spend permission batch.
+    /// @param signature Signed approval from the user.
+    function approveBatchWithSignature(SpendPermissionBatch memory spendPermissionBatch, bytes calldata signature)
+        public
+    {
+        // validate signature over spend permission batch data
+        if (
+            IERC1271(spendPermissionBatch.account).isValidSignature(getBatchHash(spendPermissionBatch), signature)
+                != IERC1271.isValidSignature.selector
+        ) {
+            revert InvalidSignature();
+        }
+
+        uint256 batchLen = spendPermissionBatch.tokenAllowances.length;
+        for (uint256 i; i < batchLen; i++) {
+            _approve(
+                SpendPermission({
+                    account: spendPermissionBatch.account,
+                    spender: spendPermissionBatch.tokenAllowances[i].spender,
+                    start: spendPermissionBatch.start,
+                    end: spendPermissionBatch.end,
+                    period: spendPermissionBatch.period,
+                    token: spendPermissionBatch.tokenAllowances[i].token,
+                    allowance: spendPermissionBatch.tokenAllowances[i].allowance,
+                    salt: spendPermissionBatch.tokenAllowances[i].salt
+                })
+            );
+        }
+    }
+
+    /// @notice Approve a spend permission and spend tokens, transferring them from `account` to `spender`.
+
+    ///
+    /// @dev Approves a spend permission for the first time and spends tokens in a single transaction.
+    ///
+    /// @param spendPermissionBatch Details of the spend permission.
+    /// @param signature Signed approval from the user.
+    /// @param index Index of the token allowance within the batch to spend from.
+    /// @param value Amount of token attempting to spend (wei).
+    function spendBatchWithSignature(
+        SpendPermissionBatch calldata spendPermissionBatch,
+        bytes calldata signature,
+        uint256 index,
+        uint160 value
+    ) public {
+        approveBatchWithSignature(spendPermissionBatch, signature);
+        SpendPermission memory spendPermission = SpendPermission({
+            account: spendPermissionBatch.account,
+            spender: spendPermissionBatch.tokenAllowances[index].spender,
+            start: spendPermissionBatch.start,
+            end: spendPermissionBatch.end,
+            period: spendPermissionBatch.period,
+            token: spendPermissionBatch.tokenAllowances[index].token,
+            allowance: spendPermissionBatch.tokenAllowances[index].allowance,
+            salt: spendPermissionBatch.tokenAllowances[index].salt
+        });
+        spend(spendPermission, value);
+    }
+
     /// @notice Hash a SpendPermission struct for signing in accordance with EIP-712.
     ///
     /// @param spendPermission Details of the spend permission.
     ///
     /// @return hash Hash of the spend permission.
     function getHash(SpendPermission memory spendPermission) public view returns (bytes32) {
-        return _hashTypedData(keccak256(abi.encode(MESSAGE_TYPEHASH, spendPermission)));
+        return _hashTypedData(keccak256(abi.encode(PERMISSION_TYPEHASH, spendPermission)));
+    }
+
+    /// @notice Hash a SpendPermissionBatch struct for signing in accordance with EIP-712.
+    ///
+    /// @param spendPermissionBatch Details of the spend permission batch.
+    ///
+    /// @return hash Hash of the spend permission batch.
+    function getBatchHash(SpendPermissionBatch memory spendPermissionBatch) public view returns (bytes32) {
+        uint256 tokenAllowancesLen = spendPermissionBatch.tokenAllowances.length;
+        bytes32[] memory tokenAllowanceHashes = new bytes32[](tokenAllowancesLen);
+        for (uint256 i; i < tokenAllowancesLen; i++) {
+            tokenAllowanceHashes[i] =
+                keccak256(abi.encode(TOKEN_ALLOWANCE_TYPEHASH, spendPermissionBatch.tokenAllowances[i]));
+        }
+
+        return _hashTypedData(
+            keccak256(
+                abi.encode(
+                    PERMISSION_BATCH_TYPEHASH,
+                    spendPermissionBatch.account,
+                    spendPermissionBatch.start,
+                    spendPermissionBatch.end,
+                    spendPermissionBatch.period,
+                    keccak256(abi.encodePacked(tokenAllowanceHashes))
+                )
+            )
+        );
     }
 
     /// @notice Return if spend permission is approved and not revoked.
