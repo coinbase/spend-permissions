@@ -26,7 +26,8 @@ contract SpendPermissionManagerBase is Base {
             start: uint48(vm.getBlockTimestamp()),
             end: type(uint48).max,
             period: 604800,
-            allowance: 1 ether
+            allowance: 1 ether,
+            salt: 0
         });
     }
 

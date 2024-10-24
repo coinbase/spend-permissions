@@ -24,6 +24,7 @@ contract SpendTest is SpendPermissionManagerBase {
         uint48 end,
         uint48 period,
         uint160 allowance,
+        uint256 salt,
         uint160 spend
     ) public {
         vm.assume(start > 0);
@@ -40,7 +41,8 @@ contract SpendTest is SpendPermissionManagerBase {
             start: start,
             end: end,
             period: period,
-            allowance: allowance
+            allowance: allowance,
+            salt: salt
         });
         vm.prank(account);
         mockSpendPermissionManager.approve(spendPermission);
@@ -56,7 +58,8 @@ contract SpendTest is SpendPermissionManagerBase {
         uint48 start,
         uint48 end,
         uint48 period,
-        uint160 allowance
+        uint160 allowance,
+        uint256 salt
     ) public {
         vm.assume(invalidPk != 0);
         vm.assume(start > 0);
@@ -73,7 +76,8 @@ contract SpendTest is SpendPermissionManagerBase {
             start: start,
             end: end,
             period: period,
-            allowance: allowance
+            allowance: allowance,
+            salt: salt
         });
 
         vm.warp(start);
@@ -90,6 +94,7 @@ contract SpendTest is SpendPermissionManagerBase {
         uint48 end,
         uint48 period,
         uint160 allowance,
+        uint256 salt,
         uint160 spend
     ) public {
         vm.assume(invalidPk != 0);
@@ -107,7 +112,8 @@ contract SpendTest is SpendPermissionManagerBase {
             start: start,
             end: end,
             period: period,
-            allowance: allowance
+            allowance: allowance,
+            salt: salt
         });
 
         vm.warp(start);
@@ -123,6 +129,7 @@ contract SpendTest is SpendPermissionManagerBase {
         uint48 end,
         uint48 period,
         uint160 allowance,
+        uint256 salt,
         uint160 spend
     ) public {
         vm.assume(spender != address(account)); // otherwise balance checks can fail
@@ -141,7 +148,8 @@ contract SpendTest is SpendPermissionManagerBase {
             start: start,
             end: end,
             period: period,
-            allowance: allowance
+            allowance: allowance,
+            salt: salt
         });
         vm.deal(address(account), allowance);
         assertEq(address(account).balance, allowance);
@@ -169,6 +177,7 @@ contract SpendTest is SpendPermissionManagerBase {
         uint48 end,
         uint48 period,
         uint160 allowance,
+        uint256 salt,
         uint160 spend
     ) public {
         vm.assume(spender != address(account)); // otherwise balance checks can fail
@@ -187,7 +196,8 @@ contract SpendTest is SpendPermissionManagerBase {
             start: start,
             end: end,
             period: period,
-            allowance: allowance
+            allowance: allowance,
+            salt: salt
         });
         vm.deal(address(account), allowance);
         vm.deal(spender, 0);
@@ -213,6 +223,7 @@ contract SpendTest is SpendPermissionManagerBase {
         uint48 end,
         uint48 period,
         uint160 allowance,
+        uint256 salt,
         uint160 spend
     ) public {
         vm.assume(spender != address(account)); // otherwise balance checks can fail
@@ -230,7 +241,8 @@ contract SpendTest is SpendPermissionManagerBase {
             start: start,
             end: end,
             period: period,
-            allowance: allowance
+            allowance: allowance,
+            salt: salt
         });
         mockERC20.mint(address(account), allowance);
         vm.prank(address(account));

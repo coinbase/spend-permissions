@@ -17,7 +17,8 @@ contract UseSpendPermissionTest is SpendPermissionManagerBase {
         uint48 end,
         uint48 period,
         uint160 allowance,
-        uint160 spend
+        uint160 spend,
+        uint256 salt
     ) public {
         vm.assume(start > 0);
         vm.assume(end > 0);
@@ -33,7 +34,8 @@ contract UseSpendPermissionTest is SpendPermissionManagerBase {
             start: start,
             end: end,
             period: period,
-            allowance: allowance
+            allowance: allowance,
+            salt: salt
         });
 
         vm.expectRevert(SpendPermissionManager.UnauthorizedSpendPermission.selector);
@@ -46,7 +48,8 @@ contract UseSpendPermissionTest is SpendPermissionManagerBase {
         uint48 start,
         uint48 end,
         uint48 period,
-        uint160 allowance
+        uint160 allowance,
+        uint256 salt
     ) public {
         vm.assume(start > 0);
         vm.assume(end > 0);
@@ -63,7 +66,8 @@ contract UseSpendPermissionTest is SpendPermissionManagerBase {
             start: start,
             end: end,
             period: period,
-            allowance: allowance
+            allowance: allowance,
+            salt: salt
         });
         vm.prank(account);
         mockSpendPermissionManager.approve(spendPermission);
@@ -80,7 +84,8 @@ contract UseSpendPermissionTest is SpendPermissionManagerBase {
         uint48 end,
         uint48 period,
         uint160 allowance,
-        uint160 spend
+        uint160 spend,
+        uint256 salt
     ) public {
         vm.assume(start > 0);
         vm.assume(end > 0);
@@ -96,7 +101,8 @@ contract UseSpendPermissionTest is SpendPermissionManagerBase {
             start: start,
             end: end,
             period: period,
-            allowance: allowance
+            allowance: allowance,
+            salt: salt
         });
         vm.prank(account);
         mockSpendPermissionManager.approve(spendPermission);
@@ -115,6 +121,7 @@ contract UseSpendPermissionTest is SpendPermissionManagerBase {
         uint48 end,
         uint48 period,
         uint160 allowance,
+        uint256 salt,
         uint160 firstSpend,
         uint160 secondSpend
     ) public {
@@ -135,7 +142,8 @@ contract UseSpendPermissionTest is SpendPermissionManagerBase {
             start: start,
             end: end,
             period: period,
-            allowance: allowance
+            allowance: allowance,
+            salt: salt
         });
         vm.prank(account);
         mockSpendPermissionManager.approve(spendPermission);
@@ -169,7 +177,8 @@ contract UseSpendPermissionTest is SpendPermissionManagerBase {
         uint48 end,
         uint48 period,
         uint160 allowance,
-        uint160 spend
+        uint160 spend,
+        uint256 salt
     ) public {
         vm.assume(start > 0);
         vm.assume(end > 0);
@@ -186,7 +195,8 @@ contract UseSpendPermissionTest is SpendPermissionManagerBase {
             start: start,
             end: end,
             period: period,
-            allowance: allowance
+            allowance: allowance,
+            salt: salt
         });
 
         vm.prank(account);
@@ -213,7 +223,8 @@ contract UseSpendPermissionTest is SpendPermissionManagerBase {
         uint48 end,
         uint48 period,
         uint160 allowance,
-        uint160 spend
+        uint160 spend,
+        uint256 salt
     ) public {
         vm.assume(start > 0);
         vm.assume(end > 0);
@@ -230,7 +241,8 @@ contract UseSpendPermissionTest is SpendPermissionManagerBase {
             start: start,
             end: end,
             period: period,
-            allowance: allowance
+            allowance: allowance,
+            salt: salt
         });
 
         vm.prank(account);
@@ -249,7 +261,8 @@ contract UseSpendPermissionTest is SpendPermissionManagerBase {
         uint48 start,
         uint48 end,
         uint48 period,
-        uint160 allowance
+        uint160 allowance,
+        uint256 salt
     ) public {
         vm.assume(start > 0);
         vm.assume(end > 0);
@@ -264,7 +277,8 @@ contract UseSpendPermissionTest is SpendPermissionManagerBase {
             start: start,
             end: end,
             period: period,
-            allowance: allowance
+            allowance: allowance,
+            salt: salt
         });
 
         vm.prank(account);
@@ -284,6 +298,7 @@ contract UseSpendPermissionTest is SpendPermissionManagerBase {
         uint48 end,
         uint48 period,
         uint160 allowance,
+        uint256 salt,
         uint8 numberOfSpends
     ) public {
         vm.assume(start > 0);
@@ -302,7 +317,8 @@ contract UseSpendPermissionTest is SpendPermissionManagerBase {
             start: start,
             end: end,
             period: period,
-            allowance: allowance
+            allowance: allowance,
+            salt: salt
         });
 
         vm.prank(account);

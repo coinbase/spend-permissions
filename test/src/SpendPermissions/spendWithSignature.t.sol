@@ -23,6 +23,7 @@ contract SpendWithSignatureTest is SpendPermissionManagerBase {
         uint48 end,
         uint48 period,
         uint160 allowance,
+        uint256 salt,
         uint160 spend
     ) public {
         vm.assume(start > 0);
@@ -39,7 +40,8 @@ contract SpendWithSignatureTest is SpendPermissionManagerBase {
             start: start,
             end: end,
             period: period,
-            allowance: allowance
+            allowance: allowance,
+            salt: salt
         });
         bytes memory signature = _signSpendPermission(spendPermission, ownerPk, 0);
         vm.startPrank(sender);
@@ -55,6 +57,7 @@ contract SpendWithSignatureTest is SpendPermissionManagerBase {
         uint48 end,
         uint48 period,
         uint160 allowance,
+        uint256 salt,
         uint160 spend
     ) public {
         vm.assume(invalidPk != 0);
@@ -72,7 +75,8 @@ contract SpendWithSignatureTest is SpendPermissionManagerBase {
             start: start,
             end: end,
             period: period,
-            allowance: allowance
+            allowance: allowance,
+            salt: salt
         });
         bytes memory invalidSignature = _signSpendPermission(spendPermission, invalidPk, 0);
         vm.warp(start);
@@ -88,6 +92,7 @@ contract SpendWithSignatureTest is SpendPermissionManagerBase {
         uint48 end,
         uint48 period,
         uint160 allowance,
+        uint256 salt,
         uint160 spend
     ) public {
         vm.assume(spender != address(account)); // otherwise balance checks can fail
@@ -106,7 +111,8 @@ contract SpendWithSignatureTest is SpendPermissionManagerBase {
             start: start,
             end: end,
             period: period,
-            allowance: allowance
+            allowance: allowance,
+            salt: salt
         });
         vm.deal(address(account), allowance);
         assertEq(address(account).balance, allowance);
@@ -133,6 +139,7 @@ contract SpendWithSignatureTest is SpendPermissionManagerBase {
         uint48 end,
         uint48 period,
         uint160 allowance,
+        uint256 salt,
         uint160 spend
     ) public {
         vm.assume(spender != address(account)); // otherwise balance checks can fail
@@ -151,7 +158,8 @@ contract SpendWithSignatureTest is SpendPermissionManagerBase {
             start: start,
             end: end,
             period: period,
-            allowance: allowance
+            allowance: allowance,
+            salt: salt
         });
         vm.deal(address(account), allowance);
         vm.prank(address(account));
@@ -177,6 +185,7 @@ contract SpendWithSignatureTest is SpendPermissionManagerBase {
         uint48 end,
         uint48 period,
         uint160 allowance,
+        uint256 salt,
         uint160 spend
     ) public {
         vm.assume(spender != address(account)); // otherwise balance checks can fail
@@ -194,7 +203,8 @@ contract SpendWithSignatureTest is SpendPermissionManagerBase {
             start: start,
             end: end,
             period: period,
-            allowance: allowance
+            allowance: allowance,
+            salt: salt
         });
         bytes memory signature = _signSpendPermission(spendPermission, ownerPk, 0);
         mockERC20.mint(address(account), allowance);

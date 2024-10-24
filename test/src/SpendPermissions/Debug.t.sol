@@ -48,7 +48,8 @@ contract DebugTest is Test, Base {
             start: 0,
             end: 1758791693, // 1 year from now
             period: 86400, // 1 day
-            allowance: 1 ether
+            allowance: 1 ether,
+            salt: 0
         });
     }
 }
