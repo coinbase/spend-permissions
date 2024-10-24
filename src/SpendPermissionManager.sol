@@ -116,9 +116,6 @@ contract SpendPermissionManager is EIP712 {
     /// @notice Unauthorized spend permission.
     error UnauthorizedSpendPermission();
 
-    /// @notice Invalid signature.
-    error InvalidSignature();
-
     /// @notice Recurring period has not started yet.
     ///
     /// @param currentTimestamp Current timestamp (unix seconds).
@@ -197,7 +194,7 @@ contract SpendPermissionManager is EIP712 {
     /// @param spendPermission Details of the spend permission.
     /// @param signature Signed approval from the user.
     /// @param value Amount of token attempting to spend (wei).
-    function spendWithSignature(SpendPermission memory spendPermission, bytes memory signature, uint160 value)
+    function spendWithSignature(SpendPermission calldata spendPermission, bytes calldata signature, uint160 value)
         external
         requireSender(spendPermission.spender)
     {
@@ -209,7 +206,7 @@ contract SpendPermissionManager is EIP712 {
     ///
     /// @param spendPermission Details of the spend permission.
     /// @param signature Signed approval from the user.
-    function approveWithSignature(SpendPermission memory spendPermission, bytes memory signature) public {
+    function approveWithSignature(SpendPermission calldata spendPermission, bytes calldata signature) public {
         // validate signature over spend permission data
         if (
             IERC1271(spendPermission.account).isValidSignature(getHash(spendPermission), signature)
@@ -225,12 +222,12 @@ contract SpendPermissionManager is EIP712 {
     ///
     /// @param spendPermissionBatch Details of the spend permission batch.
     /// @param signature Signed approval from the user.
-    function approveBatchWithSignature(SpendPermissionBatch calldata spendPermissionBatch, bytes memory signature)
-        external
+    function approveBatchWithSignature(SpendPermissionBatch memory spendPermissionBatch, bytes calldata signature)
+        public
     {
         // validate signature over spend permission batch data
         if (
-            IERC1271(spendPermission.account).isValidSignature(getHash(spendPermission), signature)
+            IERC1271(spendPermissionBatch.account).isValidSignature(getBatchHash(spendPermissionBatch), signature)
                 != IERC1271.isValidSignature.selector
         ) {
             revert InvalidSignature();
@@ -256,32 +253,16 @@ contract SpendPermissionManager is EIP712 {
     ///
     /// @dev Approves a spend permission for the first time and spends tokens in a single transaction.
     ///
-    /// @param spendPermission Details of the spend permission.
-    /// @param value Amount of token attempting to spend (wei).
-    function spendWithSignature(SpendPermission memory spendPermission, bytes memory signature, uint160 value)
-        public
-        requireSender(spendPermission.spender)
-    {
-        approveWithSignature(spendPermission, signature);
-        spend(spendPermission, value);
-    }
-
-    /// @notice Approve a spend permission and spend tokens.
-    ///
-    /// @dev Approves a spend permission for the first time and spends tokens in a single transaction.
-    ///
-    /// @param spendPermission Details of the spend permission.
+    /// @param spendPermissionBatch Details of the spend permission.
     /// @param signature Signed approval from the user.
     /// @param index Index of the token allowance within the batch to spend from.
-    /// @param recipient Address to spend tokens to.
     /// @param value Amount of token attempting to spend (wei).
     function spendBatchWithSignature(
-        SpendPermissionBatch memory spendPermissionBatch,
-        bytes memory signature,
+        SpendPermissionBatch calldata spendPermissionBatch,
+        bytes calldata signature,
         uint256 index,
-        address recipient,
         uint160 value
-    ) public requireSender(spendPermission.spender) {
+    ) public requireSender(spendPermissionBatch.spender) {
         approveBatchWithSignature(spendPermissionBatch, signature);
         SpendPermission memory spendPermission = SpendPermission({
             account: spendPermissionBatch.account,
@@ -298,9 +279,8 @@ contract SpendPermissionManager is EIP712 {
     /// @notice Spend tokens using a spend permission.
     ///
     /// @param spendPermission Details of the spend permission.
-    /// @param recipient Address to spend tokens to.
     /// @param value Amount of token attempting to spend (wei).
-    function spend(SpendPermission memory spendPermission, address recipient, uint160 value)
+    function spend(SpendPermission memory spendPermission, uint160 value)
         public
         requireSender(spendPermission.spender)
     {
@@ -324,7 +304,7 @@ contract SpendPermissionManager is EIP712 {
     /// @return hash Hash of the spend permission batch.
     function getBatchHash(SpendPermissionBatch memory spendPermissionBatch) public view returns (bytes32) {
         uint256 tokenAllowancesLen = spendPermissionBatch.tokenAllowances.length;
-        bytes32[] tokenAllowanceHashes = new bytes32[](tokenAllowancesLen);
+        bytes32[] memory tokenAllowanceHashes = new bytes32[](tokenAllowancesLen);
         for (uint256 i; i < tokenAllowancesLen; i++) {
             tokenAllowanceHashes[i] =
                 keccak256(abi.encode(TOKEN_ALLOWANCE_TYPEHASH, spendPermissionBatch.tokenAllowances[i]));
@@ -339,7 +319,7 @@ contract SpendPermissionManager is EIP712 {
                     spendPermissionBatch.start,
                     spendPermissionBatch.end,
                     spendPermissionBatch.period,
-                    keccak256(tokenAllowanceHashes)
+                    keccak256(abi.encodePacked(tokenAllowanceHashes))
                 )
             )
         );
