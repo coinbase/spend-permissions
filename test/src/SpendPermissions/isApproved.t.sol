@@ -18,7 +18,8 @@ contract IsApprovedTest is SpendPermissionManagerBase {
         uint48 end,
         uint48 period,
         uint160 allowance,
-        uint256 salt
+        uint256 salt,
+        bytes memory extraData
     ) public {
         vm.assume(start < end);
         vm.assume(period > 0);
@@ -32,7 +33,8 @@ contract IsApprovedTest is SpendPermissionManagerBase {
             end: end,
             period: period,
             allowance: allowance,
-            salt: salt
+            salt: salt,
+            extraData: extraData
         });
 
         vm.prank(account);
@@ -48,7 +50,8 @@ contract IsApprovedTest is SpendPermissionManagerBase {
         uint48 end,
         uint48 period,
         uint160 allowance,
-        uint256 salt
+        uint256 salt,
+        bytes memory extraData
     ) public view {
         SpendPermissionManager.SpendPermission memory spendPermission = SpendPermissionManager.SpendPermission({
             account: account,
@@ -58,7 +61,8 @@ contract IsApprovedTest is SpendPermissionManagerBase {
             end: end,
             period: period,
             allowance: allowance,
-            salt: salt
+            salt: salt,
+            extraData: extraData
         });
         vm.assertFalse(mockSpendPermissionManager.isApproved(spendPermission));
     }
@@ -71,7 +75,8 @@ contract IsApprovedTest is SpendPermissionManagerBase {
         uint48 end,
         uint48 period,
         uint160 allowance,
-        uint256 salt
+        uint256 salt,
+        bytes memory extraData
     ) public {
         vm.assume(start < end);
         vm.assume(period > 0);
@@ -85,7 +90,8 @@ contract IsApprovedTest is SpendPermissionManagerBase {
             end: end,
             period: period,
             allowance: allowance,
-            salt: salt
+            salt: salt,
+            extraData: extraData
         });
         vm.startPrank(account);
 

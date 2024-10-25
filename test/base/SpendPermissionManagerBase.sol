@@ -27,7 +27,8 @@ contract SpendPermissionManagerBase is Base {
             end: type(uint48).max,
             period: 604800,
             allowance: 1 ether,
-            salt: 0
+            salt: 0,
+            extraData: "0x"
         });
     }
 

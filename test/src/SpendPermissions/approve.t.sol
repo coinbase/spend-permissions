@@ -4,6 +4,7 @@ pragma solidity ^0.8.23;
 import {SpendPermissionManager} from "../../../src/SpendPermissionManager.sol";
 
 import {SpendPermissionManagerBase} from "../../base/SpendPermissionManagerBase.sol";
+import {Test, console2} from "forge-std/Test.sol";
 
 contract ApproveTest is SpendPermissionManagerBase {
     function setUp() public {
@@ -18,11 +19,12 @@ contract ApproveTest is SpendPermissionManagerBase {
         uint48 end,
         uint48 period,
         uint160 allowance,
-        uint256 salt
+        uint256 salt,
+        bytes memory extraData
     ) public {
         vm.assume(sender != address(0));
         vm.assume(sender != account);
-
+        console2.log(extraData.length);
         SpendPermissionManager.SpendPermission memory spendPermission = SpendPermissionManager.SpendPermission({
             account: account,
             spender: spender,
@@ -31,7 +33,8 @@ contract ApproveTest is SpendPermissionManagerBase {
             end: end,
             period: period,
             allowance: allowance,
-            salt: salt
+            salt: salt,
+            extraData: extraData
         });
         vm.startPrank(sender);
         vm.expectRevert(abi.encodeWithSelector(SpendPermissionManager.InvalidSender.selector, sender, account));
@@ -46,7 +49,8 @@ contract ApproveTest is SpendPermissionManagerBase {
         uint48 end,
         uint48 period,
         uint160 allowance,
-        uint256 salt
+        uint256 salt,
+        bytes memory extraData
     ) public {
         vm.assume(start >= end);
 
@@ -58,7 +62,8 @@ contract ApproveTest is SpendPermissionManagerBase {
             end: end,
             period: period,
             allowance: allowance,
-            salt: salt
+            salt: salt,
+            extraData: extraData
         });
         vm.startPrank(account);
         vm.expectRevert(abi.encodeWithSelector(SpendPermissionManager.InvalidStartEnd.selector, start, end));
@@ -72,7 +77,8 @@ contract ApproveTest is SpendPermissionManagerBase {
         uint48 start,
         uint48 end,
         uint160 allowance,
-        uint256 salt
+        uint256 salt,
+        bytes memory extraData
     ) public {
         vm.assume(start < end);
 
@@ -84,7 +90,8 @@ contract ApproveTest is SpendPermissionManagerBase {
             end: end,
             period: 0,
             allowance: allowance,
-            salt: salt
+            salt: salt,
+            extraData: extraData
         });
         vm.startPrank(account);
         vm.expectRevert(abi.encodeWithSelector(SpendPermissionManager.ZeroPeriod.selector));
@@ -98,7 +105,8 @@ contract ApproveTest is SpendPermissionManagerBase {
         uint48 start,
         uint48 end,
         uint48 period,
-        uint256 salt
+        uint256 salt,
+        bytes memory extraData
     ) public {
         vm.assume(start < end);
         vm.assume(period > 0);
@@ -111,7 +119,8 @@ contract ApproveTest is SpendPermissionManagerBase {
             end: end,
             period: period,
             allowance: 0,
-            salt: salt
+            salt: salt,
+            extraData: extraData
         });
         vm.startPrank(account);
         vm.expectRevert(abi.encodeWithSelector(SpendPermissionManager.ZeroAllowance.selector));
@@ -126,7 +135,8 @@ contract ApproveTest is SpendPermissionManagerBase {
         uint48 end,
         uint48 period,
         uint160 allowance,
-        uint256 salt
+        uint256 salt,
+        bytes memory extraData
     ) public {
         vm.assume(start < end);
         vm.assume(period > 0);
@@ -140,7 +150,8 @@ contract ApproveTest is SpendPermissionManagerBase {
             end: end,
             period: period,
             allowance: allowance,
-            salt: salt
+            salt: salt,
+            extraData: extraData
         });
         vm.prank(account);
         mockSpendPermissionManager.approve(spendPermission);
@@ -154,7 +165,8 @@ contract ApproveTest is SpendPermissionManagerBase {
         uint48 end,
         uint48 period,
         uint160 allowance,
-        uint256 salt
+        uint256 salt,
+        bytes memory extraData
     ) public {
         vm.assume(start < end);
         vm.assume(period > 0);
@@ -168,7 +180,8 @@ contract ApproveTest is SpendPermissionManagerBase {
             end: end,
             period: period,
             allowance: allowance,
-            salt: salt
+            salt: salt,
+            extraData: extraData
         });
         vm.startPrank(account);
         vm.expectEmit(address(mockSpendPermissionManager));
