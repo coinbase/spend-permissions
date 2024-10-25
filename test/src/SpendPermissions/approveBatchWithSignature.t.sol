@@ -5,7 +5,6 @@ import {SpendPermissionManager} from "../../../src/SpendPermissionManager.sol";
 
 import {SpendPermissionManagerBase} from "../../base/SpendPermissionManagerBase.sol";
 
-import {Test, console2} from "forge-std/Test.sol";
 import {Vm} from "forge-std/Vm.sol";
 
 contract ApproveBatchWithSignatureTest is SpendPermissionManagerBase {
@@ -182,7 +181,7 @@ contract ApproveBatchWithSignatureTest is SpendPermissionManagerBase {
 
     function _generateSpendPermissionArrayFromBatch(
         SpendPermissionManager.SpendPermissionBatch memory spendPermissionBatch
-    ) internal view returns (SpendPermissionManager.SpendPermission[] memory) {
+    ) internal pure returns (SpendPermissionManager.SpendPermission[] memory) {
         SpendPermissionManager.SpendPermission[] memory spendPermissions =
             new SpendPermissionManager.SpendPermission[](spendPermissionBatch.tokenAllowances.length);
         for (uint256 i = 0; i < spendPermissionBatch.tokenAllowances.length; i++) {
@@ -205,7 +204,7 @@ contract ApproveBatchWithSignatureTest is SpendPermissionManagerBase {
     function _assertSpendPermissionsEqual(
         SpendPermissionManager.SpendPermission memory expectedSpendPermission,
         bytes memory actualSpendPermissionEncoded
-    ) internal view {
+    ) internal pure {
         (
             address account,
             address spender,

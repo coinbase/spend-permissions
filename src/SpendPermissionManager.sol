@@ -84,6 +84,9 @@ contract SpendPermissionManager is EIP712 {
     /// @notice ERC-7528 address convention for native token (https://eips.ethereum.org/EIPS/eip-7528).
     address public constant NATIVE_TOKEN = 0xEeeeeEeeeEeEeeEeEeEeeEEEeeeeEeeeeeeeEEeE;
 
+    /// @notice A batch of spend permissions is invalidated.
+    mapping(bytes32 hash => mapping(address account => bool batchInvalidated)) internal _isInvalidated;
+
     /// @notice Spend permission is revoked.
     mapping(bytes32 hash => mapping(address account => bool revoked)) internal _isRevoked;
 
@@ -100,6 +103,9 @@ contract SpendPermissionManager is EIP712 {
 
     /// @notice Invalid signature.
     error InvalidSignature();
+
+    /// @notice Batch of spend permissions has been invalidated.
+    error InvalidatedBatch();
 
     /// @notice Spend Permission start time is not strictly less than end time.
     ///
@@ -156,6 +162,15 @@ contract SpendPermissionManager is EIP712 {
     /// @param spendPermission Details of the spend permission.
     event SpendPermissionRevoked(bytes32 indexed hash, address indexed account, SpendPermission spendPermission);
 
+    /// @notice SpendPermission was revoked prematurely by account.
+    ///
+    /// @param hash The unique hash of the batch of spend permissions.
+    /// @param account The smart contract account the batch of spend permissions would control.
+    /// @param spendPermissionBatch Details of the batch of spend permissions.
+    event SpendPermissionBatchInvalidated(
+        bytes32 indexed hash, address indexed account, SpendPermissionBatch spendPermissionBatch
+    );
+
     /// @notice Register native or ERC-20 token spend for a spend permission period.
     ///
     /// @param hash Hash of the spend permission.
@@ -188,6 +203,21 @@ contract SpendPermissionManager is EIP712 {
         bytes32 hash = getHash(spendPermission);
         _isRevoked[hash][spendPermission.account] = true;
         emit SpendPermissionRevoked(hash, spendPermission.account, spendPermission);
+    }
+
+    /// @notice Invalidate a specific batch of spend permissions from being approved.
+    /// @dev This permanently prevents a signature over this specific batch hash from being applied in the future.
+    /// This does not affect the unique spend permissions themselves if they have already been approved
+    /// nor does it prevent the ability to approve them in the future in a different batch or individually.
+    ///
+    /// @param spendPermissionBatch Details of the batch of spend permissions.
+    function invalidateBatch(SpendPermissionBatch calldata spendPermissionBatch)
+        external
+        requireSender(spendPermissionBatch.account)
+    {
+        bytes32 hash = getBatchHash(spendPermissionBatch);
+        _isInvalidated[hash][spendPermissionBatch.account] = true;
+        emit SpendPermissionBatchInvalidated(hash, spendPermissionBatch.account, spendPermissionBatch);
     }
 
     /// @notice Approve a spend permission via a signature from the account.
@@ -241,9 +271,13 @@ contract SpendPermissionManager is EIP712 {
     function approveBatchWithSignature(SpendPermissionBatch memory spendPermissionBatch, bytes calldata signature)
         public
     {
+        bytes32 batchHash = getBatchHash(spendPermissionBatch);
+        if (_isInvalidated[batchHash][spendPermissionBatch.account]) {
+            revert InvalidatedBatch();
+        }
         // validate signature over spend permission batch data
         if (
-            IERC1271(spendPermissionBatch.account).isValidSignature(getBatchHash(spendPermissionBatch), signature)
+            IERC1271(spendPermissionBatch.account).isValidSignature(batchHash, signature)
                 != IERC1271.isValidSignature.selector
         ) {
             revert InvalidSignature();
