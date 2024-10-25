@@ -30,6 +30,8 @@ contract SpendPermissionManager is EIP712 {
         uint48 start;
         /// @dev Timestamp this spend permission is valid until (unix seconds).
         uint48 end;
+        /// @dev An arbitrary salt to differentiate unique spend permissions with otherwise identical data.
+        uint256 salt;
     }
 
     /// @notice Spend Permission usage for a certain period.
@@ -43,7 +45,7 @@ contract SpendPermissionManager is EIP712 {
     }
 
     bytes32 constant MESSAGE_TYPEHASH = keccak256(
-        "SpendPermission(address account,address spender,address token,uint160 allowance,uint48 period,uint48 start,uint48 end)"
+        "SpendPermission(address account,address spender,address token,uint160 allowance,uint48 period,uint48 start,uint48 end,uint256 salt)"
     );
 
     /// @notice ERC-7528 address convention for native token (https://eips.ethereum.org/EIPS/eip-7528).

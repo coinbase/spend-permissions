@@ -17,7 +17,8 @@ contract ApproveTest is SpendPermissionManagerBase {
         uint48 start,
         uint48 end,
         uint48 period,
-        uint160 allowance
+        uint160 allowance,
+        uint256 salt
     ) public {
         vm.assume(sender != address(0));
         vm.assume(sender != account);
@@ -29,7 +30,8 @@ contract ApproveTest is SpendPermissionManagerBase {
             start: start,
             end: end,
             period: period,
-            allowance: allowance
+            allowance: allowance,
+            salt: salt
         });
         vm.startPrank(sender);
         vm.expectRevert(abi.encodeWithSelector(SpendPermissionManager.InvalidSender.selector, sender, account));
@@ -43,7 +45,8 @@ contract ApproveTest is SpendPermissionManagerBase {
         uint48 start,
         uint48 end,
         uint48 period,
-        uint160 allowance
+        uint160 allowance,
+        uint256 salt
     ) public {
         vm.assume(start >= end);
 
@@ -54,7 +57,8 @@ contract ApproveTest is SpendPermissionManagerBase {
             start: start,
             end: end,
             period: period,
-            allowance: allowance
+            allowance: allowance,
+            salt: salt
         });
         vm.startPrank(account);
         vm.expectRevert(abi.encodeWithSelector(SpendPermissionManager.InvalidStartEnd.selector, start, end));
@@ -67,7 +71,8 @@ contract ApproveTest is SpendPermissionManagerBase {
         address spender,
         uint48 start,
         uint48 end,
-        uint160 allowance
+        uint160 allowance,
+        uint256 salt
     ) public {
         vm.assume(start < end);
 
@@ -78,7 +83,8 @@ contract ApproveTest is SpendPermissionManagerBase {
             start: start,
             end: end,
             period: 0,
-            allowance: allowance
+            allowance: allowance,
+            salt: salt
         });
         vm.startPrank(account);
         vm.expectRevert(abi.encodeWithSelector(SpendPermissionManager.ZeroPeriod.selector));
@@ -91,7 +97,8 @@ contract ApproveTest is SpendPermissionManagerBase {
         address spender,
         uint48 start,
         uint48 end,
-        uint48 period
+        uint48 period,
+        uint256 salt
     ) public {
         vm.assume(start < end);
         vm.assume(period > 0);
@@ -103,7 +110,8 @@ contract ApproveTest is SpendPermissionManagerBase {
             start: start,
             end: end,
             period: period,
-            allowance: 0
+            allowance: 0,
+            salt: salt
         });
         vm.startPrank(account);
         vm.expectRevert(abi.encodeWithSelector(SpendPermissionManager.ZeroAllowance.selector));
@@ -117,7 +125,8 @@ contract ApproveTest is SpendPermissionManagerBase {
         uint48 start,
         uint48 end,
         uint48 period,
-        uint160 allowance
+        uint160 allowance,
+        uint256 salt
     ) public {
         vm.assume(start < end);
         vm.assume(period > 0);
@@ -130,7 +139,8 @@ contract ApproveTest is SpendPermissionManagerBase {
             start: start,
             end: end,
             period: period,
-            allowance: allowance
+            allowance: allowance,
+            salt: salt
         });
         vm.prank(account);
         mockSpendPermissionManager.approve(spendPermission);
@@ -143,7 +153,8 @@ contract ApproveTest is SpendPermissionManagerBase {
         uint48 start,
         uint48 end,
         uint48 period,
-        uint160 allowance
+        uint160 allowance,
+        uint256 salt
     ) public {
         vm.assume(start < end);
         vm.assume(period > 0);
@@ -156,7 +167,8 @@ contract ApproveTest is SpendPermissionManagerBase {
             start: start,
             end: end,
             period: period,
-            allowance: allowance
+            allowance: allowance,
+            salt: salt
         });
         vm.startPrank(account);
         vm.expectEmit(address(mockSpendPermissionManager));
