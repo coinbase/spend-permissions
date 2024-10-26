@@ -5,8 +5,6 @@ import {SpendPermissionManager} from "../../../src/SpendPermissionManager.sol";
 
 import {SpendPermissionManagerBase} from "../../base/SpendPermissionManagerBase.sol";
 
-import {Vm} from "forge-std/Vm.sol";
-
 contract InvalidateBatchTest is SpendPermissionManagerBase {
     function setUp() public {
         _initializeSpendPermissionManager();
