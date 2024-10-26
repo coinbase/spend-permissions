@@ -9,10 +9,6 @@ import {Test, console2} from "forge-std/Test.sol";
 import {Vm} from "forge-std/Vm.sol";
 
 contract ApproveBatchWithSignatureTest is SpendPermissionManagerBase {
-    bytes32 SPEND_PERMISSION_APPROVED_EVENT_SIGNATURE = keccak256(
-        "SpendPermissionApproved(bytes32,address,(address,address,address,uint160,uint48,uint48,uint48,uint256,bytes))"
-    );
-
     function setUp() public {
         _initializeSpendPermissionManager();
         vm.prank(owner);
