@@ -5,11 +5,12 @@ import {SpendPermissionManager} from "../../../src/SpendPermissionManager.sol";
 
 import {SpendPermissionManagerBase} from "../../base/SpendPermissionManagerBase.sol";
 
+import {Test, console2} from "forge-std/Test.sol";
 import {Vm} from "forge-std/Vm.sol";
 
 contract ApproveBatchWithSignatureTest is SpendPermissionManagerBase {
     bytes32 SPEND_PERMISSION_APPROVED_EVENT_SIGNATURE = keccak256(
-        "SpendPermissionApproved(bytes32,address,(address,address,address,uint160,uint48,uint48,uint48,uint256))"
+        "SpendPermissionApproved(bytes32,address,(address,address,address,uint160,uint48,uint48,uint48,uint256,bytes))"
     );
 
     function setUp() public {
@@ -34,10 +35,20 @@ contract ApproveBatchWithSignatureTest is SpendPermissionManagerBase {
         vm.assume(allowance > 0);
         vm.assume(invalidPk != 0);
         vm.assume(invalidPk != ownerPk);
-        SpendPermissionManager.TokenAllowance memory tokenAllowance1 =
-            SpendPermissionManager.TokenAllowance({token: token, allowance: allowance, spender: spender, salt: salt1});
-        SpendPermissionManager.TokenAllowance memory tokenAllowance2 =
-            SpendPermissionManager.TokenAllowance({token: token, allowance: allowance, spender: spender, salt: salt2});
+        SpendPermissionManager.TokenAllowance memory tokenAllowance1 = SpendPermissionManager.TokenAllowance({
+            token: token,
+            allowance: allowance,
+            spender: spender,
+            salt: salt1,
+            extraData: "0x"
+        });
+        SpendPermissionManager.TokenAllowance memory tokenAllowance2 = SpendPermissionManager.TokenAllowance({
+            token: token,
+            allowance: allowance,
+            spender: spender,
+            salt: salt2,
+            extraData: "0x"
+        });
         SpendPermissionManager.TokenAllowance[] memory tokenAllowances = new SpendPermissionManager.TokenAllowance[](2);
         tokenAllowances[0] = tokenAllowance1;
         tokenAllowances[1] = tokenAllowance2;
@@ -69,10 +80,20 @@ contract ApproveBatchWithSignatureTest is SpendPermissionManagerBase {
         vm.assume(period > 0);
         vm.assume(allowance1 > 0);
         uint160 allowance2 = 0; // invalid allowance for second spend permission
-        SpendPermissionManager.TokenAllowance memory tokenAllowance1 =
-            SpendPermissionManager.TokenAllowance({token: token, allowance: allowance1, spender: spender, salt: salt});
-        SpendPermissionManager.TokenAllowance memory tokenAllowance2 =
-            SpendPermissionManager.TokenAllowance({token: token, allowance: allowance2, spender: spender, salt: salt});
+        SpendPermissionManager.TokenAllowance memory tokenAllowance1 = SpendPermissionManager.TokenAllowance({
+            token: token,
+            allowance: allowance1,
+            spender: spender,
+            salt: salt,
+            extraData: "0x"
+        });
+        SpendPermissionManager.TokenAllowance memory tokenAllowance2 = SpendPermissionManager.TokenAllowance({
+            token: token,
+            allowance: allowance2,
+            spender: spender,
+            salt: salt,
+            extraData: "0x"
+        });
         SpendPermissionManager.TokenAllowance[] memory tokenAllowances = new SpendPermissionManager.TokenAllowance[](2);
         tokenAllowances[0] = tokenAllowance1;
         tokenAllowances[1] = tokenAllowance2;
@@ -107,10 +128,20 @@ contract ApproveBatchWithSignatureTest is SpendPermissionManagerBase {
         vm.assume(allowance1 > 0);
         vm.assume(allowance2 > 0);
 
-        SpendPermissionManager.TokenAllowance memory tokenAllowance1 =
-            SpendPermissionManager.TokenAllowance({token: token, allowance: allowance1, spender: spender, salt: salt1});
-        SpendPermissionManager.TokenAllowance memory tokenAllowance2 =
-            SpendPermissionManager.TokenAllowance({token: token, allowance: allowance2, spender: spender, salt: salt2});
+        SpendPermissionManager.TokenAllowance memory tokenAllowance1 = SpendPermissionManager.TokenAllowance({
+            token: token,
+            allowance: allowance1,
+            spender: spender,
+            salt: salt1,
+            extraData: "0x"
+        });
+        SpendPermissionManager.TokenAllowance memory tokenAllowance2 = SpendPermissionManager.TokenAllowance({
+            token: token,
+            allowance: allowance2,
+            spender: spender,
+            salt: salt2,
+            extraData: "0x"
+        });
         SpendPermissionManager.TokenAllowance[] memory tokenAllowances = new SpendPermissionManager.TokenAllowance[](2);
         tokenAllowances[0] = tokenAllowance1;
         tokenAllowances[1] = tokenAllowance2;
@@ -144,10 +175,20 @@ contract ApproveBatchWithSignatureTest is SpendPermissionManagerBase {
         vm.assume(allowance1 > 0);
         vm.assume(allowance2 > 0);
 
-        SpendPermissionManager.TokenAllowance memory tokenAllowance1 =
-            SpendPermissionManager.TokenAllowance({token: token, allowance: allowance1, spender: spender, salt: salt1});
-        SpendPermissionManager.TokenAllowance memory tokenAllowance2 =
-            SpendPermissionManager.TokenAllowance({token: token, allowance: allowance2, spender: spender, salt: salt2});
+        SpendPermissionManager.TokenAllowance memory tokenAllowance1 = SpendPermissionManager.TokenAllowance({
+            token: token,
+            allowance: allowance1,
+            spender: spender,
+            salt: salt1,
+            extraData: "0x01"
+        });
+        SpendPermissionManager.TokenAllowance memory tokenAllowance2 = SpendPermissionManager.TokenAllowance({
+            token: token,
+            allowance: allowance2,
+            spender: spender,
+            salt: salt2,
+            extraData: "0x01"
+        });
         SpendPermissionManager.TokenAllowance[] memory tokenAllowances = new SpendPermissionManager.TokenAllowance[](2);
         tokenAllowances[0] = tokenAllowance1;
         tokenAllowances[1] = tokenAllowance2;
@@ -162,20 +203,18 @@ contract ApproveBatchWithSignatureTest is SpendPermissionManagerBase {
 
         bytes memory signature = _signSpendPermissionBatch(spendPermissionBatch, ownerPk, 0);
 
-        vm.recordLogs();
-        mockSpendPermissionManager.approveBatchWithSignature(spendPermissionBatch, signature);
-        Vm.Log[] memory entries = vm.getRecordedLogs();
-        vm.assertEq(entries.length, 2);
         SpendPermissionManager.SpendPermission[] memory expectedSpendPermissions =
             _generateSpendPermissionArrayFromBatch(spendPermissionBatch);
-        for (uint256 i = 0; i < entries.length; i++) {
-            // compare the topics
-            vm.assertEq(entries[i].topics[0], SPEND_PERMISSION_APPROVED_EVENT_SIGNATURE);
-            vm.assertEq(entries[i].topics[1], mockSpendPermissionManager.getHash(expectedSpendPermissions[i]));
-            vm.assertEq(entries[i].topics[2], bytes32(uint256(uint160(address(account)))));
-            // compare the data
-            _assertSpendPermissionsEqual(expectedSpendPermissions[i], entries[i].data);
+        for (uint256 i = 0; i < expectedSpendPermissions.length; i++) {
+            vm.expectEmit(address(mockSpendPermissionManager));
+            emit SpendPermissionManager.SpendPermissionApproved({
+                hash: mockSpendPermissionManager.getHash(expectedSpendPermissions[i]),
+                account: address(account),
+                spendPermission: expectedSpendPermissions[i]
+            });
         }
+
+        mockSpendPermissionManager.approveBatchWithSignature(spendPermissionBatch, signature);
         _assertSpendPermissionBatchApproved(spendPermissionBatch, mockSpendPermissionManager);
     }
 
@@ -194,37 +233,12 @@ contract ApproveBatchWithSignatureTest is SpendPermissionManagerBase {
                 end: spendPermissionBatch.end,
                 period: spendPermissionBatch.period,
                 allowance: tokenAllowance.allowance,
-                salt: tokenAllowance.salt
+                salt: tokenAllowance.salt,
+                extraData: tokenAllowance.extraData
             });
             spendPermissions[i] = spendPermission;
         }
         return spendPermissions;
-    }
-
-    function _assertSpendPermissionsEqual(
-        SpendPermissionManager.SpendPermission memory expectedSpendPermission,
-        bytes memory actualSpendPermissionEncoded
-    ) internal pure {
-        (
-            address account,
-            address spender,
-            address token,
-            uint160 allowance,
-            uint48 period,
-            uint48 start,
-            uint48 end,
-            uint256 salt
-        ) = abi.decode(
-            actualSpendPermissionEncoded, (address, address, address, uint160, uint48, uint48, uint48, uint256)
-        );
-        vm.assertEq(expectedSpendPermission.account, account);
-        vm.assertEq(expectedSpendPermission.spender, spender);
-        vm.assertEq(expectedSpendPermission.token, token);
-        vm.assertEq(expectedSpendPermission.start, start);
-        vm.assertEq(expectedSpendPermission.end, end);
-        vm.assertEq(expectedSpendPermission.period, period);
-        vm.assertEq(expectedSpendPermission.allowance, allowance);
-        vm.assertEq(expectedSpendPermission.salt, salt);
     }
 
     function _assertSpendPermissionBatchApproved(
@@ -242,7 +256,8 @@ contract ApproveBatchWithSignatureTest is SpendPermissionManagerBase {
                 end: spendPermissionBatch.end,
                 period: spendPermissionBatch.period,
                 allowance: tokenAllowance.allowance,
-                salt: tokenAllowance.salt
+                salt: tokenAllowance.salt,
+                extraData: tokenAllowance.extraData
             });
             vm.assertTrue(spendPermissionManager.isApproved(spendPermission));
         }
@@ -263,7 +278,8 @@ contract ApproveBatchWithSignatureTest is SpendPermissionManagerBase {
                 end: spendPermissionBatch.end,
                 period: spendPermissionBatch.period,
                 allowance: tokenAllowance.allowance,
-                salt: tokenAllowance.salt
+                salt: tokenAllowance.salt,
+                extraData: tokenAllowance.extraData
             });
             vm.assertFalse(spendPermissionManager.isApproved(spendPermission));
         }

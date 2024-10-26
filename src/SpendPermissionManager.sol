@@ -45,6 +45,8 @@ contract SpendPermissionManager is EIP712 {
         address spender;
         /// @dev An arbitrary salt to differentiate unique spend permissions with otherwise identical data.
         uint256 salt;
+        /// @dev Arbitrary data to include in the signature.
+        bytes extraData;
     }
 
     struct SpendPermissionBatch {
@@ -236,22 +238,6 @@ contract SpendPermissionManager is EIP712 {
         _approve(spendPermission);
     }
 
-    /// @notice Approve a spend permission with signature and spend tokens in one call, transferring them from `account`
-    /// to `spender`.
-    ///
-    /// @dev After initially approving a spend permission, it is more gas efficient to call `spend` for repeated use.
-    ///
-    /// @param spendPermission Details of the spend permission.
-    /// @param signature Signed approval from the user.
-    /// @param value Amount of token attempting to spend (wei).
-    function spendWithSignature(SpendPermission calldata spendPermission, bytes calldata signature, uint160 value)
-        external
-        requireSender(spendPermission.spender)
-    {
-        approveWithSignature(spendPermission, signature);
-        spend(spendPermission, value);
-    }
-
     /// @notice Spend tokens using a spend permission, transferring them from `account` to `spender`.
     ///
     /// @param spendPermission Details of the spend permission.
@@ -294,39 +280,11 @@ contract SpendPermissionManager is EIP712 {
                     period: spendPermissionBatch.period,
                     token: spendPermissionBatch.tokenAllowances[i].token,
                     allowance: spendPermissionBatch.tokenAllowances[i].allowance,
-                    salt: spendPermissionBatch.tokenAllowances[i].salt
+                    salt: spendPermissionBatch.tokenAllowances[i].salt,
+                    extraData: spendPermissionBatch.tokenAllowances[i].extraData
                 })
             );
         }
-    }
-
-    /// @notice Approve a spend permission and spend tokens, transferring them from `account` to `spender`.
-
-    ///
-    /// @dev Approves a spend permission for the first time and spends tokens in a single transaction.
-    ///
-    /// @param spendPermissionBatch Details of the spend permission.
-    /// @param signature Signed approval from the user.
-    /// @param index Index of the token allowance within the batch to spend from.
-    /// @param value Amount of token attempting to spend (wei).
-    function spendBatchWithSignature(
-        SpendPermissionBatch calldata spendPermissionBatch,
-        bytes calldata signature,
-        uint256 index,
-        uint160 value
-    ) public {
-        approveBatchWithSignature(spendPermissionBatch, signature);
-        SpendPermission memory spendPermission = SpendPermission({
-            account: spendPermissionBatch.account,
-            spender: spendPermissionBatch.tokenAllowances[index].spender,
-            start: spendPermissionBatch.start,
-            end: spendPermissionBatch.end,
-            period: spendPermissionBatch.period,
-            token: spendPermissionBatch.tokenAllowances[index].token,
-            allowance: spendPermissionBatch.tokenAllowances[index].allowance,
-            salt: spendPermissionBatch.tokenAllowances[index].salt
-        });
-        spend(spendPermission, value);
     }
 
     /// @notice Hash a SpendPermission struct for signing in accordance with EIP-712.
