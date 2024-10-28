@@ -4,7 +4,6 @@ pragma solidity ^0.8.23;
 import {SpendPermissionManager} from "../../../src/SpendPermissionManager.sol";
 
 import {SpendPermissionManagerBase} from "../../base/SpendPermissionManagerBase.sol";
-import {Test, console2} from "forge-std/Test.sol";
 
 contract ApproveTest is SpendPermissionManagerBase {
     function setUp() public {
@@ -24,7 +23,6 @@ contract ApproveTest is SpendPermissionManagerBase {
     ) public {
         vm.assume(sender != address(0));
         vm.assume(sender != account);
-        console2.log(extraData.length);
         SpendPermissionManager.SpendPermission memory spendPermission = SpendPermissionManager.SpendPermission({
             account: account,
             spender: spender,
