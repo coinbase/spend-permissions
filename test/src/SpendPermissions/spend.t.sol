@@ -161,6 +161,7 @@ contract SpendTest is SpendPermissionManagerBase {
         });
         vm.deal(address(account), allowance);
         assertEq(address(account).balance, allowance);
+        vm.deal(spender, 0);
         assertEq(spender.balance, 0);
 
         bytes memory signature = _signSpendPermission(spendPermission, ownerPk, 0);

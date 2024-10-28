@@ -45,6 +45,19 @@ contract SpendPermissionManagerBase is Base {
         return wrappedSignature;
     }
 
+    function _signSpendPermissionBatch(
+        SpendPermissionManager.SpendPermissionBatch memory spendPermissionBatch,
+        uint256 ownerPk,
+        uint256 ownerIndex
+    ) internal view returns (bytes memory) {
+        bytes32 spendPermissionBatchHash = mockSpendPermissionManager.getBatchHash(spendPermissionBatch);
+        bytes32 replaySafeHash =
+            CoinbaseSmartWallet(payable(spendPermissionBatch.account)).replaySafeHash(spendPermissionBatchHash);
+        bytes memory signature = _sign(ownerPk, replaySafeHash);
+        bytes memory wrappedSignature = _applySignatureWrapper(ownerIndex, signature);
+        return wrappedSignature;
+    }
+
     function _safeAddUint48(uint48 a, uint48 b, uint48 end) internal pure returns (uint48 c) {
         bool overflow = uint256(a) + uint256(b) > end;
         return overflow ? end : a + b;
