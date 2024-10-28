@@ -50,7 +50,8 @@ contract GetCurrentPeriodTest is SpendPermissionManagerBase {
         uint48 end,
         uint48 period,
         uint160 allowance,
-        uint256 salt
+        uint256 salt,
+        bytes memory extraData
     ) public {
         vm.assume(start > 0);
         vm.assume(end > 0);
@@ -66,7 +67,8 @@ contract GetCurrentPeriodTest is SpendPermissionManagerBase {
             end: end,
             period: period,
             allowance: allowance,
-            salt: salt
+            salt: salt,
+            extraData: extraData
         });
         vm.warp(start);
         SpendPermissionManager.PeriodSpend memory usage = mockSpendPermissionManager.getCurrentPeriod(spendPermission);
@@ -83,7 +85,8 @@ contract GetCurrentPeriodTest is SpendPermissionManagerBase {
         uint48 period,
         uint160 allowance,
         uint160 spend,
-        uint256 salt
+        uint256 salt,
+        bytes memory extraData
     ) public {
         vm.assume(start > 0);
         vm.assume(end > 0);
@@ -101,7 +104,8 @@ contract GetCurrentPeriodTest is SpendPermissionManagerBase {
             end: end,
             period: period,
             allowance: allowance,
-            salt: salt
+            salt: salt,
+            extraData: extraData
         });
 
         vm.prank(address(account));
@@ -122,7 +126,8 @@ contract GetCurrentPeriodTest is SpendPermissionManagerBase {
         uint48 period,
         uint160 allowance,
         uint160 spend,
-        uint256 salt
+        uint256 salt,
+        bytes memory extraData
     ) public {
         vm.assume(start > 0);
         vm.assume(end > 0);
@@ -141,7 +146,8 @@ contract GetCurrentPeriodTest is SpendPermissionManagerBase {
             end: end,
             period: period,
             allowance: allowance,
-            salt: salt
+            salt: salt,
+            extraData: extraData
         });
 
         vm.prank(address(account));
@@ -164,6 +170,7 @@ contract GetCurrentPeriodTest is SpendPermissionManagerBase {
         uint48 period,
         uint160 allowance,
         uint256 salt,
+        bytes memory extraData,
         uint160 spend
     ) public {
         vm.assume(start > 0);
@@ -183,7 +190,8 @@ contract GetCurrentPeriodTest is SpendPermissionManagerBase {
             end: end,
             period: period,
             allowance: allowance,
-            salt: salt
+            salt: salt,
+            extraData: extraData
         });
 
         vm.prank(address(account));
@@ -205,7 +213,8 @@ contract GetCurrentPeriodTest is SpendPermissionManagerBase {
         uint48 end,
         uint48 period,
         uint160 allowance,
-        uint256 salt
+        uint256 salt,
+        bytes memory extraData
     ) public {
         vm.assume(end > 0 && end < type(uint48).max);
         vm.assume(period > 0);
@@ -221,7 +230,8 @@ contract GetCurrentPeriodTest is SpendPermissionManagerBase {
             end: end,
             period: period,
             allowance: allowance,
-            salt: salt
+            salt: salt,
+            extraData: extraData
         });
 
         vm.warp(start);
@@ -236,7 +246,8 @@ contract GetCurrentPeriodTest is SpendPermissionManagerBase {
         uint48 start,
         uint48 period,
         uint160 allowance,
-        uint256 salt
+        uint256 salt,
+        bytes memory extraData
     ) public {
         uint48 end = type(uint48).max;
         vm.assume(period > 0);
@@ -252,7 +263,8 @@ contract GetCurrentPeriodTest is SpendPermissionManagerBase {
             end: end,
             period: period,
             allowance: allowance,
-            salt: salt
+            salt: salt,
+            extraData: extraData
         });
 
         vm.warp(start);

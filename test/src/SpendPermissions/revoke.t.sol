@@ -19,7 +19,8 @@ contract RevokeTest is SpendPermissionManagerBase {
         uint48 end,
         uint48 period,
         uint160 allowance,
-        uint256 salt
+        uint256 salt,
+        bytes memory extraData
     ) public {
         vm.assume(start < end);
         vm.assume(period > 0);
@@ -35,7 +36,8 @@ contract RevokeTest is SpendPermissionManagerBase {
             end: end,
             period: period,
             allowance: allowance,
-            salt: salt
+            salt: salt,
+            extraData: extraData
         });
 
         vm.prank(account);
@@ -55,7 +57,8 @@ contract RevokeTest is SpendPermissionManagerBase {
         uint48 end,
         uint48 period,
         uint160 allowance,
-        uint256 salt
+        uint256 salt,
+        bytes memory extraData
     ) public {
         vm.assume(start < end);
         vm.assume(period > 0);
@@ -69,7 +72,8 @@ contract RevokeTest is SpendPermissionManagerBase {
             end: end,
             period: period,
             allowance: allowance,
-            salt: salt
+            salt: salt,
+            extraData: extraData
         });
         vm.startPrank(account);
         mockSpendPermissionManager.approve(spendPermission);
@@ -86,7 +90,8 @@ contract RevokeTest is SpendPermissionManagerBase {
         uint48 end,
         uint48 period,
         uint160 allowance,
-        uint256 salt
+        uint256 salt,
+        bytes memory extraData
     ) public {
         vm.assume(start < end);
         vm.assume(period > 0);
@@ -100,7 +105,8 @@ contract RevokeTest is SpendPermissionManagerBase {
             end: end,
             period: period,
             allowance: allowance,
-            salt: salt
+            salt: salt,
+            extraData: extraData
         });
         vm.startPrank(account);
         mockSpendPermissionManager.approve(spendPermission);
