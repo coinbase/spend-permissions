@@ -100,6 +100,12 @@ contract SpendPermissionManager is EIP712 {
     /// @param sender Expected sender to be valid.
     error InvalidSender(address sender, address expected);
 
+    /// @notice Invalid zero address for token.
+    error InvalidTokenZeroAddress();
+
+    /// @notice Invalid zero address for spender.
+    error InvalidSpenderZeroAddress();
+
     /// @notice Invalid signature.
     error InvalidSignature();
 
@@ -355,6 +361,13 @@ contract SpendPermissionManager is EIP712 {
     ///
     /// @param spendPermission Details of the spend permission.
     function _approve(SpendPermission memory spendPermission) internal {
+        if (spendPermission.token == address(0)) {
+            revert InvalidTokenZeroAddress();
+        }
+        if (spendPermission.spender == address(0)) {
+            revert InvalidSpenderZeroAddress();
+        }
+
         // check start is strictly before end
         if (spendPermission.start >= spendPermission.end) {
             revert InvalidStartEnd(spendPermission.start, spendPermission.end);

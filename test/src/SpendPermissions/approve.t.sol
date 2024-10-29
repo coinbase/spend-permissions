@@ -50,6 +50,7 @@ contract ApproveTest is SpendPermissionManagerBase {
         uint256 salt,
         bytes memory extraData
     ) public {
+        vm.assume(spender != address(0));
         vm.assume(start >= end);
 
         SpendPermissionManager.SpendPermission memory spendPermission = SpendPermissionManager.SpendPermission({
@@ -69,6 +70,67 @@ contract ApproveTest is SpendPermissionManagerBase {
         vm.stopPrank();
     }
 
+    function test_approve_revert_invalidTokenZeroAddress(
+        address account,
+        address spender,
+        uint48 start,
+        uint48 end,
+        uint48 period,
+        uint160 allowance,
+        uint256 salt,
+        bytes memory extraData
+    ) public {
+        vm.assume(spender != address(0));
+        vm.assume(start < end);
+
+        SpendPermissionManager.SpendPermission memory spendPermission = SpendPermissionManager.SpendPermission({
+            account: account,
+            spender: spender,
+            token: address(0),
+            start: start,
+            end: end,
+            period: period,
+            allowance: allowance,
+            salt: salt,
+            extraData: extraData
+        });
+        vm.startPrank(account);
+        vm.expectRevert(abi.encodeWithSelector(SpendPermissionManager.InvalidTokenZeroAddress.selector));
+        mockSpendPermissionManager.approve(spendPermission);
+        vm.stopPrank();
+    }
+
+    function test_approve_revert_invalidSpenderZeroAddress(
+        address account,
+        address token,
+        uint48 start,
+        uint48 end,
+        uint48 period,
+        uint160 allowance,
+        uint256 salt,
+        bytes memory extraData
+    ) public {
+        vm.assume(token != address(0));
+        vm.assume(start < end);
+        vm.assume(allowance > 0);
+
+        SpendPermissionManager.SpendPermission memory spendPermission = SpendPermissionManager.SpendPermission({
+            account: account,
+            spender: address(0),
+            token: token,
+            start: start,
+            end: end,
+            period: period,
+            allowance: allowance,
+            salt: salt,
+            extraData: extraData
+        });
+        vm.startPrank(account);
+        vm.expectRevert(abi.encodeWithSelector(SpendPermissionManager.InvalidSpenderZeroAddress.selector));
+        mockSpendPermissionManager.approve(spendPermission);
+        vm.stopPrank();
+    }
+
     function test_approve_revert_zeroPeriod(
         address account,
         address spender,
@@ -78,6 +140,7 @@ contract ApproveTest is SpendPermissionManagerBase {
         uint256 salt,
         bytes memory extraData
     ) public {
+        vm.assume(spender != address(0));
         vm.assume(start < end);
 
         SpendPermissionManager.SpendPermission memory spendPermission = SpendPermissionManager.SpendPermission({
@@ -106,6 +169,7 @@ contract ApproveTest is SpendPermissionManagerBase {
         uint256 salt,
         bytes memory extraData
     ) public {
+        vm.assume(spender != address(0));
         vm.assume(start < end);
         vm.assume(period > 0);
 
@@ -136,6 +200,7 @@ contract ApproveTest is SpendPermissionManagerBase {
         uint256 salt,
         bytes memory extraData
     ) public {
+        vm.assume(spender != address(0));
         vm.assume(start < end);
         vm.assume(period > 0);
         vm.assume(allowance > 0);
@@ -166,6 +231,7 @@ contract ApproveTest is SpendPermissionManagerBase {
         uint256 salt,
         bytes memory extraData
     ) public {
+        vm.assume(spender != address(0));
         vm.assume(start < end);
         vm.assume(period > 0);
         vm.assume(allowance > 0);

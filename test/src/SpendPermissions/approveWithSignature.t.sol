@@ -23,6 +23,8 @@ contract ApproveWithSignatureTest is SpendPermissionManagerBase {
         uint256 salt,
         bytes memory extraData
     ) public {
+        vm.assume(spender != address(0));
+        vm.assume(token != address(0));
         vm.assume(invalidPk != 0);
 
         SpendPermissionManager.SpendPermission memory spendPermission = SpendPermissionManager.SpendPermission({
@@ -51,6 +53,7 @@ contract ApproveWithSignatureTest is SpendPermissionManagerBase {
         uint256 salt,
         bytes memory extraData
     ) public {
+        vm.assume(spender != address(0));
         vm.assume(start >= end);
 
         SpendPermissionManager.SpendPermission memory spendPermission = SpendPermissionManager.SpendPermission({
@@ -78,6 +81,7 @@ contract ApproveWithSignatureTest is SpendPermissionManagerBase {
         uint256 salt,
         bytes memory extraData
     ) public {
+        vm.assume(spender != address(0));
         vm.assume(start < end);
 
         SpendPermissionManager.SpendPermission memory spendPermission = SpendPermissionManager.SpendPermission({
@@ -105,6 +109,7 @@ contract ApproveWithSignatureTest is SpendPermissionManagerBase {
         uint256 salt,
         bytes memory extraData
     ) public {
+        vm.assume(spender != address(0));
         vm.assume(start < end);
         vm.assume(period > 0);
 
@@ -135,6 +140,8 @@ contract ApproveWithSignatureTest is SpendPermissionManagerBase {
         uint256 salt,
         bytes memory extraData
     ) public {
+        vm.assume(spender != address(0));
+        vm.assume(token != address(0));
         vm.assume(start < end);
         vm.assume(period > 0);
         vm.assume(allowance > 0);
@@ -166,6 +173,8 @@ contract ApproveWithSignatureTest is SpendPermissionManagerBase {
         uint256 salt,
         bytes memory extraData
     ) public {
+        vm.assume(spender != address(0));
+        vm.assume(token != address(0));
         vm.assume(start < end);
         vm.assume(period > 0);
         vm.assume(allowance > 0);
