@@ -282,8 +282,16 @@ contract SpendPermissionManager is EIP712 {
         if (permissionDetailsLen == 0) revert EmptyBatch();
         bytes32[] memory permissionDetailsHashes = new bytes32[](permissionDetailsLen);
         for (uint256 i; i < permissionDetailsLen; i++) {
-            permissionDetailsHashes[i] =
-                keccak256(abi.encode(TOKEN_ALLOWANCE_TYPEHASH, spendPermissionBatch.permissions[i]));
+            permissionDetailsHashes[i] = keccak256(
+                abi.encode(
+                    TOKEN_ALLOWANCE_TYPEHASH,
+                    spendPermissionBatch.permissions[i].spender,
+                    spendPermissionBatch.permissions[i].token,
+                    spendPermissionBatch.permissions[i].allowance,
+                    spendPermissionBatch.permissions[i].salt,
+                    keccak256(spendPermissionBatch.permissions[i].extraData)
+                )
+            );
         }
 
         return _hashTypedData(
@@ -361,9 +369,12 @@ contract SpendPermissionManager is EIP712 {
     ///
     /// @param spendPermission Details of the spend permission.
     function _approve(SpendPermission memory spendPermission) internal {
+        // check token is not the zero adddress
         if (spendPermission.token == address(0)) {
             revert InvalidTokenZeroAddress();
         }
+
+        // check spender is not the zero address
         if (spendPermission.spender == address(0)) {
             revert InvalidSpenderZeroAddress();
         }
