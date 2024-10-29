@@ -10,6 +10,7 @@ import {SignatureCheckerLib} from "solady/utils/SignatureCheckerLib.sol";
 ///
 /// @dev Dedicated contract for validating ERC-6492 (and therefore also ERC-1271) signatures,
 /// performing contract deployment or preparation when necessary from an unprivileged context.
+/// (https://eips.ethereum.org/EIPS/eip-6492)
 ///
 /// @author Coinbase (https://github.com/coinbase/spend-permissions)
 contract ERC6492Deployer {
