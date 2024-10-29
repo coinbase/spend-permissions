@@ -77,7 +77,7 @@ contract SpendPermissionManager is EIP712 {
     );
 
     bytes32 constant PERMISSION_BATCH_TYPEHASH = keccak256(
-        "SpendPermissionBatch(address account,address spender,uint48 period,uint48 start,uint48 end,PermissionDetails[] permissions)PermissionDetails(address spender,address token,uint160 allowance,uint256 salt,bytes extraData)"
+        "SpendPermissionBatch(address account,uint48 period,uint48 start,uint48 end,PermissionDetails[] permissions)PermissionDetails(address spender,address token,uint160 allowance,uint256 salt,bytes extraData)"
     );
 
     bytes32 constant TOKEN_ALLOWANCE_TYPEHASH =
