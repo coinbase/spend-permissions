@@ -12,7 +12,7 @@ contract UseSpendPermissionTest is SpendPermissionManagerBase {
 
     function test_useSpendPermission_revert_unauthorizedSpendPermission(
         address account,
-        address permissionSigner,
+        address spender,
         uint48 start,
         uint48 end,
         uint48 period,
@@ -21,6 +21,7 @@ contract UseSpendPermissionTest is SpendPermissionManagerBase {
         uint256 salt,
         bytes memory extraData
     ) public {
+        vm.assume(spender != address(0));
         vm.assume(start > 0);
         vm.assume(end > 0);
         vm.assume(period > 0);
@@ -30,7 +31,7 @@ contract UseSpendPermissionTest is SpendPermissionManagerBase {
 
         SpendPermissionManager.SpendPermission memory spendPermission = SpendPermissionManager.SpendPermission({
             account: account,
-            spender: permissionSigner,
+            spender: spender,
             token: NATIVE_TOKEN,
             start: start,
             end: end,
@@ -46,7 +47,7 @@ contract UseSpendPermissionTest is SpendPermissionManagerBase {
 
     function test_useSpendPermission_revert_spendValueOverflow(
         address account,
-        address permissionSigner,
+        address spender,
         uint48 start,
         uint48 end,
         uint48 period,
@@ -54,6 +55,7 @@ contract UseSpendPermissionTest is SpendPermissionManagerBase {
         uint256 salt,
         bytes memory extraData
     ) public {
+        vm.assume(spender != address(0));
         vm.assume(start > 0);
         vm.assume(end > 0);
         vm.assume(start < end);
@@ -64,7 +66,7 @@ contract UseSpendPermissionTest is SpendPermissionManagerBase {
             // rejects too many inputs
         SpendPermissionManager.SpendPermission memory spendPermission = SpendPermissionManager.SpendPermission({
             account: account,
-            spender: permissionSigner,
+            spender: spender,
             token: NATIVE_TOKEN,
             start: start,
             end: end,
@@ -83,7 +85,7 @@ contract UseSpendPermissionTest is SpendPermissionManagerBase {
 
     function test_useSpendPermission_revert_exceededSpendPermission(
         address account,
-        address permissionSigner,
+        address spender,
         uint48 start,
         uint48 end,
         uint48 period,
@@ -92,6 +94,7 @@ contract UseSpendPermissionTest is SpendPermissionManagerBase {
         uint256 salt,
         bytes memory extraData
     ) public {
+        vm.assume(spender != address(0));
         vm.assume(start > 0);
         vm.assume(end > 0);
         vm.assume(start < end);
@@ -101,7 +104,7 @@ contract UseSpendPermissionTest is SpendPermissionManagerBase {
 
         SpendPermissionManager.SpendPermission memory spendPermission = SpendPermissionManager.SpendPermission({
             account: account,
-            spender: permissionSigner,
+            spender: spender,
             token: NATIVE_TOKEN,
             start: start,
             end: end,
@@ -122,7 +125,7 @@ contract UseSpendPermissionTest is SpendPermissionManagerBase {
 
     function test_useSpendPermission_revert_exceededSpendPermission_accruedSpend(
         address account,
-        address permissionSigner,
+        address spender,
         uint48 start,
         uint48 end,
         uint48 period,
@@ -132,6 +135,7 @@ contract UseSpendPermissionTest is SpendPermissionManagerBase {
         uint160 firstSpend,
         uint160 secondSpend
     ) public {
+        vm.assume(spender != address(0));
         vm.assume(start > 0);
         vm.assume(end > 0);
         vm.assume(start < end);
@@ -144,7 +148,7 @@ contract UseSpendPermissionTest is SpendPermissionManagerBase {
 
         SpendPermissionManager.SpendPermission memory spendPermission = SpendPermissionManager.SpendPermission({
             account: account,
-            spender: permissionSigner,
+            spender: spender,
             token: NATIVE_TOKEN,
             start: start,
             end: end,
@@ -180,7 +184,7 @@ contract UseSpendPermissionTest is SpendPermissionManagerBase {
 
     function test_useSpendPermission_success_emitsEvent(
         address account,
-        address permissionSigner,
+        address spender,
         uint48 start,
         uint48 end,
         uint48 period,
@@ -189,6 +193,7 @@ contract UseSpendPermissionTest is SpendPermissionManagerBase {
         uint256 salt,
         bytes memory extraData
     ) public {
+        vm.assume(spender != address(0));
         vm.assume(start > 0);
         vm.assume(end > 0);
         vm.assume(start < end);
@@ -199,7 +204,7 @@ contract UseSpendPermissionTest is SpendPermissionManagerBase {
 
         SpendPermissionManager.SpendPermission memory spendPermission = SpendPermissionManager.SpendPermission({
             account: account,
-            spender: permissionSigner,
+            spender: spender,
             token: NATIVE_TOKEN,
             start: start,
             end: end,
@@ -228,7 +233,7 @@ contract UseSpendPermissionTest is SpendPermissionManagerBase {
 
     function test_useSpendPermission_success_setsState(
         address account,
-        address permissionSigner,
+        address spender,
         uint48 start,
         uint48 end,
         uint48 period,
@@ -237,6 +242,7 @@ contract UseSpendPermissionTest is SpendPermissionManagerBase {
         uint256 salt,
         bytes memory extraData
     ) public {
+        vm.assume(spender != address(0));
         vm.assume(start > 0);
         vm.assume(end > 0);
         vm.assume(start < end);
@@ -247,7 +253,7 @@ contract UseSpendPermissionTest is SpendPermissionManagerBase {
 
         SpendPermissionManager.SpendPermission memory spendPermission = SpendPermissionManager.SpendPermission({
             account: account,
-            spender: permissionSigner,
+            spender: spender,
             token: NATIVE_TOKEN,
             start: start,
             end: end,
@@ -269,7 +275,7 @@ contract UseSpendPermissionTest is SpendPermissionManagerBase {
 
     function test_useSpendPermission_success_maxAllowance(
         address account,
-        address permissionSigner,
+        address spender,
         uint48 start,
         uint48 end,
         uint48 period,
@@ -277,6 +283,7 @@ contract UseSpendPermissionTest is SpendPermissionManagerBase {
         uint256 salt,
         bytes memory extraData
     ) public {
+        vm.assume(spender != address(0));
         vm.assume(start > 0);
         vm.assume(end > 0);
         vm.assume(start < end);
@@ -285,7 +292,7 @@ contract UseSpendPermissionTest is SpendPermissionManagerBase {
 
         SpendPermissionManager.SpendPermission memory spendPermission = SpendPermissionManager.SpendPermission({
             account: account,
-            spender: permissionSigner,
+            spender: spender,
             token: NATIVE_TOKEN,
             start: start,
             end: end,
@@ -307,7 +314,7 @@ contract UseSpendPermissionTest is SpendPermissionManagerBase {
 
     function test_useSpendPermission_success_incrementalSpends(
         address account,
-        address permissionSigner,
+        address spender,
         uint48 start,
         uint48 end,
         uint48 period,
@@ -316,6 +323,7 @@ contract UseSpendPermissionTest is SpendPermissionManagerBase {
         bytes memory extraData,
         uint8 numberOfSpends
     ) public {
+        vm.assume(spender != address(0));
         vm.assume(start > 0);
         vm.assume(end > 0);
         vm.assume(start < end);
@@ -327,7 +335,7 @@ contract UseSpendPermissionTest is SpendPermissionManagerBase {
 
         SpendPermissionManager.SpendPermission memory spendPermission = SpendPermissionManager.SpendPermission({
             account: account,
-            spender: permissionSigner,
+            spender: spender,
             token: NATIVE_TOKEN,
             start: start,
             end: end,

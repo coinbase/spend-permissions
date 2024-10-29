@@ -23,6 +23,8 @@ contract ApproveBatchWithSignatureTest is SpendPermissionManagerBase {
         uint256 salt1,
         uint256 salt2
     ) public {
+        vm.assume(spender != address(0));
+        vm.assume(token != address(0));
         vm.assume(start < end);
         vm.assume(period > 0);
         vm.assume(allowance > 0);
@@ -70,6 +72,8 @@ contract ApproveBatchWithSignatureTest is SpendPermissionManagerBase {
         uint160 allowance1,
         uint256 salt
     ) public {
+        vm.assume(spender != address(0));
+        vm.assume(token != address(0));
         vm.assume(start < end);
         vm.assume(period > 0);
         vm.assume(allowance1 > 0);
@@ -107,6 +111,26 @@ contract ApproveBatchWithSignatureTest is SpendPermissionManagerBase {
         _assertSpendPermissionBatchNotApproved(spendPermissionBatch, mockSpendPermissionManager);
     }
 
+    function test_approveBatchWithSignature_revert_emptyBatch(uint48 start, uint48 end, uint48 period) public {
+        vm.assume(start < end);
+        vm.assume(period > 0);
+        SpendPermissionManager.PermissionDetails[] memory permissions =
+            new SpendPermissionManager.PermissionDetails[](0);
+        SpendPermissionManager.SpendPermissionBatch memory spendPermissionBatch = SpendPermissionManager
+            .SpendPermissionBatch({
+            account: address(account),
+            start: start,
+            end: end,
+            period: period,
+            permissions: permissions
+        });
+
+        bytes memory stubSignature = abi.encodePacked("0x"); // can't get a valid signature for an empty batch because
+            // getBatchHash reverts
+        vm.expectRevert(abi.encodeWithSelector(SpendPermissionManager.EmptyBatch.selector));
+        mockSpendPermissionManager.approveBatchWithSignature(spendPermissionBatch, stubSignature);
+    }
+
     function test_approveBatchWithSignature_success_isApproved(
         address spender,
         address token,
@@ -118,6 +142,8 @@ contract ApproveBatchWithSignatureTest is SpendPermissionManagerBase {
         uint256 salt1,
         uint256 salt2
     ) public {
+        vm.assume(spender != address(0));
+        vm.assume(token != address(0));
         vm.assume(start < end);
         vm.assume(period > 0);
         vm.assume(allowance1 > 0);
@@ -166,6 +192,8 @@ contract ApproveBatchWithSignatureTest is SpendPermissionManagerBase {
         uint256 salt1,
         uint256 salt2
     ) public {
+        vm.assume(spender != address(0));
+        vm.assume(token != address(0));
         vm.assume(start < end);
         vm.assume(period > 0);
         vm.assume(allowance1 > 0);
