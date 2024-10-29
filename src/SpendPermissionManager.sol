@@ -77,11 +77,11 @@ contract SpendPermissionManager is EIP712 {
     );
 
     bytes32 constant PERMISSION_BATCH_TYPEHASH = keccak256(
-        "SpendPermissionBatch(address account,address spender,uint48 start,uint48 end,uint48 period,PermissionDetails[] permissions)PermissionDetails(address token,uint160 allowance,uint256 salt,bytes extraData)"
+        "SpendPermissionBatch(address account,address spender,uint48 period,uint48 start,uint48 end,PermissionDetails[] permissions)PermissionDetails(address spender,address token,uint160 allowance,uint256 salt,bytes extraData)"
     );
 
     bytes32 constant TOKEN_ALLOWANCE_TYPEHASH =
-        keccak256("PermissionDetails(address token,uint160 allowance,address spender,uint256 salt,bytes extraData)");
+        keccak256("PermissionDetails(address spender,address token,uint160 allowance,uint256 salt,bytes extraData)");
 
     /// @notice ERC-7528 address convention for native token (https://eips.ethereum.org/EIPS/eip-7528).
     address public constant NATIVE_TOKEN = 0xEeeeeEeeeEeEeeEeEeEeeEEEeeeeEeeeeeeeEEeE;
