@@ -107,6 +107,76 @@ contract ApproveBatchWithSignatureTest is SpendPermissionManagerBase {
         _assertSpendPermissionBatchNotApproved(spendPermissionBatch, mockSpendPermissionManager);
     }
 
+    function test_approveBatchWithSignature_revert_emptyBatch(uint48 start, uint48 end, uint48 period) public {
+        vm.assume(start < end);
+        vm.assume(period > 0);
+        SpendPermissionManager.PermissionDetails[] memory permissions =
+            new SpendPermissionManager.PermissionDetails[](0);
+        SpendPermissionManager.SpendPermissionBatch memory spendPermissionBatch = SpendPermissionManager
+            .SpendPermissionBatch({
+            account: address(account),
+            start: start,
+            end: end,
+            period: period,
+            permissions: permissions
+        });
+
+        bytes memory signature = _signSpendPermissionBatch(spendPermissionBatch, ownerPk, 0);
+        vm.expectRevert(
+            abi.encodeWithSelector(
+                SpendPermissionManager.EmptyBatch.selector,
+                mockSpendPermissionManager.getBatchHash(spendPermissionBatch)
+            )
+        );
+        mockSpendPermissionManager.approveBatchWithSignature(spendPermissionBatch, signature);
+    }
+
+    function test_approveBatchWithSignature_revert_duplicateSpendPermissionInBatch(
+        address spender,
+        address token,
+        uint48 start,
+        uint48 end,
+        uint48 period,
+        uint160 allowance,
+        uint256 salt,
+        bytes memory extraData
+    ) public {
+        vm.assume(start < end);
+        vm.assume(period > 0);
+        vm.assume(allowance > 0);
+        SpendPermissionManager.PermissionDetails memory permissionDetails = SpendPermissionManager.PermissionDetails({
+            token: token,
+            allowance: allowance,
+            spender: spender,
+            salt: salt,
+            extraData: extraData
+        });
+        SpendPermissionManager.PermissionDetails memory duplicatePermissionDetails = SpendPermissionManager
+            .PermissionDetails({token: token, allowance: allowance, spender: spender, salt: salt, extraData: extraData});
+        SpendPermissionManager.PermissionDetails[] memory permissions =
+            new SpendPermissionManager.PermissionDetails[](2);
+        permissions[0] = permissionDetails;
+        permissions[1] = duplicatePermissionDetails;
+        SpendPermissionManager.SpendPermissionBatch memory spendPermissionBatch = SpendPermissionManager
+            .SpendPermissionBatch({
+            account: address(account),
+            start: start,
+            end: end,
+            period: period,
+            permissions: permissions
+        });
+        SpendPermissionManager.SpendPermission[] memory expectedSpendPermissions =
+            _generateSpendPermissionArrayFromBatch(spendPermissionBatch);
+        bytes memory signature = _signSpendPermissionBatch(spendPermissionBatch, ownerPk, 0);
+        vm.expectRevert(
+            abi.encodeWithSelector(
+                SpendPermissionManager.ExistingSpendPermission.selector,
+                mockSpendPermissionManager.getHash(expectedSpendPermissions[1])
+            )
+        );
+        mockSpendPermissionManager.approveBatchWithSignature(spendPermissionBatch, signature);
+    }
+
     function test_approveBatchWithSignature_success_isApproved(
         address spender,
         address token,
