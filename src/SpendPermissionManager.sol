@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.0;
 
+import {ERC6492Deployer} from "./ERC6492Deployer.sol";
 import {IERC1271} from "openzeppelin-contracts/contracts/interfaces/IERC1271.sol";
 import {IERC20} from "openzeppelin-contracts/contracts/token/ERC20/IERC20.sol";
 import {CoinbaseSmartWallet} from "smart-wallet/CoinbaseSmartWallet.sol";
@@ -71,6 +72,8 @@ contract SpendPermissionManager is EIP712 {
         /// @dev Accumulated spend amount for period.
         uint160 spend;
     }
+
+    ERC6492Deployer public erc6492Deployer;
 
     bytes32 constant PERMISSION_TYPEHASH = keccak256(
         "SpendPermission(address account,address spender,address token,uint160 allowance,uint48 period,uint48 start,uint48 end,uint256 salt,bytes extraData)"
@@ -177,6 +180,15 @@ contract SpendPermissionManager is EIP712 {
         bytes32 indexed hash, address indexed account, address indexed token, PeriodSpend newUsage
     );
 
+    /// @notice Construct a new SpendPermissionManager contract.
+    ///
+    /// @dev The ERC6492Deployer contract is used to validate ERC-6492 signatures.
+    ///
+    /// @param _erc6492Deployer Address of the ERC6492Deployer contract.
+    constructor(ERC6492Deployer _erc6492Deployer) {
+        erc6492Deployer = _erc6492Deployer;
+    }
+
     /// @notice Require a specific sender for an external call,
     ///
     /// @param sender Expected sender for call to be valid.
@@ -203,13 +215,17 @@ contract SpendPermissionManager is EIP712 {
 
     /// @notice Approve a spend permission via a signature from the account.
     ///
+    /// @dev Compatible with ERC-6492 signatures (https://eips.ethereum.org/EIPS/eip-6492)
+    /// Validates a signature over spend permission data and optionally deploys account.
+    ///
     /// @param spendPermission Details of the spend permission.
     /// @param signature Signed approval from the user.
     function approveWithSignature(SpendPermission calldata spendPermission, bytes calldata signature) public {
-        // validate signature over spend permission data
+        // validate signature over spend permission data, deploying or preparing account if necessary
         if (
-            IERC1271(spendPermission.account).isValidSignature(getHash(spendPermission), signature)
-                != IERC1271.isValidSignature.selector
+            !erc6492Deployer.isValidERC6492SignatureNowAllowSideEffects(
+                spendPermission.account, getHash(spendPermission), signature
+            )
         ) {
             revert InvalidSignature();
         }
@@ -231,16 +247,19 @@ contract SpendPermissionManager is EIP712 {
 
     /// @notice Approve a spend permission batch via a signature from the account.
     ///
+    /// @dev Compatible with ERC-6492 signatures (https://eips.ethereum.org/EIPS/eip-6492)
+    /// Validates a signature over a batch of spend permission data and optionally deploys account.
+    ///
     /// @param spendPermissionBatch Details of the spend permission batch.
     /// @param signature Signed approval from the user.
     function approveBatchWithSignature(SpendPermissionBatch memory spendPermissionBatch, bytes calldata signature)
         public
     {
         // validate signature over spend permission batch data
-        bytes32 batchHash = getBatchHash(spendPermissionBatch);
         if (
-            IERC1271(spendPermissionBatch.account).isValidSignature(batchHash, signature)
-                != IERC1271.isValidSignature.selector
+            !erc6492Deployer.isValidERC6492SignatureNowAllowSideEffects(
+                spendPermissionBatch.account, getBatchHash(spendPermissionBatch), signature
+            )
         ) {
             revert InvalidSignature();
         }

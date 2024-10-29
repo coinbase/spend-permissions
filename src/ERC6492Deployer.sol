@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.0;
 
-import {SpendPermissionManager} from "solady/SpendPermissionManager.sol";
+import {SpendPermissionManager} from "./SpendPermissionManager.sol";
 import {SignatureCheckerLib} from "solady/utils/SignatureCheckerLib.sol";
 
 /// @title ERC6492Deployer
@@ -13,7 +13,10 @@ import {SignatureCheckerLib} from "solady/utils/SignatureCheckerLib.sol";
 ///
 /// @author Coinbase (https://github.com/coinbase/spend-permissions)
 contract ERC6492Deployer {
-    function isValidERC6492SignatureNowAllowSideEffects(address account, bytes32 hash, bytes memory signature) public {
+    function isValidERC6492SignatureNowAllowSideEffects(address account, bytes32 hash, bytes memory signature)
+        public
+        returns (bool)
+    {
         return SignatureCheckerLib.isValidERC6492SignatureNowAllowSideEffects(account, hash, signature);
     }
 }

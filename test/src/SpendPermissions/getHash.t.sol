@@ -92,8 +92,8 @@ contract GetHashTest is SpendPermissionManagerBase {
             salt: salt,
             extraData: extraData
         });
-        MockSpendPermissionManager mockSpendPermissionManager1 = new MockSpendPermissionManager();
-        MockSpendPermissionManager mockSpendPermissionManager2 = new MockSpendPermissionManager();
+        MockSpendPermissionManager mockSpendPermissionManager1 = new MockSpendPermissionManager(erc6492Deployer);
+        MockSpendPermissionManager mockSpendPermissionManager2 = new MockSpendPermissionManager(erc6492Deployer);
         bytes32 hash1 = mockSpendPermissionManager1.getHash(spendPermission);
         bytes32 hash2 = mockSpendPermissionManager2.getHash(spendPermission);
         assertNotEq(hash1, hash2);
