@@ -103,11 +103,8 @@ contract SpendPermissionManager is EIP712 {
     /// @notice Invalid signature.
     error InvalidSignature();
 
-    /// @notice Spend permission already exists.
-    error ExistingSpendPermission(bytes32 hash);
-
     /// @notice Empty batch of spend permissions.
-    error EmptyBatch(bytes32 hash);
+    error EmptyBatch();
 
     /// @notice Spend Permission start time is not strictly less than end time.
     ///
@@ -243,7 +240,6 @@ contract SpendPermissionManager is EIP712 {
         }
         // loop through each unique spend permission in the batch and approve it
         uint256 batchLen = spendPermissionBatch.permissions.length;
-        if (batchLen == 0) revert EmptyBatch(batchHash);
         for (uint256 i; i < batchLen; i++) {
             _approve(
                 SpendPermission({
@@ -277,6 +273,7 @@ contract SpendPermissionManager is EIP712 {
     /// @return hash Hash of the spend permission batch.
     function getBatchHash(SpendPermissionBatch memory spendPermissionBatch) public view returns (bytes32) {
         uint256 permissionDetailsLen = spendPermissionBatch.permissions.length;
+        if (permissionDetailsLen == 0) revert EmptyBatch();
         bytes32[] memory permissionDetailsHashes = new bytes32[](permissionDetailsLen);
         for (uint256 i; i < permissionDetailsLen; i++) {
             permissionDetailsHashes[i] =
@@ -358,9 +355,6 @@ contract SpendPermissionManager is EIP712 {
     ///
     /// @param spendPermission Details of the spend permission.
     function _approve(SpendPermission memory spendPermission) internal {
-        // revert if spend permission has already been approved (regardless of revoke status)
-        if (isApproved(spendPermission)) revert ExistingSpendPermission(getHash(spendPermission));
-
         // check start is strictly before end
         if (spendPermission.start >= spendPermission.end) {
             revert InvalidStartEnd(spendPermission.start, spendPermission.end);

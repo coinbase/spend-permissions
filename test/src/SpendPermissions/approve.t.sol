@@ -126,45 +126,6 @@ contract ApproveTest is SpendPermissionManagerBase {
         vm.stopPrank();
     }
 
-    function test_approve_revert_existingSpendPermission(
-        address account,
-        address spender,
-        uint48 start,
-        uint48 end,
-        uint48 period,
-        uint160 allowance,
-        uint256 salt,
-        bytes memory extraData
-    ) public {
-        vm.assume(start < end);
-        vm.assume(period > 0);
-        vm.assume(allowance > 0);
-
-        SpendPermissionManager.SpendPermission memory spendPermission = SpendPermissionManager.SpendPermission({
-            account: account,
-            spender: spender,
-            token: NATIVE_TOKEN,
-            start: start,
-            end: end,
-            period: period,
-            allowance: allowance,
-            salt: salt,
-            extraData: extraData
-        });
-        vm.startPrank(account);
-        // first approval succeeds
-        mockSpendPermissionManager.approve(spendPermission);
-        vm.assertTrue(mockSpendPermissionManager.isApproved(spendPermission));
-        // attempt to approve again fails
-        vm.expectRevert(
-            abi.encodeWithSelector(
-                SpendPermissionManager.ExistingSpendPermission.selector,
-                mockSpendPermissionManager.getHash(spendPermission)
-            )
-        );
-        mockSpendPermissionManager.approve(spendPermission);
-    }
-
     function test_approve_success_isAuthorized(
         address account,
         address spender,
