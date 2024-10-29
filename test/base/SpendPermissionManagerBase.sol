@@ -5,7 +5,7 @@ import {SpendPermissionManager} from "../../src/SpendPermissionManager.sol";
 import {MockSpendPermissionManager} from "../mocks/MockSpendPermissionManager.sol";
 import {Base} from "./Base.sol";
 
-import {ERC6492Deployer} from "../../src/ERC6492Deployer.sol";
+import {PublicERC6492Validator} from "../../src/PublicERC6492Validator.sol";
 import {CoinbaseSmartWallet} from "smart-wallet/CoinbaseSmartWallet.sol";
 import {CoinbaseSmartWalletFactory} from "smart-wallet/CoinbaseSmartWalletFactory.sol";
 
@@ -14,15 +14,15 @@ contract SpendPermissionManagerBase is Base {
     bytes32 constant EIP6492_MAGIC_VALUE = 0x6492649264926492649264926492649264926492649264926492649264926492;
     bytes32 constant CBSW_MESSAGE_TYPEHASH = keccak256("CoinbaseSmartWalletMessage(bytes32 hash)");
 
-    ERC6492Deployer erc6492Deployer;
+    PublicERC6492Validator publicERC6492Validator;
     MockSpendPermissionManager mockSpendPermissionManager;
     CoinbaseSmartWalletFactory mockCoinbaseSmartWalletFactory;
 
     function _initializeSpendPermissionManager() internal {
         _initialize(); // Base
         mockCoinbaseSmartWalletFactory = new CoinbaseSmartWalletFactory(address(account));
-        erc6492Deployer = new ERC6492Deployer();
-        mockSpendPermissionManager = new MockSpendPermissionManager(erc6492Deployer);
+        publicERC6492Validator = new PublicERC6492Validator();
+        mockSpendPermissionManager = new MockSpendPermissionManager(publicERC6492Validator);
     }
 
     /**

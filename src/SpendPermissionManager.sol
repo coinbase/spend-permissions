@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.0;
 
-import {ERC6492Deployer} from "./ERC6492Deployer.sol";
+import {PublicERC6492Validator} from "./PublicERC6492Validator.sol";
 import {IERC1271} from "openzeppelin-contracts/contracts/interfaces/IERC1271.sol";
 import {IERC20} from "openzeppelin-contracts/contracts/token/ERC20/IERC20.sol";
 import {CoinbaseSmartWallet} from "smart-wallet/CoinbaseSmartWallet.sol";
@@ -73,7 +73,7 @@ contract SpendPermissionManager is EIP712 {
         uint160 spend;
     }
 
-    ERC6492Deployer public erc6492Deployer;
+    PublicERC6492Validator public publicERC6492Validator;
 
     bytes32 constant PERMISSION_TYPEHASH = keccak256(
         "SpendPermission(address account,address spender,address token,uint160 allowance,uint48 period,uint48 start,uint48 end,uint256 salt,bytes extraData)"
@@ -182,11 +182,11 @@ contract SpendPermissionManager is EIP712 {
 
     /// @notice Construct a new SpendPermissionManager contract.
     ///
-    /// @dev The ERC6492Deployer contract is used to validate ERC-6492 signatures.
+    /// @dev The PublicERC6492Validator contract is used to validate ERC-6492 signatures.
     ///
-    /// @param _erc6492Deployer Address of the ERC6492Deployer contract.
-    constructor(ERC6492Deployer _erc6492Deployer) {
-        erc6492Deployer = _erc6492Deployer;
+    /// @param _publicERC6492Validator Address of the PublicERC6492Validator contract.
+    constructor(PublicERC6492Validator _publicERC6492Validator) {
+        publicERC6492Validator = _publicERC6492Validator;
     }
 
     /// @notice Require a specific sender for an external call,
@@ -223,7 +223,7 @@ contract SpendPermissionManager is EIP712 {
     function approveWithSignature(SpendPermission calldata spendPermission, bytes calldata signature) public {
         // validate signature over spend permission data, deploying or preparing account if necessary
         if (
-            !erc6492Deployer.isValidERC6492SignatureNowAllowSideEffects(
+            !publicERC6492Validator.isValidERC6492SignatureNowAllowSideEffects(
                 spendPermission.account, getHash(spendPermission), signature
             )
         ) {
@@ -257,7 +257,7 @@ contract SpendPermissionManager is EIP712 {
     {
         // validate signature over spend permission batch data
         if (
-            !erc6492Deployer.isValidERC6492SignatureNowAllowSideEffects(
+            !publicERC6492Validator.isValidERC6492SignatureNowAllowSideEffects(
                 spendPermissionBatch.account, getBatchHash(spendPermissionBatch), signature
             )
         ) {

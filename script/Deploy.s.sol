@@ -4,7 +4,7 @@ pragma solidity ^0.8.20;
 import {Script, console2} from "forge-std/Script.sol";
 import {Strings} from "openzeppelin-contracts/contracts/utils/Strings.sol";
 
-import {ERC6492Deployer} from "../src/ERC6492Deployer.sol";
+import {PublicERC6492Validator} from "../src/PublicERC6492Validator.sol";
 import {SpendPermissionManager} from "../src/SpendPermissionManager.sol";
 /**
  * forge script Deploy --account dev --sender $SENDER --rpc-url $BASE_SEPOLIA_RPC --verify --verifier-url
@@ -23,8 +23,8 @@ contract Deploy is Script {
     }
 
     function deploy() internal {
-        ERC6492Deployer erc6492Deployer = new ERC6492Deployer();
-        new SpendPermissionManager{salt: 0}(erc6492Deployer);
+        PublicERC6492Validator publicERC6492Validator = new PublicERC6492Validator();
+        new SpendPermissionManager{salt: 0}(publicERC6492Validator);
     }
 
     function logAddress(string memory name, address addr) internal pure {
