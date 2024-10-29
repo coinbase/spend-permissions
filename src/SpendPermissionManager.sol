@@ -251,11 +251,11 @@ contract SpendPermissionManager is EIP712 {
                 SpendPermission({
                     account: spendPermissionBatch.account,
                     spender: spendPermissionBatch.permissions[i].spender,
-                    start: spendPermissionBatch.start,
-                    end: spendPermissionBatch.end,
-                    period: spendPermissionBatch.period,
                     token: spendPermissionBatch.permissions[i].token,
                     allowance: spendPermissionBatch.permissions[i].allowance,
+                    period: spendPermissionBatch.period,
+                    start: spendPermissionBatch.start,
+                    end: spendPermissionBatch.end,
                     salt: spendPermissionBatch.permissions[i].salt,
                     extraData: spendPermissionBatch.permissions[i].extraData
                 })
