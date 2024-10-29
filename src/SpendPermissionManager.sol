@@ -223,7 +223,7 @@ contract SpendPermissionManager is EIP712 {
     function approveWithSignature(SpendPermission calldata spendPermission, bytes calldata signature) public {
         // validate signature over spend permission data, deploying or preparing account if necessary
         if (
-            !publicERC6492Validator.isValidERC6492SignatureNowAllowSideEffects(
+            !publicERC6492Validator.isValidSignatureNowAllowSideEffects(
                 spendPermission.account, getHash(spendPermission), signature
             )
         ) {
@@ -257,7 +257,7 @@ contract SpendPermissionManager is EIP712 {
     {
         // validate signature over spend permission batch data
         if (
-            !publicERC6492Validator.isValidERC6492SignatureNowAllowSideEffects(
+            !publicERC6492Validator.isValidSignatureNowAllowSideEffects(
                 spendPermissionBatch.account, getBatchHash(spendPermissionBatch), signature
             )
         ) {

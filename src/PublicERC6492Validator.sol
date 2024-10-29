@@ -14,10 +14,14 @@ import {SignatureCheckerLib} from "solady/utils/SignatureCheckerLib.sol";
 ///
 /// @author Coinbase (https://github.com/coinbase/spend-permissions)
 contract PublicERC6492Validator {
-    function isValidERC6492SignatureNowAllowSideEffects(address account, bytes32 hash, bytes memory signature)
+    function isValidSignatureNowAllowSideEffects(address account, bytes32 hash, bytes memory signature)
         public
         returns (bool)
     {
         return SignatureCheckerLib.isValidERC6492SignatureNowAllowSideEffects(account, hash, signature);
+    }
+
+    function isValidSignatureNow(address account, bytes32 hash, bytes memory signature) public returns (bool) {
+        return SignatureCheckerLib.isValidERC6492SignatureNow(account, hash, signature);
     }
 }
