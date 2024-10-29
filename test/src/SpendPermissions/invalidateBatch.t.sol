@@ -23,26 +23,28 @@ contract InvalidateBatchTest is SpendPermissionManagerBase {
         uint256 salt1,
         uint256 salt2
     ) public {
+        vm.assume(spender != address(account));
         vm.assume(start < end);
         vm.assume(period > 0);
         vm.assume(allowance1 > 0);
         vm.assume(allowance2 > 0);
 
-        SpendPermissionManager.TokenAllowance memory tokenAllowance1 = SpendPermissionManager.TokenAllowance({
+        SpendPermissionManager.PermissionDetails memory tokenAllowance1 = SpendPermissionManager.PermissionDetails({
             token: token,
             allowance: allowance1,
             spender: spender,
             salt: salt1,
             extraData: "0x"
         });
-        SpendPermissionManager.TokenAllowance memory tokenAllowance2 = SpendPermissionManager.TokenAllowance({
+        SpendPermissionManager.PermissionDetails memory tokenAllowance2 = SpendPermissionManager.PermissionDetails({
             token: token,
             allowance: allowance2,
             spender: spender,
             salt: salt2,
             extraData: "0x"
         });
-        SpendPermissionManager.TokenAllowance[] memory tokenAllowances = new SpendPermissionManager.TokenAllowance[](2);
+        SpendPermissionManager.PermissionDetails[] memory tokenAllowances =
+            new SpendPermissionManager.PermissionDetails[](2);
         tokenAllowances[0] = tokenAllowance1;
         tokenAllowances[1] = tokenAllowance2;
         SpendPermissionManager.SpendPermissionBatch memory spendPermissionBatch = SpendPermissionManager
@@ -65,7 +67,7 @@ contract InvalidateBatchTest is SpendPermissionManagerBase {
         mockSpendPermissionManager.approveBatchWithSignature(spendPermissionBatch, signature);
     }
 
-    function test_invalidateBatch_success(
+    function test_invalidateBatch_success_preventsApproval(
         address spender,
         address token,
         uint48 start,
@@ -81,21 +83,22 @@ contract InvalidateBatchTest is SpendPermissionManagerBase {
         vm.assume(allowance1 > 0);
         vm.assume(allowance2 > 0);
 
-        SpendPermissionManager.TokenAllowance memory tokenAllowance1 = SpendPermissionManager.TokenAllowance({
+        SpendPermissionManager.PermissionDetails memory tokenAllowance1 = SpendPermissionManager.PermissionDetails({
             token: token,
             allowance: allowance1,
             spender: spender,
             salt: salt1,
             extraData: "0x"
         });
-        SpendPermissionManager.TokenAllowance memory tokenAllowance2 = SpendPermissionManager.TokenAllowance({
+        SpendPermissionManager.PermissionDetails memory tokenAllowance2 = SpendPermissionManager.PermissionDetails({
             token: token,
             allowance: allowance2,
             spender: spender,
             salt: salt2,
             extraData: "0x"
         });
-        SpendPermissionManager.TokenAllowance[] memory tokenAllowances = new SpendPermissionManager.TokenAllowance[](2);
+        SpendPermissionManager.PermissionDetails[] memory tokenAllowances =
+            new SpendPermissionManager.PermissionDetails[](2);
         tokenAllowances[0] = tokenAllowance1;
         tokenAllowances[1] = tokenAllowance2;
         SpendPermissionManager.SpendPermissionBatch memory spendPermissionBatch = SpendPermissionManager
@@ -110,7 +113,12 @@ contract InvalidateBatchTest is SpendPermissionManagerBase {
         mockSpendPermissionManager.invalidateBatch(spendPermissionBatch);
 
         bytes memory signature = _signSpendPermissionBatch(spendPermissionBatch, ownerPk, 0);
-        vm.expectRevert(abi.encodeWithSelector(SpendPermissionManager.InvalidatedBatch.selector));
+        vm.expectRevert(
+            abi.encodeWithSelector(
+                SpendPermissionManager.InvalidatedBatch.selector,
+                mockSpendPermissionManager.getBatchHash(spendPermissionBatch)
+            )
+        );
         mockSpendPermissionManager.approveBatchWithSignature(spendPermissionBatch, signature);
     }
 
@@ -130,21 +138,22 @@ contract InvalidateBatchTest is SpendPermissionManagerBase {
         vm.assume(allowance1 > 0);
         vm.assume(allowance2 > 0);
 
-        SpendPermissionManager.TokenAllowance memory tokenAllowance1 = SpendPermissionManager.TokenAllowance({
+        SpendPermissionManager.PermissionDetails memory tokenAllowance1 = SpendPermissionManager.PermissionDetails({
             token: token,
             allowance: allowance1,
             spender: spender,
             salt: salt1,
             extraData: "0x"
         });
-        SpendPermissionManager.TokenAllowance memory tokenAllowance2 = SpendPermissionManager.TokenAllowance({
+        SpendPermissionManager.PermissionDetails memory tokenAllowance2 = SpendPermissionManager.PermissionDetails({
             token: token,
             allowance: allowance2,
             spender: spender,
             salt: salt2,
             extraData: "0x"
         });
-        SpendPermissionManager.TokenAllowance[] memory tokenAllowances = new SpendPermissionManager.TokenAllowance[](2);
+        SpendPermissionManager.PermissionDetails[] memory tokenAllowances =
+            new SpendPermissionManager.PermissionDetails[](2);
         tokenAllowances[0] = tokenAllowance1;
         tokenAllowances[1] = tokenAllowance2;
         SpendPermissionManager.SpendPermissionBatch memory spendPermissionBatch = SpendPermissionManager
@@ -165,7 +174,12 @@ contract InvalidateBatchTest is SpendPermissionManagerBase {
         mockSpendPermissionManager.invalidateBatch(spendPermissionBatch);
 
         bytes memory signature = _signSpendPermissionBatch(spendPermissionBatch, ownerPk, 0);
-        vm.expectRevert(abi.encodeWithSelector(SpendPermissionManager.InvalidatedBatch.selector));
+        vm.expectRevert(
+            abi.encodeWithSelector(
+                SpendPermissionManager.InvalidatedBatch.selector,
+                mockSpendPermissionManager.getBatchHash(spendPermissionBatch)
+            )
+        );
         mockSpendPermissionManager.approveBatchWithSignature(spendPermissionBatch, signature);
     }
 }

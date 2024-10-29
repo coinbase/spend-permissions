@@ -36,13 +36,13 @@ contract SpendPermissionManager is EIP712 {
         bytes extraData;
     }
 
-    struct TokenAllowance {
+    struct PermissionDetails {
+        /// @dev Entity that can spend user funds.
+        address spender;
         /// @dev Token address (ERC-7528 ether address or ERC-20 contract).
         address token;
         /// @dev Maximum allowed value to spend within a recurring period.
         uint160 allowance;
-        /// @dev Entity that can spend user funds.
-        address spender;
         /// @dev An arbitrary salt to differentiate unique spend permissions with otherwise identical data.
         uint256 salt;
         /// @dev Arbitrary data to include in the signature.
@@ -52,14 +52,14 @@ contract SpendPermissionManager is EIP712 {
     struct SpendPermissionBatch {
         /// @dev Smart account this spend permission is valid for.
         address account;
+        /// @dev Time duration for resetting used allowance on a recurring basis (seconds).
+        uint48 period;
         /// @dev Timestamp this spend permission is valid after (unix seconds).
         uint48 start;
         /// @dev Timestamp this spend permission is valid until (unix seconds).
         uint48 end;
-        /// @dev Time duration for resetting used allowance on a recurring basis (seconds).
-        uint48 period;
         /// @dev Array of (token, allowance) tuples applied to this batch.
-        TokenAllowance[] tokenAllowances;
+        PermissionDetails[] tokenAllowances;
     }
 
     /// @notice Period parameters and spend usage.
@@ -77,17 +77,17 @@ contract SpendPermissionManager is EIP712 {
     );
 
     bytes32 constant PERMISSION_BATCH_TYPEHASH = keccak256(
-        "SpendPermissionBatch(address account,address spender,uint48 start,uint48 end,uint48 period,TokenAllowance[] tokenAllowances)TokenAllowance(address token,uint160 allowance)"
+        "SpendPermissionBatch(address account,address spender,uint48 start,uint48 end,uint48 period,PermissionDetails[] tokenAllowances)PermissionDetails(address token,uint160 allowance,uint256 salt,bytes extraData)"
     );
 
     bytes32 constant TOKEN_ALLOWANCE_TYPEHASH =
-        keccak256("TokenAllowance(address token,uint160 allowance,address spender,uint256 salt)");
+        keccak256("PermissionDetails(address token,uint160 allowance,address spender,uint256 salt,bytes extraData)");
 
     /// @notice ERC-7528 address convention for native token (https://eips.ethereum.org/EIPS/eip-7528).
     address public constant NATIVE_TOKEN = 0xEeeeeEeeeEeEeeEeEeEeeEEEeeeeEeeeeeeeEEeE;
 
     /// @notice A batch of spend permissions is invalidated.
-    mapping(bytes32 hash => mapping(address account => bool batchInvalidated)) internal _isInvalidated;
+    mapping(bytes32 hash => mapping(address account => bool invalidated)) internal _isBatchInvalidated;
 
     /// @notice Spend permission is revoked.
     mapping(bytes32 hash => mapping(address account => bool revoked)) internal _isRevoked;
@@ -107,7 +107,7 @@ contract SpendPermissionManager is EIP712 {
     error InvalidSignature();
 
     /// @notice Batch of spend permissions has been invalidated.
-    error InvalidatedBatch();
+    error InvalidatedBatch(bytes32 batchHash);
 
     /// @notice Spend Permission start time is not strictly less than end time.
     ///
@@ -164,7 +164,10 @@ contract SpendPermissionManager is EIP712 {
     /// @param spendPermission Details of the spend permission.
     event SpendPermissionRevoked(bytes32 indexed hash, address indexed account, SpendPermission spendPermission);
 
-    /// @notice SpendPermission was revoked prematurely by account.
+    /// @notice SpendPermission was invalidated by account.
+    /// @dev This prevents a batch of spend permissions from being approved if and only if that batch
+    /// has not yet been approved. It does not revoke any spend permissions that have already been approved or
+    /// prevent the ability to approve them in the future in a different batch or individually.
     ///
     /// @param hash The unique hash of the batch of spend permissions.
     /// @param account The smart contract account the batch of spend permissions would control.
@@ -218,7 +221,7 @@ contract SpendPermissionManager is EIP712 {
         requireSender(spendPermissionBatch.account)
     {
         bytes32 hash = getBatchHash(spendPermissionBatch);
-        _isInvalidated[hash][spendPermissionBatch.account] = true;
+        _isBatchInvalidated[hash][spendPermissionBatch.account] = true;
         emit SpendPermissionBatchInvalidated(hash, spendPermissionBatch.account, spendPermissionBatch);
     }
 
@@ -257,9 +260,10 @@ contract SpendPermissionManager is EIP712 {
     function approveBatchWithSignature(SpendPermissionBatch memory spendPermissionBatch, bytes calldata signature)
         public
     {
+        // check batch has not been invalidated
         bytes32 batchHash = getBatchHash(spendPermissionBatch);
-        if (_isInvalidated[batchHash][spendPermissionBatch.account]) {
-            revert InvalidatedBatch();
+        if (_isBatchInvalidated[batchHash][spendPermissionBatch.account]) {
+            revert InvalidatedBatch(batchHash);
         }
         // validate signature over spend permission batch data
         if (
@@ -268,7 +272,7 @@ contract SpendPermissionManager is EIP712 {
         ) {
             revert InvalidSignature();
         }
-
+        // loop through each unique spend permission in the batch and approve it
         uint256 batchLen = spendPermissionBatch.tokenAllowances.length;
         for (uint256 i; i < batchLen; i++) {
             _approve(
