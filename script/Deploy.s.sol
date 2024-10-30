@@ -12,8 +12,6 @@ import {SpendPermissionManager} from "../src/SpendPermissionManager.sol";
  * $SEPOLIA_BASESCAN_API --etherscan-api-key $BASESCAN_API_KEY --broadcast -vvvv
  */
 contract Deploy is Script {
-    address public constant OWNER = 0x6EcB18183838265968039955F1E8829480Db5329; // dev wallet
-
     function run() public {
         vm.startBroadcast();
 
@@ -23,7 +21,7 @@ contract Deploy is Script {
     }
 
     function deploy() internal {
-        PublicERC6492Validator publicERC6492Validator = new PublicERC6492Validator();
+        PublicERC6492Validator publicERC6492Validator = new PublicERC6492Validator{salt: 0}();
         new SpendPermissionManager{salt: 0}(publicERC6492Validator);
     }
 
