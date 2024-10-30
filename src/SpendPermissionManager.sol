@@ -60,7 +60,7 @@ contract SpendPermissionManager is EIP712 {
         uint48 start;
         /// @dev Timestamp this spend permission is valid until (unix seconds).
         uint48 end;
-        /// @dev Array of (token, allowance) tuples applied to this batch.
+        /// @dev Array of PermissionDetails structs defining properties that apply per-permission.
         PermissionDetails[] permissions;
     }
 
@@ -140,7 +140,7 @@ contract SpendPermissionManager is EIP712 {
     /// @param start Timestamp this spend permission is valid starting at (unix seconds).
     error BeforeSpendPermissionStart(uint48 currentTimestamp, uint48 start);
 
-    /// @notice Recurring period has not started yet.
+    /// @notice Recurring period has already ended.
     ///
     /// @param currentTimestamp Current timestamp (unix seconds).
     /// @param end Timestamp this spend permission is valid until (unix seconds).
@@ -164,7 +164,7 @@ contract SpendPermissionManager is EIP712 {
     /// @param spendPermission Details of the spend permission.
     event SpendPermissionApproved(bytes32 indexed hash, address indexed account, SpendPermission spendPermission);
 
-    /// @notice SpendPermission was revoked prematurely by account.
+    /// @notice SpendPermission was revoked by account.
     ///
     /// @param hash The unique hash representing the spend permission.
     /// @param account The smart contract account the spend permission controlled.
@@ -237,7 +237,7 @@ contract SpendPermissionManager is EIP712 {
     /// @notice Spend tokens using a spend permission, transferring them from `account` to `spender`.
     ///
     /// @param spendPermission Details of the spend permission.
-    /// @param value Amount of token attempting to spend (wei).
+    /// @param value Amount of token attempting to spend.
     function spend(SpendPermission memory spendPermission, uint160 value)
         public
         requireSender(spendPermission.spender)
