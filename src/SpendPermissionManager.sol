@@ -1,11 +1,12 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.0;
 
-import {PublicERC6492Validator} from "./PublicERC6492Validator.sol";
 import {IERC1271} from "openzeppelin-contracts/contracts/interfaces/IERC1271.sol";
 import {IERC20} from "openzeppelin-contracts/contracts/token/ERC20/IERC20.sol";
 import {CoinbaseSmartWallet} from "smart-wallet/CoinbaseSmartWallet.sol";
 import {EIP712} from "solady/utils/EIP712.sol";
+
+import {PublicERC6492Validator} from "./PublicERC6492Validator.sol";
 
 /// @title SpendPermissionManager
 ///
@@ -73,7 +74,7 @@ contract SpendPermissionManager is EIP712 {
         uint160 spend;
     }
 
-    PublicERC6492Validator public publicERC6492Validator;
+    PublicERC6492Validator public immutable publicERC6492Validator;
 
     bytes32 constant PERMISSION_TYPEHASH = keccak256(
         "SpendPermission(address account,address spender,address token,uint160 allowance,uint48 period,uint48 start,uint48 end,uint256 salt,bytes extraData)"
