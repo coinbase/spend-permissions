@@ -120,7 +120,6 @@ contract RevokeTest is SpendPermissionManagerBase {
         vm.expectEmit(address(mockSpendPermissionManager));
         emit SpendPermissionManager.SpendPermissionRevoked({
             hash: mockSpendPermissionManager.getHash(spendPermission),
-            account: account,
             spendPermission: spendPermission
         });
         mockSpendPermissionManager.revoke(spendPermission);

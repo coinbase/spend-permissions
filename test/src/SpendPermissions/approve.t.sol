@@ -51,6 +51,9 @@ contract ApproveTest is SpendPermissionManagerBase {
         bytes memory extraData
     ) public {
         vm.assume(spender != address(0));
+        vm.assume(period > 0);
+        vm.assume(allowance > 0);
+
         vm.assume(start >= end);
 
         SpendPermissionManager.SpendPermission memory spendPermission = SpendPermissionManager.SpendPermission({
@@ -95,7 +98,7 @@ contract ApproveTest is SpendPermissionManagerBase {
             extraData: extraData
         });
         vm.startPrank(account);
-        vm.expectRevert(abi.encodeWithSelector(SpendPermissionManager.InvalidTokenZeroAddress.selector));
+        vm.expectRevert(abi.encodeWithSelector(SpendPermissionManager.ZeroToken.selector));
         mockSpendPermissionManager.approve(spendPermission);
         vm.stopPrank();
     }
@@ -126,7 +129,7 @@ contract ApproveTest is SpendPermissionManagerBase {
             extraData: extraData
         });
         vm.startPrank(account);
-        vm.expectRevert(abi.encodeWithSelector(SpendPermissionManager.InvalidSpenderZeroAddress.selector));
+        vm.expectRevert(abi.encodeWithSelector(SpendPermissionManager.ZeroSpender.selector));
         mockSpendPermissionManager.approve(spendPermission);
         vm.stopPrank();
     }
@@ -251,7 +254,6 @@ contract ApproveTest is SpendPermissionManagerBase {
         vm.expectEmit(address(mockSpendPermissionManager));
         emit SpendPermissionManager.SpendPermissionApproved({
             hash: mockSpendPermissionManager.getHash(spendPermission),
-            account: account,
             spendPermission: spendPermission
         });
         mockSpendPermissionManager.approve(spendPermission);

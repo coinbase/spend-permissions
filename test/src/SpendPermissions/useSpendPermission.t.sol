@@ -183,48 +183,32 @@ contract UseSpendPermissionTest is SpendPermissionManagerBase {
     }
 
     function test_useSpendPermission_success_emitsEvent(
-        address account,
-        address spender,
-        uint48 start,
-        uint48 end,
-        uint48 period,
-        uint160 allowance,
-        uint160 spend,
-        uint256 salt,
-        bytes memory extraData
+        SpendPermissionManager.SpendPermission memory spendPermission,
+        uint160 spend
     ) public {
-        vm.assume(spender != address(0));
-        vm.assume(start > 0);
-        vm.assume(end > 0);
-        vm.assume(start < end);
-        vm.assume(period > 0);
-        vm.assume(allowance > 0);
+        vm.assume(spendPermission.spender != address(0));
+        vm.assume(spendPermission.start > 0);
+        vm.assume(spendPermission.end > 0);
+        vm.assume(spendPermission.start < spendPermission.end);
+        vm.assume(spendPermission.period > 0);
+        vm.assume(spendPermission.allowance > 0);
         vm.assume(spend > 0);
-        vm.assume(spend < allowance);
+        vm.assume(spend < spendPermission.allowance);
 
-        SpendPermissionManager.SpendPermission memory spendPermission = SpendPermissionManager.SpendPermission({
-            account: account,
-            spender: spender,
-            token: NATIVE_TOKEN,
-            start: start,
-            end: end,
-            period: period,
-            allowance: allowance,
-            salt: salt,
-            extraData: extraData
-        });
+        spendPermission.token = NATIVE_TOKEN;
 
-        vm.prank(account);
+        vm.prank(spendPermission.account);
         mockSpendPermissionManager.approve(spendPermission);
-        vm.warp(start);
+        vm.warp(spendPermission.start);
         vm.expectEmit(address(mockSpendPermissionManager));
         emit SpendPermissionManager.SpendPermissionUsed({
             hash: mockSpendPermissionManager.getHash(spendPermission),
-            account: account,
+            account: spendPermission.account,
+            spender: spendPermission.spender,
             token: NATIVE_TOKEN,
-            newUsage: SpendPermissionManager.PeriodSpend({
-                start: start,
-                end: _safeAddUint48(start, period, end),
+            periodSpend: SpendPermissionManager.PeriodSpend({
+                start: spendPermission.start,
+                end: _safeAddUint48(spendPermission.start, spendPermission.period, spendPermission.end),
                 spend: spend
             })
         });
