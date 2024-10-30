@@ -56,7 +56,7 @@ sequenceDiagram
 
 Spenders (apps) spend tokens by calling `SpendPermissionManager.spend` with their spend permission values, a recipient, and an amount of tokens to spend.
 
-Spenders may want to batch this call with an additionally prepended call to [approve their permission via user signature](./approveWithSignature.md) or the convenience function `SpendPermissionManager.spendWithSignature`.
+Spenders may want to batch this call with an additionally prepended call to [approve their permission via user signature](./approveWithSignature.md) unless the user has already approved the spend permission(s) directly via `SpendPermissionManager.approve`.
 
 Read more details [here](./docs/diagrams/spend.md).
 
@@ -68,9 +68,18 @@ sequenceDiagram
     participant A as Account
     participant ERC20
 
-    opt
-        S->>PM: approveWithSignature
+sequenceDiagram
+    autonumber
+    participant S as Spender
+    participant PM as Permission Manager
+    participant A as Account
+    participant ERC20
+
+    alt
+    S->>PM: approveWithSignature
     Note over PM: validate signature and store approval
+    else
+    A->>PM: approve
     end
     S->>PM: spend
     Note over PM: validate permission approved <br> and spend value within allowance
