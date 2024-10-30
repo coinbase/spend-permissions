@@ -38,19 +38,6 @@ contract SpendPermissionManager is EIP712 {
         bytes extraData;
     }
 
-    struct PermissionDetails {
-        /// @dev Entity that can spend user funds.
-        address spender;
-        /// @dev Token address (ERC-7528 ether address or ERC-20 contract).
-        address token;
-        /// @dev Maximum allowed value to spend within a recurring period.
-        uint160 allowance;
-        /// @dev An arbitrary salt to differentiate unique spend permissions with otherwise identical data.
-        uint256 salt;
-        /// @dev Arbitrary data to include in the signature.
-        bytes extraData;
-    }
-
     struct SpendPermissionBatch {
         /// @dev Smart account this spend permission is valid for.
         address account;
@@ -64,6 +51,19 @@ contract SpendPermissionManager is EIP712 {
         PermissionDetails[] permissions;
     }
 
+    struct PermissionDetails {
+        /// @dev Entity that can spend user funds.
+        address spender;
+        /// @dev Token address (ERC-7528 ether address or ERC-20 contract).
+        address token;
+        /// @dev Maximum allowed value to spend within a recurring period.
+        uint160 allowance;
+        /// @dev An arbitrary salt to differentiate unique spend permissions with otherwise identical data.
+        uint256 salt;
+        /// @dev Arbitrary data to include in the signature.
+        bytes extraData;
+    }
+
     /// @notice Period parameters and spend usage.
     struct PeriodSpend {
         /// @dev Start time of the period (unix seconds).
@@ -74,6 +74,8 @@ contract SpendPermissionManager is EIP712 {
         uint160 spend;
     }
 
+    /// @notice Separated contract for validating signatures and executing ERC-6492 side effects
+    ///         (https://eips.ethereum.org/EIPS/eip-6492).
     PublicERC6492Validator public immutable publicERC6492Validator;
 
     bytes32 constant PERMISSION_TYPEHASH = keccak256(
@@ -84,7 +86,7 @@ contract SpendPermissionManager is EIP712 {
         "SpendPermissionBatch(address account,uint48 period,uint48 start,uint48 end,PermissionDetails[] permissions)PermissionDetails(address spender,address token,uint160 allowance,uint256 salt,bytes extraData)"
     );
 
-    bytes32 constant TOKEN_ALLOWANCE_TYPEHASH =
+    bytes32 constant PERMISSION_DETAILS_TYPEHASH =
         keccak256("PermissionDetails(address spender,address token,uint160 allowance,uint256 salt,bytes extraData)");
 
     /// @notice ERC-7528 address convention for native token (https://eips.ethereum.org/EIPS/eip-7528).
@@ -104,29 +106,29 @@ contract SpendPermissionManager is EIP712 {
     /// @param sender Expected sender to be valid.
     error InvalidSender(address sender, address expected);
 
-    /// @notice Invalid zero address for token.
-    error InvalidTokenZeroAddress();
-
-    /// @notice Invalid zero address for spender.
-    error InvalidSpenderZeroAddress();
-
     /// @notice Invalid signature.
     error InvalidSignature();
 
     /// @notice Empty batch of spend permissions.
-    error EmptyBatch();
+    error EmptySpendPermissionBatch();
 
-    /// @notice Spend Permission start time is not strictly less than end time.
-    ///
-    /// @param start Unix timestamp (seconds) for start of the permission.
-    /// @param end Unix timestamp (seconds) for end of the permission.
-    error InvalidStartEnd(uint48 start, uint48 end);
+    /// @notice Spend Permission has zero token address.
+    error ZeroToken();
+
+    /// @notice Spend Permission has zero spender address.
+    error ZeroSpender();
 
     /// @notice Spend Permission has zero allowance.
     error ZeroAllowance();
 
     /// @notice Spend Permission has zero period.
     error ZeroPeriod();
+
+    /// @notice Spend Permission start time is not strictly less than end time.
+    ///
+    /// @param start Unix timestamp (seconds) for start of the permission.
+    /// @param end Unix timestamp (seconds) for end of the permission.
+    error InvalidStartEnd(uint48 start, uint48 end);
 
     /// @notice Attempting to spend zero value.
     error ZeroValue();
@@ -160,25 +162,24 @@ contract SpendPermissionManager is EIP712 {
     /// @notice SpendPermission was approved via transaction.
     ///
     /// @param hash The unique hash representing the spend permission.
-    /// @param account The smart contract account the spend permission controls.
     /// @param spendPermission Details of the spend permission.
-    event SpendPermissionApproved(bytes32 indexed hash, address indexed account, SpendPermission spendPermission);
+    event SpendPermissionApproved(bytes32 indexed hash, SpendPermission spendPermission);
 
     /// @notice SpendPermission was revoked by account.
     ///
     /// @param hash The unique hash representing the spend permission.
-    /// @param account The smart contract account the spend permission controlled.
     /// @param spendPermission Details of the spend permission.
-    event SpendPermissionRevoked(bytes32 indexed hash, address indexed account, SpendPermission spendPermission);
+    event SpendPermissionRevoked(bytes32 indexed hash, SpendPermission spendPermission);
 
     /// @notice Register native or ERC-20 token spend for a spend permission period.
     ///
     /// @param hash Hash of the spend permission.
-    /// @param account Account that spent tokens via a spend permission.
+    /// @param account Account that had its tokens spent via a spend permission.
+    /// @param spender Entity that spent `account`'s tokens.
     /// @param token Address of token spent via a spend permission.
-    /// @param newUsage Start and end of the current period with new spend usage (struct).
+    /// @param periodSpend Start and end of the current period with marginal new spend (struct).
     event SpendPermissionUsed(
-        bytes32 indexed hash, address indexed account, address indexed token, PeriodSpend newUsage
+        bytes32 indexed hash, address indexed account, address indexed spender, address token, PeriodSpend periodSpend
     );
 
     /// @notice Construct a new SpendPermissionManager contract.
@@ -190,7 +191,7 @@ contract SpendPermissionManager is EIP712 {
         publicERC6492Validator = _publicERC6492Validator;
     }
 
-    /// @notice Require a specific sender for an external call,
+    /// @notice Require a specific sender for an external call.
     ///
     /// @param sender Expected sender for call to be valid.
     modifier requireSender(address sender) {
@@ -200,28 +201,20 @@ contract SpendPermissionManager is EIP712 {
 
     /// @notice Approve a spend permission via a direct call from the account.
     ///
+    /// @dev Can only be called by the `account` of a permission.
+    ///
     /// @param spendPermission Details of the spend permission.
     function approve(SpendPermission calldata spendPermission) external requireSender(spendPermission.account) {
         _approve(spendPermission);
     }
 
-    /// @notice Revoke a spend permission to disable its use indefinitely.
-    ///
-    /// @param spendPermission Details of the spend permission.
-    function revoke(SpendPermission calldata spendPermission) external requireSender(spendPermission.account) {
-        bytes32 hash = getHash(spendPermission);
-        _isRevoked[hash][spendPermission.account] = true;
-        emit SpendPermissionRevoked(hash, spendPermission.account, spendPermission);
-    }
-
     /// @notice Approve a spend permission via a signature from the account.
     ///
-    /// @dev Compatible with ERC-6492 signatures (https://eips.ethereum.org/EIPS/eip-6492)
-    /// Validates a signature over spend permission data and optionally deploys account.
+    /// @dev Compatible with ERC-6492 signatures including side effects (https://eips.ethereum.org/EIPS/eip-6492).
     ///
     /// @param spendPermission Details of the spend permission.
     /// @param signature Signed approval from the user.
-    function approveWithSignature(SpendPermission calldata spendPermission, bytes calldata signature) public {
+    function approveWithSignature(SpendPermission calldata spendPermission, bytes calldata signature) external {
         // validate signature over spend permission data, deploying or preparing account if necessary
         if (
             !publicERC6492Validator.isValidSignatureNowAllowSideEffects(
@@ -234,27 +227,15 @@ contract SpendPermissionManager is EIP712 {
         _approve(spendPermission);
     }
 
-    /// @notice Spend tokens using a spend permission, transferring them from `account` to `spender`.
+    /// @notice Approve a spend permission batch via a signature from the account.
     ///
-    /// @param spendPermission Details of the spend permission.
-    /// @param value Amount of token attempting to spend.
-    function spend(SpendPermission memory spendPermission, uint160 value)
-        public
-        requireSender(spendPermission.spender)
-    {
-        _useSpendPermission(spendPermission, value);
-        _transferFrom(spendPermission.token, spendPermission.account, spendPermission.spender, value);
-    }
-
-    /// @notice Approve a spend permission batch via a signature from the account, optionally deploying account.
-    ///
-    /// @dev Compatible with ERC-6492 signatures (https://eips.ethereum.org/EIPS/eip-6492)
-    /// Validates a signature over a batch of spend permission data and optionally deploys account.
+    /// @dev Compatible with ERC-6492 signatures including side effects (https://eips.ethereum.org/EIPS/eip-6492).
+    /// @dev Does not enforce uniqueness of permissions within a batch, allowing duplicate approvals.
     ///
     /// @param spendPermissionBatch Details of the spend permission batch.
     /// @param signature Signed approval from the user.
     function approveBatchWithSignature(SpendPermissionBatch memory spendPermissionBatch, bytes calldata signature)
-        public
+        external
     {
         // validate signature over spend permission batch data
         if (
@@ -264,7 +245,8 @@ contract SpendPermissionManager is EIP712 {
         ) {
             revert InvalidSignature();
         }
-        // loop through each unique spend permission in the batch and approve it
+
+        // loop through each spend permission in the batch and approve it
         uint256 batchLen = spendPermissionBatch.permissions.length;
         for (uint256 i; i < batchLen; i++) {
             _approve(
@@ -283,7 +265,33 @@ contract SpendPermissionManager is EIP712 {
         }
     }
 
-    /// @notice Hash a SpendPermission struct for signing in accordance with EIP-712.
+    /// @notice Spend tokens using a spend permission, transferring them from `account` to `spender`.
+    ///
+    /// @dev Can only be called by the `spender` of a permission.
+    ///
+    /// @param spendPermission Details of the spend permission.
+    /// @param value Amount of token attempting to spend.
+    function spend(SpendPermission memory spendPermission, uint160 value)
+        external
+        requireSender(spendPermission.spender)
+    {
+        _useSpendPermission(spendPermission, value);
+        _transferFrom(spendPermission.token, spendPermission.account, spendPermission.spender, value);
+    }
+
+    /// @notice Revoke a spend permission to disable its use indefinitely.
+    ///
+    /// @dev Can only be called by the `account` of a permission.
+    ///
+    /// @param spendPermission Details of the spend permission.
+    function revoke(SpendPermission calldata spendPermission) external requireSender(spendPermission.account) {
+        bytes32 hash = getHash(spendPermission);
+        _isRevoked[hash][spendPermission.account] = true;
+        emit SpendPermissionRevoked(hash, spendPermission);
+    }
+
+    /// @notice Hash a SpendPermission struct for signing in accordance with EIP-712
+    ///         (https://eips.ethereum.org/EIPS/eip-712).
     ///
     /// @param spendPermission Details of the spend permission.
     ///
@@ -308,18 +316,24 @@ contract SpendPermissionManager is EIP712 {
     }
 
     /// @notice Hash a SpendPermissionBatch struct for signing in accordance with EIP-712.
+    ///         (https://eips.ethereum.org/EIPS/eip-712).
+    ///
+    /// @dev Reverts if the batch is empty.
     ///
     /// @param spendPermissionBatch Details of the spend permission batch.
     ///
     /// @return hash Hash of the spend permission batch.
     function getBatchHash(SpendPermissionBatch memory spendPermissionBatch) public view returns (bytes32) {
+        // check batch is non-empty
         uint256 permissionDetailsLen = spendPermissionBatch.permissions.length;
-        if (permissionDetailsLen == 0) revert EmptyBatch();
+        if (permissionDetailsLen == 0) revert EmptySpendPermissionBatch();
+
+        // loop over permission details to aggregate inner struct hashes
         bytes32[] memory permissionDetailsHashes = new bytes32[](permissionDetailsLen);
         for (uint256 i; i < permissionDetailsLen; i++) {
             permissionDetailsHashes[i] = keccak256(
                 abi.encode(
-                    TOKEN_ALLOWANCE_TYPEHASH,
+                    PERMISSION_DETAILS_TYPEHASH,
                     spendPermissionBatch.permissions[i].spender,
                     spendPermissionBatch.permissions[i].token,
                     spendPermissionBatch.permissions[i].allowance,
@@ -353,10 +367,10 @@ contract SpendPermissionManager is EIP712 {
         return !_isRevoked[hash][spendPermission.account] && _isApproved[hash][spendPermission.account];
     }
 
-    /// @notice Get current period spend.
+    /// @notice Get start, end, and spend of the current period.
     ///
     /// @dev Reverts if spend permission has not started or has already ended.
-    /// @dev Period boundaries are at fixed intervals of [start + n * period, start + (n + 1) * period - 1].
+    /// @dev Period boundaries are at fixed intervals of [start + n * period, min(end, start + (n + 1) * period) - 1].
     ///
     /// @param spendPermission Details of the spend permission.
     ///
@@ -404,20 +418,11 @@ contract SpendPermissionManager is EIP712 {
     ///
     /// @param spendPermission Details of the spend permission.
     function _approve(SpendPermission memory spendPermission) internal {
-        // check token is not the zero adddress
-        if (spendPermission.token == address(0)) {
-            revert InvalidTokenZeroAddress();
-        }
+        // check token is non-zero
+        if (spendPermission.token == address(0)) revert ZeroToken();
 
-        // check spender is not the zero address
-        if (spendPermission.spender == address(0)) {
-            revert InvalidSpenderZeroAddress();
-        }
-
-        // check start is strictly before end
-        if (spendPermission.start >= spendPermission.end) {
-            revert InvalidStartEnd(spendPermission.start, spendPermission.end);
-        }
+        // check spender is non-zero
+        if (spendPermission.spender == address(0)) revert ZeroSpender();
 
         // check period non-zero
         if (spendPermission.period == 0) revert ZeroPeriod();
@@ -425,9 +430,14 @@ contract SpendPermissionManager is EIP712 {
         // check allowance non-zero
         if (spendPermission.allowance == 0) revert ZeroAllowance();
 
+        // check start is strictly before end
+        if (spendPermission.start >= spendPermission.end) {
+            revert InvalidStartEnd(spendPermission.start, spendPermission.end);
+        }
+
         bytes32 hash = getHash(spendPermission);
         _isApproved[hash][spendPermission.account] = true;
-        emit SpendPermissionApproved(hash, spendPermission.account, spendPermission);
+        emit SpendPermissionApproved(hash, spendPermission);
     }
 
     /// @notice Use a spend permission.
@@ -460,6 +470,7 @@ contract SpendPermissionManager is EIP712 {
         emit SpendPermissionUsed(
             hash,
             spendPermission.account,
+            spendPermission.spender,
             spendPermission.token,
             PeriodSpend(currentPeriod.start, currentPeriod.end, uint160(value))
         );
@@ -497,10 +508,10 @@ contract SpendPermissionManager is EIP712 {
         CoinbaseSmartWallet(payable(account)).execute({target: target, value: value, data: data});
     }
 
-    /// @notice Return EIP712 domain name and version.
+    /// @notice Return EIP-712 domain name and version.
     ///
-    /// @return name Name string for the EIP712 domain.
-    /// @return version Version string for the EIP712 domain.
+    /// @return name Name string for the EIP-712 domain.
+    /// @return version Version string for the EIP-712 domain.
     function _domainNameAndVersion() internal pure override returns (string memory name, string memory version) {
         name = "Spend Permission Manager";
         version = "1";
