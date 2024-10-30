@@ -1,6 +1,9 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.23;
 
+import {console2} from "forge-std/console2.sol";
+import {LibString} from "solady/utils/LibString.sol";
+
 import {SpendPermissionManager} from "../../../src/SpendPermissionManager.sol";
 
 import {SpendPermissionManagerBase} from "../../base/SpendPermissionManagerBase.sol";
@@ -173,5 +176,53 @@ contract GetBatchHashTest is SpendPermissionManagerBase {
         bytes32 hash1 = mockSpendPermissionManager1.getBatchHash(spendPermissionBatch);
         bytes32 hash2 = mockSpendPermissionManager2.getBatchHash(spendPermissionBatch);
         assertNotEq(hash1, hash2);
+    }
+
+    function test_getBatchHash_success_matchesViem(SpendPermissionManager.SpendPermission calldata spendPermission)
+        public
+    {
+        string[] memory inputs = new string[](13);
+        inputs[0] = "node";
+        inputs[1] = "node/getBatchHash.js";
+        inputs[2] = LibString.toString(block.chainid);
+        inputs[3] = LibString.toHexString(address(mockSpendPermissionManager));
+        inputs[4] = LibString.toHexString(spendPermission.account);
+        inputs[5] = LibString.toHexString(spendPermission.spender);
+        inputs[6] = LibString.toHexString(spendPermission.token);
+        inputs[7] = LibString.toString(spendPermission.allowance);
+        inputs[8] = LibString.toString(spendPermission.period);
+        inputs[9] = LibString.toString(spendPermission.start);
+        inputs[10] = LibString.toString(spendPermission.end);
+        inputs[11] = LibString.toString(spendPermission.salt);
+        inputs[12] = LibString.toHexString(spendPermission.extraData);
+
+        bytes memory res = vm.ffi(inputs);
+        bytes32 viemHash = abi.decode(res, (bytes32));
+        console2.logBytes32(viemHash);
+
+        SpendPermissionManager.PermissionDetails memory permissionDetails = SpendPermissionManager.PermissionDetails({
+            spender: spendPermission.spender,
+            token: spendPermission.token,
+            allowance: spendPermission.allowance,
+            salt: spendPermission.salt,
+            extraData: spendPermission.extraData
+        });
+        SpendPermissionManager.PermissionDetails[] memory permissions =
+            new SpendPermissionManager.PermissionDetails[](1);
+        permissions[0] = permissionDetails;
+
+        SpendPermissionManager.SpendPermissionBatch memory spendPermissionBatch = SpendPermissionManager
+            .SpendPermissionBatch({
+            account: spendPermission.account,
+            period: spendPermission.period,
+            start: spendPermission.start,
+            end: spendPermission.end,
+            permissions: permissions
+        });
+
+        bytes32 contractHash = mockSpendPermissionManager.getBatchHash(spendPermissionBatch);
+        console2.logBytes32(contractHash);
+
+        assertEq(viemHash, contractHash);
     }
 }

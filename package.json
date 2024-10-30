@@ -1,0 +1,21 @@
+{
+  "name": "spend-permissions",
+  "version": "1.0.0",
+  "type": "module",
+  "description": "> :information_source: These contracts are unaudited. Please use at your own risk.",
+  "main": "index.js",
+  "directories": {
+    "doc": "docs",
+    "lib": "lib",
+    "test": "test"
+  },
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "dependencies": {
+    "viem": "^2.21.37"
+  }
+}
