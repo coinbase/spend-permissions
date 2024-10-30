@@ -68,13 +68,6 @@ sequenceDiagram
     participant A as Account
     participant ERC20
 
-sequenceDiagram
-    autonumber
-    participant S as Spender
-    participant PM as Permission Manager
-    participant A as Account
-    participant ERC20
-
     alt
     S->>PM: approveWithSignature
     Note over PM: validate signature and store approval
