@@ -289,7 +289,22 @@ contract SpendPermissionManager is EIP712 {
     ///
     /// @return hash Hash of the spend permission.
     function getHash(SpendPermission memory spendPermission) public view returns (bytes32) {
-        return _hashTypedData(keccak256(abi.encode(PERMISSION_TYPEHASH, spendPermission)));
+        return _hashTypedData(
+            keccak256(
+                abi.encode(
+                    PERMISSION_TYPEHASH,
+                    spendPermission.account,
+                    spendPermission.spender,
+                    spendPermission.token,
+                    spendPermission.allowance,
+                    spendPermission.period,
+                    spendPermission.start,
+                    spendPermission.end,
+                    spendPermission.salt,
+                    keccak256(spendPermission.extraData)
+                )
+            )
+        );
     }
 
     /// @notice Hash a SpendPermissionBatch struct for signing in accordance with EIP-712.
