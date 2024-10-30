@@ -14,9 +14,11 @@ sequenceDiagram
     participant A as Account
     participant ERC20
 
-    opt
-        S->>PM: approveWithSignature
+    alt
+    S->>PM: approveWithSignature
     Note over PM: validate signature and store approval
+    else
+    A->>PM: approve
     end
     S->>PM: spend
     Note over PM: validate permission approved <br> and spend value within allowance
