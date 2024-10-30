@@ -334,9 +334,9 @@ contract SpendPermissionManager is EIP712 {
                 abi.encode(
                     PERMISSION_BATCH_TYPEHASH,
                     spendPermissionBatch.account,
+                    spendPermissionBatch.period,
                     spendPermissionBatch.start,
                     spendPermissionBatch.end,
-                    spendPermissionBatch.period,
                     keccak256(abi.encodePacked(permissionDetailsHashes))
                 )
             )
