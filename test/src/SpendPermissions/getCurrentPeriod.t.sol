@@ -88,6 +88,7 @@ contract GetCurrentPeriodTest is SpendPermissionManagerBase {
         uint256 salt,
         bytes memory extraData
     ) public {
+        vm.assume(spender != address(0));
         vm.assume(start > 0);
         vm.assume(end > 0);
         vm.assume(start < end);
@@ -129,6 +130,7 @@ contract GetCurrentPeriodTest is SpendPermissionManagerBase {
         uint256 salt,
         bytes memory extraData
     ) public {
+        vm.assume(spender != address(0));
         vm.assume(start > 0);
         vm.assume(end > 0);
         vm.assume(start < end);
@@ -173,6 +175,7 @@ contract GetCurrentPeriodTest is SpendPermissionManagerBase {
         bytes memory extraData,
         uint160 spend
     ) public {
+        vm.assume(spender != address(0));
         vm.assume(start > 0);
         vm.assume(end > 0);
         vm.assume(start < end);
@@ -181,7 +184,6 @@ contract GetCurrentPeriodTest is SpendPermissionManagerBase {
         vm.assume(allowance > 0);
         vm.assume(spend > 0);
         vm.assume(spend <= allowance);
-        // vm.assume(spender )
 
         SpendPermissionManager.SpendPermission memory spendPermission = SpendPermissionManager.SpendPermission({
             account: address(account),
