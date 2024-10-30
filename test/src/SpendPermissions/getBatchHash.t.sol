@@ -168,8 +168,8 @@ contract GetBatchHashTest is SpendPermissionManagerBase {
             period: period,
             permissions: permissions
         });
-        MockSpendPermissionManager mockSpendPermissionManager1 = new MockSpendPermissionManager();
-        MockSpendPermissionManager mockSpendPermissionManager2 = new MockSpendPermissionManager();
+        MockSpendPermissionManager mockSpendPermissionManager1 = new MockSpendPermissionManager(publicERC6492Validator);
+        MockSpendPermissionManager mockSpendPermissionManager2 = new MockSpendPermissionManager(publicERC6492Validator);
         bytes32 hash1 = mockSpendPermissionManager1.getBatchHash(spendPermissionBatch);
         bytes32 hash2 = mockSpendPermissionManager2.getBatchHash(spendPermissionBatch);
         assertNotEq(hash1, hash2);

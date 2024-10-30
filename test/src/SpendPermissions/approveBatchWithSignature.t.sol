@@ -243,6 +243,57 @@ contract ApproveBatchWithSignatureTest is SpendPermissionManagerBase {
         _assertSpendPermissionBatchApproved(spendPermissionBatch, mockSpendPermissionManager);
     }
 
+    function test_approveBatchWithSignature_success_erc6492SignaturePredeploy(
+        uint128 ownerPk,
+        address spender,
+        address token,
+        uint48 start,
+        uint48 end,
+        uint48 period,
+        uint160 allowance
+    ) public {
+        vm.assume(spender != address(0));
+        vm.assume(token != address(0));
+        vm.assume(ownerPk != 0);
+        vm.assume(start < end);
+        vm.assume(period > 0);
+        vm.assume(allowance > 0);
+
+        // generate the counterfactual address for the account
+        address ownerAddress = vm.addr(ownerPk);
+        bytes[] memory owners = new bytes[](1);
+        owners[0] = abi.encode(ownerAddress);
+        address counterfactualAccount = mockCoinbaseSmartWalletFactory.getAddress(owners, 0);
+
+        SpendPermissionManager.PermissionDetails memory permissionDetails = SpendPermissionManager.PermissionDetails({
+            token: token,
+            allowance: allowance,
+            spender: spender,
+            salt: 0,
+            extraData: "0x"
+        });
+        SpendPermissionManager.PermissionDetails[] memory permissions =
+            new SpendPermissionManager.PermissionDetails[](1);
+        permissions[0] = permissionDetails;
+        SpendPermissionManager.SpendPermissionBatch memory spendPermissionBatch = SpendPermissionManager
+            .SpendPermissionBatch({
+            account: counterfactualAccount,
+            start: start,
+            end: end,
+            period: period,
+            permissions: permissions
+        });
+
+        // verify that the account isn't deployed yet
+        vm.assertEq(counterfactualAccount.code.length, 0);
+
+        bytes memory signature = _signSpendPermissionBatch6492(spendPermissionBatch, ownerPk, 0, owners);
+        mockSpendPermissionManager.approveBatchWithSignature(spendPermissionBatch, signature);
+        // verify that the account is now deployed (has code) and that a call to isValidSignature returns true
+        vm.assertGt(counterfactualAccount.code.length, 0);
+        _assertSpendPermissionBatchApproved(spendPermissionBatch, mockSpendPermissionManager);
+    }
+
     function _generateSpendPermissionArrayFromBatch(
         SpendPermissionManager.SpendPermissionBatch memory spendPermissionBatch
     ) internal pure returns (SpendPermissionManager.SpendPermission[] memory) {

@@ -6,6 +6,8 @@ import {IERC20} from "openzeppelin-contracts/contracts/token/ERC20/IERC20.sol";
 import {CoinbaseSmartWallet} from "smart-wallet/CoinbaseSmartWallet.sol";
 import {EIP712} from "solady/utils/EIP712.sol";
 
+import {PublicERC6492Validator} from "./PublicERC6492Validator.sol";
+
 /// @title SpendPermissionManager
 ///
 /// @notice Allow spending native and ERC-20 tokens with a spend permission.
@@ -58,7 +60,7 @@ contract SpendPermissionManager is EIP712 {
         uint48 start;
         /// @dev Timestamp this spend permission is valid until (unix seconds).
         uint48 end;
-        /// @dev Array of (token, allowance) tuples applied to this batch.
+        /// @dev Array of PermissionDetails structs defining properties that apply per-permission.
         PermissionDetails[] permissions;
     }
 
@@ -71,6 +73,8 @@ contract SpendPermissionManager is EIP712 {
         /// @dev Accumulated spend amount for period.
         uint160 spend;
     }
+
+    PublicERC6492Validator public immutable publicERC6492Validator;
 
     bytes32 constant PERMISSION_TYPEHASH = keccak256(
         "SpendPermission(address account,address spender,address token,uint160 allowance,uint48 period,uint48 start,uint48 end,uint256 salt,bytes extraData)"
@@ -136,7 +140,7 @@ contract SpendPermissionManager is EIP712 {
     /// @param start Timestamp this spend permission is valid starting at (unix seconds).
     error BeforeSpendPermissionStart(uint48 currentTimestamp, uint48 start);
 
-    /// @notice Recurring period has not started yet.
+    /// @notice Recurring period has already ended.
     ///
     /// @param currentTimestamp Current timestamp (unix seconds).
     /// @param end Timestamp this spend permission is valid until (unix seconds).
@@ -160,7 +164,7 @@ contract SpendPermissionManager is EIP712 {
     /// @param spendPermission Details of the spend permission.
     event SpendPermissionApproved(bytes32 indexed hash, address indexed account, SpendPermission spendPermission);
 
-    /// @notice SpendPermission was revoked prematurely by account.
+    /// @notice SpendPermission was revoked by account.
     ///
     /// @param hash The unique hash representing the spend permission.
     /// @param account The smart contract account the spend permission controlled.
@@ -176,6 +180,15 @@ contract SpendPermissionManager is EIP712 {
     event SpendPermissionUsed(
         bytes32 indexed hash, address indexed account, address indexed token, PeriodSpend newUsage
     );
+
+    /// @notice Construct a new SpendPermissionManager contract.
+    ///
+    /// @dev The PublicERC6492Validator contract is used to validate ERC-6492 signatures.
+    ///
+    /// @param _publicERC6492Validator Address of the PublicERC6492Validator contract.
+    constructor(PublicERC6492Validator _publicERC6492Validator) {
+        publicERC6492Validator = _publicERC6492Validator;
+    }
 
     /// @notice Require a specific sender for an external call,
     ///
@@ -203,13 +216,17 @@ contract SpendPermissionManager is EIP712 {
 
     /// @notice Approve a spend permission via a signature from the account.
     ///
+    /// @dev Compatible with ERC-6492 signatures (https://eips.ethereum.org/EIPS/eip-6492)
+    /// Validates a signature over spend permission data and optionally deploys account.
+    ///
     /// @param spendPermission Details of the spend permission.
     /// @param signature Signed approval from the user.
     function approveWithSignature(SpendPermission calldata spendPermission, bytes calldata signature) public {
-        // validate signature over spend permission data
+        // validate signature over spend permission data, deploying or preparing account if necessary
         if (
-            IERC1271(spendPermission.account).isValidSignature(getHash(spendPermission), signature)
-                != IERC1271.isValidSignature.selector
+            !publicERC6492Validator.isValidSignatureNowAllowSideEffects(
+                spendPermission.account, getHash(spendPermission), signature
+            )
         ) {
             revert InvalidSignature();
         }
@@ -220,7 +237,7 @@ contract SpendPermissionManager is EIP712 {
     /// @notice Spend tokens using a spend permission, transferring them from `account` to `spender`.
     ///
     /// @param spendPermission Details of the spend permission.
-    /// @param value Amount of token attempting to spend (wei).
+    /// @param value Amount of token attempting to spend.
     function spend(SpendPermission memory spendPermission, uint160 value)
         public
         requireSender(spendPermission.spender)
@@ -229,7 +246,10 @@ contract SpendPermissionManager is EIP712 {
         _transferFrom(spendPermission.token, spendPermission.account, spendPermission.spender, value);
     }
 
-    /// @notice Approve a spend permission batch via a signature from the account.
+    /// @notice Approve a spend permission batch via a signature from the account, optionally deploying account.
+    ///
+    /// @dev Compatible with ERC-6492 signatures (https://eips.ethereum.org/EIPS/eip-6492)
+    /// Validates a signature over a batch of spend permission data and optionally deploys account.
     ///
     /// @param spendPermissionBatch Details of the spend permission batch.
     /// @param signature Signed approval from the user.
@@ -237,10 +257,10 @@ contract SpendPermissionManager is EIP712 {
         public
     {
         // validate signature over spend permission batch data
-        bytes32 batchHash = getBatchHash(spendPermissionBatch);
         if (
-            IERC1271(spendPermissionBatch.account).isValidSignature(batchHash, signature)
-                != IERC1271.isValidSignature.selector
+            !publicERC6492Validator.isValidSignatureNowAllowSideEffects(
+                spendPermissionBatch.account, getBatchHash(spendPermissionBatch), signature
+            )
         ) {
             revert InvalidSignature();
         }

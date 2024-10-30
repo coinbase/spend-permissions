@@ -28,6 +28,7 @@ contract SpendTest is SpendPermissionManagerBase {
         bytes memory extraData,
         uint160 spend
     ) public {
+        vm.assume(spender != address(0));
         vm.assume(start > 0);
         vm.assume(start < end);
         vm.assume(period > 0);
@@ -65,6 +66,7 @@ contract SpendTest is SpendPermissionManagerBase {
         bytes memory extraData
     ) public {
         vm.assume(invalidPk != 0);
+        vm.assume(spender != address(0));
         vm.assume(start > 0);
         vm.assume(end > 0);
         vm.assume(start < end);
@@ -103,6 +105,7 @@ contract SpendTest is SpendPermissionManagerBase {
         uint160 spend
     ) public {
         vm.assume(invalidPk != 0);
+        vm.assume(spender != address(0));
         vm.assume(start > 0);
         vm.assume(end > 0);
         vm.assume(start < end);
@@ -139,6 +142,7 @@ contract SpendTest is SpendPermissionManagerBase {
         bytes memory extraData,
         uint160 spend
     ) public {
+        vm.assume(spender != address(0));
         vm.assume(spender != address(account)); // otherwise balance checks can fail
         assumePayable(spender);
         vm.assume(start > 0);
@@ -190,6 +194,7 @@ contract SpendTest is SpendPermissionManagerBase {
         bytes memory extraData,
         uint160 spend
     ) public {
+        vm.assume(spender != address(0));
         vm.assume(spender != address(account)); // otherwise balance checks can fail
         assumePayable(spender);
         vm.assume(start > 0);
@@ -238,6 +243,7 @@ contract SpendTest is SpendPermissionManagerBase {
         bytes memory extraData,
         uint160 spend
     ) public {
+        vm.assume(spender != address(0));
         vm.assume(spender != address(account)); // otherwise balance checks can fail
         vm.assume(start > 0);
         vm.assume(end > 0);

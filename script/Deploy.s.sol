@@ -4,6 +4,7 @@ pragma solidity ^0.8.20;
 import {Script, console2} from "forge-std/Script.sol";
 import {Strings} from "openzeppelin-contracts/contracts/utils/Strings.sol";
 
+import {PublicERC6492Validator} from "../src/PublicERC6492Validator.sol";
 import {SpendPermissionManager} from "../src/SpendPermissionManager.sol";
 
 /**
@@ -22,7 +23,8 @@ contract Deploy is Script {
     }
 
     function deploy() internal {
-        new SpendPermissionManager{salt: 0}();
+        PublicERC6492Validator publicERC6492Validator = new PublicERC6492Validator();
+        new SpendPermissionManager{salt: 0}(publicERC6492Validator);
     }
 
     function logAddress(string memory name, address addr) internal pure {
