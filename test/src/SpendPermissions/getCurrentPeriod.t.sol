@@ -45,7 +45,7 @@ contract GetCurrentPeriodTest is SpendPermissionManagerBase {
     }
 
     function test_getCurrentPeriod_success_unusedAllowance(
-        address permissionSigner,
+        address spender,
         uint48 start,
         uint48 end,
         uint48 period,
@@ -61,7 +61,7 @@ contract GetCurrentPeriodTest is SpendPermissionManagerBase {
 
         SpendPermissionManager.SpendPermission memory spendPermission = SpendPermissionManager.SpendPermission({
             account: address(account),
-            spender: permissionSigner,
+            spender: spender,
             token: NATIVE_TOKEN,
             start: start,
             end: end,
@@ -79,7 +79,7 @@ contract GetCurrentPeriodTest is SpendPermissionManagerBase {
     }
 
     function test_getCurrentPeriod_success_startOfPeriod(
-        address permissionSigner,
+        address spender,
         uint48 start,
         uint48 end,
         uint48 period,
@@ -98,7 +98,7 @@ contract GetCurrentPeriodTest is SpendPermissionManagerBase {
 
         SpendPermissionManager.SpendPermission memory spendPermission = SpendPermissionManager.SpendPermission({
             account: address(account),
-            spender: permissionSigner,
+            spender: spender,
             token: NATIVE_TOKEN,
             start: start,
             end: end,
@@ -120,7 +120,7 @@ contract GetCurrentPeriodTest is SpendPermissionManagerBase {
     }
 
     function test_getCurrentPeriod_success_endOfPeriod(
-        address permissionSigner,
+        address spender,
         uint48 start,
         uint48 end,
         uint48 period,
@@ -140,7 +140,7 @@ contract GetCurrentPeriodTest is SpendPermissionManagerBase {
 
         SpendPermissionManager.SpendPermission memory spendPermission = SpendPermissionManager.SpendPermission({
             account: address(account),
-            spender: permissionSigner,
+            spender: spender,
             token: NATIVE_TOKEN,
             start: start,
             end: end,
@@ -164,7 +164,7 @@ contract GetCurrentPeriodTest is SpendPermissionManagerBase {
     }
 
     function test_getCurrentPeriod_succes_resetsAfterPeriod(
-        address permissionSigner,
+        address spender,
         uint48 start,
         uint48 end,
         uint48 period,
@@ -181,10 +181,11 @@ contract GetCurrentPeriodTest is SpendPermissionManagerBase {
         vm.assume(allowance > 0);
         vm.assume(spend > 0);
         vm.assume(spend <= allowance);
+        // vm.assume(spender )
 
         SpendPermissionManager.SpendPermission memory spendPermission = SpendPermissionManager.SpendPermission({
             account: address(account),
-            spender: permissionSigner,
+            spender: spender,
             token: NATIVE_TOKEN,
             start: start,
             end: end,
@@ -208,7 +209,7 @@ contract GetCurrentPeriodTest is SpendPermissionManagerBase {
     }
 
     function test_getCurrentPeriod_success_periodEndWithinPermissionEnd(
-        address permissionSigner,
+        address spender,
         uint48 start,
         uint48 end,
         uint48 period,
@@ -224,7 +225,7 @@ contract GetCurrentPeriodTest is SpendPermissionManagerBase {
 
         SpendPermissionManager.SpendPermission memory spendPermission = SpendPermissionManager.SpendPermission({
             account: address(account),
-            spender: permissionSigner,
+            spender: spender,
             token: NATIVE_TOKEN,
             start: start,
             end: end,
@@ -242,7 +243,7 @@ contract GetCurrentPeriodTest is SpendPermissionManagerBase {
     }
 
     function test_getCurrentPeriod_success_periodEndWithinPermissionEnd_maxValue(
-        address permissionSigner,
+        address spender,
         uint48 start,
         uint48 period,
         uint160 allowance,
@@ -257,7 +258,7 @@ contract GetCurrentPeriodTest is SpendPermissionManagerBase {
 
         SpendPermissionManager.SpendPermission memory spendPermission = SpendPermissionManager.SpendPermission({
             account: address(account),
-            spender: permissionSigner,
+            spender: spender,
             token: NATIVE_TOKEN,
             start: start,
             end: end,
