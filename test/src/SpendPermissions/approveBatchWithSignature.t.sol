@@ -127,7 +127,7 @@ contract ApproveBatchWithSignatureTest is SpendPermissionManagerBase {
 
         bytes memory stubSignature = abi.encodePacked("0x"); // can't get a valid signature for an empty batch because
             // getBatchHash reverts
-        vm.expectRevert(abi.encodeWithSelector(SpendPermissionManager.EmptyBatch.selector));
+        vm.expectRevert(abi.encodeWithSelector(SpendPermissionManager.EmptySpendPermissionBatch.selector));
         mockSpendPermissionManager.approveBatchWithSignature(spendPermissionBatch, stubSignature);
     }
 
@@ -234,7 +234,6 @@ contract ApproveBatchWithSignatureTest is SpendPermissionManagerBase {
             vm.expectEmit(address(mockSpendPermissionManager));
             emit SpendPermissionManager.SpendPermissionApproved({
                 hash: mockSpendPermissionManager.getHash(expectedSpendPermissions[i]),
-                account: address(account),
                 spendPermission: expectedSpendPermissions[i]
             });
         }

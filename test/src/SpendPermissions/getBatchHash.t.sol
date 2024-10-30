@@ -31,7 +31,7 @@ contract GetBatchHashTest is SpendPermissionManagerBase {
             period: period,
             permissions: permissions
         });
-        vm.expectRevert(abi.encodeWithSelector(SpendPermissionManager.EmptyBatch.selector));
+        vm.expectRevert(abi.encodeWithSelector(SpendPermissionManager.EmptySpendPermissionBatch.selector));
         mockSpendPermissionManager.getBatchHash(spendPermissionBatch);
     }
 

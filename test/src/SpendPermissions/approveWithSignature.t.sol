@@ -54,6 +54,9 @@ contract ApproveWithSignatureTest is SpendPermissionManagerBase {
         bytes memory extraData
     ) public {
         vm.assume(spender != address(0));
+        vm.assume(period > 0);
+        vm.assume(allowance > 0);
+
         vm.assume(start >= end);
 
         SpendPermissionManager.SpendPermission memory spendPermission = SpendPermissionManager.SpendPermission({
@@ -243,7 +246,6 @@ contract ApproveWithSignatureTest is SpendPermissionManagerBase {
         vm.expectEmit(address(mockSpendPermissionManager));
         emit SpendPermissionManager.SpendPermissionApproved({
             hash: mockSpendPermissionManager.getHash(spendPermission),
-            account: address(account),
             spendPermission: spendPermission
         });
         mockSpendPermissionManager.approveWithSignature(spendPermission, signature);
