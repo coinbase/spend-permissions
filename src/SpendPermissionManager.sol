@@ -246,7 +246,7 @@ contract SpendPermissionManager is EIP712 {
         _transferFrom(spendPermission.token, spendPermission.account, spendPermission.spender, value);
     }
 
-    /// @notice Approve a spend permission batch via a signature from the account.
+    /// @notice Approve a spend permission batch via a signature from the account, optionally deploying account.
     ///
     /// @dev Compatible with ERC-6492 signatures (https://eips.ethereum.org/EIPS/eip-6492)
     /// Validates a signature over a batch of spend permission data and optionally deploys account.

@@ -6,11 +6,11 @@ import {Strings} from "openzeppelin-contracts/contracts/utils/Strings.sol";
 
 import {PublicERC6492Validator} from "../src/PublicERC6492Validator.sol";
 import {SpendPermissionManager} from "../src/SpendPermissionManager.sol";
+
 /**
  * forge script Deploy --account dev --sender $SENDER --rpc-url $BASE_SEPOLIA_RPC --verify --verifier-url
  * $SEPOLIA_BASESCAN_API --etherscan-api-key $BASESCAN_API_KEY --broadcast -vvvv
  */
-
 contract Deploy is Script {
     address public constant OWNER = 0x6EcB18183838265968039955F1E8829480Db5329; // dev wallet
 
