@@ -20,7 +20,7 @@ contract PublicERC6492Validator {
     ///
     /// @return isValid True if signature is valid.
     function isValidSignatureNowAllowSideEffects(address account, bytes32 hash, bytes calldata signature)
-        public
+        external
         returns (bool)
     {
         return SignatureCheckerLib.isValidERC6492SignatureNowAllowSideEffects(account, hash, signature);
@@ -35,7 +35,7 @@ contract PublicERC6492Validator {
     /// @dev This function is reentrancy safe.
     ///
     /// @return isValid True if signature is valid.
-    function isValidSignatureNow(address account, bytes32 hash, bytes calldata signature) public returns (bool) {
+    function isValidSignatureNow(address account, bytes32 hash, bytes calldata signature) external returns (bool) {
         return SignatureCheckerLib.isValidERC6492SignatureNow(account, hash, signature);
     }
 }
