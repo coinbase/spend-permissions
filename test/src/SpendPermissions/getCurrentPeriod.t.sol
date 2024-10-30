@@ -45,7 +45,7 @@ contract GetCurrentPeriodTest is SpendPermissionManagerBase {
     }
 
     function test_getCurrentPeriod_success_unusedAllowance(
-        address permissionSigner,
+        address spender,
         uint48 start,
         uint48 end,
         uint48 period,
@@ -61,7 +61,7 @@ contract GetCurrentPeriodTest is SpendPermissionManagerBase {
 
         SpendPermissionManager.SpendPermission memory spendPermission = SpendPermissionManager.SpendPermission({
             account: address(account),
-            spender: permissionSigner,
+            spender: spender,
             token: NATIVE_TOKEN,
             start: start,
             end: end,
@@ -79,7 +79,7 @@ contract GetCurrentPeriodTest is SpendPermissionManagerBase {
     }
 
     function test_getCurrentPeriod_success_startOfPeriod(
-        address permissionSigner,
+        address spender,
         uint48 start,
         uint48 end,
         uint48 period,
@@ -88,6 +88,7 @@ contract GetCurrentPeriodTest is SpendPermissionManagerBase {
         uint256 salt,
         bytes memory extraData
     ) public {
+        vm.assume(spender != address(0));
         vm.assume(start > 0);
         vm.assume(end > 0);
         vm.assume(start < end);
@@ -98,7 +99,7 @@ contract GetCurrentPeriodTest is SpendPermissionManagerBase {
 
         SpendPermissionManager.SpendPermission memory spendPermission = SpendPermissionManager.SpendPermission({
             account: address(account),
-            spender: permissionSigner,
+            spender: spender,
             token: NATIVE_TOKEN,
             start: start,
             end: end,
@@ -120,7 +121,7 @@ contract GetCurrentPeriodTest is SpendPermissionManagerBase {
     }
 
     function test_getCurrentPeriod_success_endOfPeriod(
-        address permissionSigner,
+        address spender,
         uint48 start,
         uint48 end,
         uint48 period,
@@ -129,6 +130,7 @@ contract GetCurrentPeriodTest is SpendPermissionManagerBase {
         uint256 salt,
         bytes memory extraData
     ) public {
+        vm.assume(spender != address(0));
         vm.assume(start > 0);
         vm.assume(end > 0);
         vm.assume(start < end);
@@ -140,7 +142,7 @@ contract GetCurrentPeriodTest is SpendPermissionManagerBase {
 
         SpendPermissionManager.SpendPermission memory spendPermission = SpendPermissionManager.SpendPermission({
             account: address(account),
-            spender: permissionSigner,
+            spender: spender,
             token: NATIVE_TOKEN,
             start: start,
             end: end,
@@ -164,7 +166,7 @@ contract GetCurrentPeriodTest is SpendPermissionManagerBase {
     }
 
     function test_getCurrentPeriod_succes_resetsAfterPeriod(
-        address permissionSigner,
+        address spender,
         uint48 start,
         uint48 end,
         uint48 period,
@@ -173,6 +175,7 @@ contract GetCurrentPeriodTest is SpendPermissionManagerBase {
         bytes memory extraData,
         uint160 spend
     ) public {
+        vm.assume(spender != address(0));
         vm.assume(start > 0);
         vm.assume(end > 0);
         vm.assume(start < end);
@@ -184,7 +187,7 @@ contract GetCurrentPeriodTest is SpendPermissionManagerBase {
 
         SpendPermissionManager.SpendPermission memory spendPermission = SpendPermissionManager.SpendPermission({
             account: address(account),
-            spender: permissionSigner,
+            spender: spender,
             token: NATIVE_TOKEN,
             start: start,
             end: end,
@@ -208,7 +211,7 @@ contract GetCurrentPeriodTest is SpendPermissionManagerBase {
     }
 
     function test_getCurrentPeriod_success_periodEndWithinPermissionEnd(
-        address permissionSigner,
+        address spender,
         uint48 start,
         uint48 end,
         uint48 period,
@@ -224,7 +227,7 @@ contract GetCurrentPeriodTest is SpendPermissionManagerBase {
 
         SpendPermissionManager.SpendPermission memory spendPermission = SpendPermissionManager.SpendPermission({
             account: address(account),
-            spender: permissionSigner,
+            spender: spender,
             token: NATIVE_TOKEN,
             start: start,
             end: end,
@@ -242,7 +245,7 @@ contract GetCurrentPeriodTest is SpendPermissionManagerBase {
     }
 
     function test_getCurrentPeriod_success_periodEndWithinPermissionEnd_maxValue(
-        address permissionSigner,
+        address spender,
         uint48 start,
         uint48 period,
         uint160 allowance,
@@ -257,7 +260,7 @@ contract GetCurrentPeriodTest is SpendPermissionManagerBase {
 
         SpendPermissionManager.SpendPermission memory spendPermission = SpendPermissionManager.SpendPermission({
             account: address(account),
-            spender: permissionSigner,
+            spender: spender,
             token: NATIVE_TOKEN,
             start: start,
             end: end,

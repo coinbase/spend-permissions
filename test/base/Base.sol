@@ -17,16 +17,16 @@ contract Base is Test {
     bytes4 constant EIP1271_MAGIC_VALUE = 0x1626ba7e;
     uint256 ownerPk = uint256(keccak256("owner"));
     address owner = vm.addr(ownerPk);
-    uint256 permissionSignerPk = uint256(keccak256("permissionSigner"));
-    address permissionSigner = vm.addr(permissionSignerPk);
+    uint256 spenderPk = uint256(keccak256("spender"));
+    address spender = vm.addr(spenderPk);
     uint256 p256PrivateKey = uint256(0x03d99692017473e2d631945a812607b23269d85721e0f370b8d3e7d29a874fd2);
     bytes p256PublicKey =
         hex"1c05286fe694493eae33312f2d2e0d0abeda8db76238b7a204be1fb87f54ce4228fef61ef4ac300f631657635c28e59bfb2fe71bce1634c81c65642042f6dc4d";
-    MockContractSigner permissionSignerContract;
+    MockContractSigner spenderContract;
     MockCoinbaseSmartWallet account;
 
     function _initialize() internal {
-        permissionSignerContract = new MockContractSigner(permissionSigner);
+        spenderContract = new MockContractSigner(spender);
 
         account = new MockCoinbaseSmartWallet();
         bytes[] memory owners = new bytes[](1);

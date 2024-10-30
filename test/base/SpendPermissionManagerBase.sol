@@ -31,7 +31,7 @@ contract SpendPermissionManagerBase is Base {
     function _createSpendPermission() internal view returns (SpendPermissionManager.SpendPermission memory) {
         return SpendPermissionManager.SpendPermission({
             account: address(account),
-            spender: permissionSigner,
+            spender: spender,
             token: NATIVE_TOKEN,
             start: uint48(vm.getBlockTimestamp()),
             end: type(uint48).max,
