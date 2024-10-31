@@ -4,6 +4,14 @@
 
 **Spend Permissions enable apps to spend native and ERC-20 tokens on behalf of users.**
 
+## Deployments
+
+### Base Sepolia
+
+`SpendPermissionManager`: 0x6Bb91a81aa8C4edDBe04c774015279445fE68B5A
+
+`PublicERC6492Validator`: 0x111c9102952eEA29b02297E9ee4b8DB6265e763e
+
 ## Design Overview
 
 ### 1. Periphery addition to Coinbase Smart Wallet V1
