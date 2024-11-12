@@ -516,7 +516,7 @@ contract SpendPermissionManager is EIP712 {
     /// @param signature The signature to extract the ownerIndex from.
     ///
     /// @return ownerIndex The ownerIndex extracted from the signature.
-    function _extractOwnerIndexFromSignature(bytes calldata signature) internal pure returns (uint256) {
+    function _extractOwnerIndexFromSignatureWrapper(bytes calldata signature) internal pure returns (uint256) {
         bytes memory indexWrappedSignature = signature;
         // if signature is an ERC6492 signature, extract the inner signature
         bool isErc6492Signature =
