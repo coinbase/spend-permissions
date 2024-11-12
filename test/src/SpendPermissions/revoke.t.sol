@@ -29,6 +29,7 @@ contract RevokeTest is SpendPermissionManagerBase {
         vm.assume(allowance > 0);
         vm.assume(sender != address(0));
         vm.assume(sender != account);
+        vm.assume(sender != spender);
 
         SpendPermissionManager.SpendPermission memory spendPermission = SpendPermissionManager.SpendPermission({
             account: account,
@@ -45,13 +46,17 @@ contract RevokeTest is SpendPermissionManagerBase {
         vm.prank(account);
         mockSpendPermissionManager.approve(spendPermission);
         assertTrue(mockSpendPermissionManager.isApproved(spendPermission));
+
+        address[] memory expectedSenders = new address[](2);
+        expectedSenders[0] = account;
+        expectedSenders[1] = spender;
         vm.startPrank(sender);
-        vm.expectRevert(abi.encodeWithSelector(SpendPermissionManager.InvalidSender.selector, sender, account));
+        vm.expectRevert(abi.encodeWithSelector(SpendPermissionManager.InvalidSender.selector, sender, expectedSenders));
         mockSpendPermissionManager.revoke(spendPermission);
         vm.stopPrank();
     }
 
-    function test_revoke_success_isNoLongerAuthorized(
+    function test_revoke_success_isNoLongerAuthorized_calledByAccount(
         address account,
         address spender,
         address token,
@@ -82,6 +87,42 @@ contract RevokeTest is SpendPermissionManagerBase {
         vm.startPrank(account);
         mockSpendPermissionManager.approve(spendPermission);
         assertTrue(mockSpendPermissionManager.isApproved(spendPermission));
+        mockSpendPermissionManager.revoke(spendPermission);
+        assertFalse(mockSpendPermissionManager.isApproved(spendPermission));
+    }
+
+    function test_revoke_success_isNoLongerAuthorized_calledBySpender(
+        address account,
+        address spender,
+        address token,
+        uint48 start,
+        uint48 end,
+        uint48 period,
+        uint160 allowance,
+        uint256 salt,
+        bytes memory extraData
+    ) public {
+        vm.assume(spender != address(0));
+        vm.assume(token != address(0));
+        vm.assume(start < end);
+        vm.assume(period > 0);
+        vm.assume(allowance > 0);
+
+        SpendPermissionManager.SpendPermission memory spendPermission = SpendPermissionManager.SpendPermission({
+            account: account,
+            spender: spender,
+            token: token,
+            start: start,
+            end: end,
+            period: period,
+            allowance: allowance,
+            salt: salt,
+            extraData: extraData
+        });
+        vm.prank(account);
+        mockSpendPermissionManager.approve(spendPermission);
+        assertTrue(mockSpendPermissionManager.isApproved(spendPermission));
+        vm.prank(spender);
         mockSpendPermissionManager.revoke(spendPermission);
         assertFalse(mockSpendPermissionManager.isApproved(spendPermission));
     }

@@ -107,7 +107,7 @@ contract SpendPermissionManager is EIP712 {
     /// @notice Invalid sender for the external call.
     ///
     /// @param sender Expected sender to be valid.
-    error InvalidSender(address sender, address expected);
+    error InvalidSender(address sender, address[] expected);
 
     /// @notice Invalid signature.
     error InvalidSignature();
@@ -198,7 +198,11 @@ contract SpendPermissionManager is EIP712 {
     ///
     /// @param sender Expected sender for call to be valid.
     modifier requireSender(address sender) {
-        if (msg.sender != sender) revert InvalidSender(msg.sender, sender);
+        if (msg.sender != sender) {
+            address[] memory allowedSenders = new address[](1);
+            allowedSenders[0] = sender;
+            revert InvalidSender(msg.sender, allowedSenders);
+        }
         _;
     }
 
@@ -284,10 +288,16 @@ contract SpendPermissionManager is EIP712 {
 
     /// @notice Revoke a spend permission to disable its use indefinitely.
     ///
-    /// @dev Can only be called by the `account` of a permission.
+    /// @dev Can only be called by the `account` or the `spender` of a spend permission.
     ///
     /// @param spendPermission Details of the spend permission.
-    function revoke(SpendPermission calldata spendPermission) external requireSender(spendPermission.account) {
+    function revoke(SpendPermission calldata spendPermission) external {
+        if (msg.sender != spendPermission.account && msg.sender != spendPermission.spender) {
+            address[] memory allowedSenders = new address[](2);
+            allowedSenders[0] = spendPermission.account;
+            allowedSenders[1] = spendPermission.spender;
+            revert InvalidSender(msg.sender, allowedSenders);
+        }
         bytes32 hash = getHash(spendPermission);
         _isRevoked[hash] = true;
         emit SpendPermissionRevoked(hash, spendPermission);

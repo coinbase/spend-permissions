@@ -34,8 +34,10 @@ contract ApproveTest is SpendPermissionManagerBase {
             salt: salt,
             extraData: extraData
         });
+        address[] memory expectedSenders = new address[](1);
+        expectedSenders[0] = account;
         vm.startPrank(sender);
-        vm.expectRevert(abi.encodeWithSelector(SpendPermissionManager.InvalidSender.selector, sender, account));
+        vm.expectRevert(abi.encodeWithSelector(SpendPermissionManager.InvalidSender.selector, sender, expectedSenders));
         mockSpendPermissionManager.approve(spendPermission);
         vm.stopPrank();
     }
