@@ -78,6 +78,9 @@ contract SpendPermissionManager is EIP712 {
     ///         (https://eips.ethereum.org/EIPS/eip-6492).
     PublicERC6492Validator public immutable publicERC6492Validator;
 
+    bytes32 private constant ERC6492_DETECTION_SUFFIX =
+        0x6492649264926492649264926492649264926492649264926492649264926492;
+
     bytes32 constant PERMISSION_TYPEHASH = keccak256(
         "SpendPermission(address account,address spender,address token,uint160 allowance,uint48 period,uint48 start,uint48 end,uint256 salt,bytes extraData)"
     );
@@ -508,10 +511,30 @@ contract SpendPermissionManager is EIP712 {
         CoinbaseSmartWallet(payable(account)).execute({target: target, value: value, data: data});
     }
 
+    /// @notice Extracts the ownerIndex from a signature wrapped in a CoinbaseSmartWallet.SignatureWrapper
+    ///
+    /// @param signature The signature to extract the ownerIndex from.
+    ///
+    /// @return ownerIndex The ownerIndex extracted from the signature.
+    function _extractOwnerIndexFromSignature(bytes calldata signature) internal pure returns (uint256) {
+        bytes memory indexWrappedSignature = signature;
+        // if signature is an ERC6492 signature, extract the inner signature
+        bool isErc6492Signature =
+            bytes32(_signature[_signature.length - 32:_signature.length]) == ERC6492_DETECTION_SUFFIX;
+        if (isErc6492Signature) {
+            (_, _factoryCalldata, indexWrappedSignature) =
+                abi.decode(_signature[0:_signature.length - 32], (address, bytes, bytes));
+        }
+        CoinbaseSmartWallet.SignatureWrapper memory wrapper =
+            abi.decode(indexWrappedSignature, (CoinbaseSmartWallet.SignatureWrapper));
+        return wrapper.ownerIndex;
+    }
+
     /// @notice Return EIP-712 domain name and version.
     ///
     /// @return name Name string for the EIP-712 domain.
     /// @return version Version string for the EIP-712 domain.
+
     function _domainNameAndVersion() internal pure override returns (string memory name, string memory version) {
         name = "Spend Permission Manager";
         version = "1";
