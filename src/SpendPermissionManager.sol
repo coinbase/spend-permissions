@@ -159,6 +159,14 @@ contract SpendPermissionManager is EIP712 {
     /// @param allowance Allowance value that was exceeded.
     error ExceededSpendPermission(uint256 value, uint256 allowance);
 
+    /// @notice External `IERC20.transferFrom` call did not return success when spending tokens.
+    ///
+    /// @param token Contract address for token.
+    /// @param account User address attempting to spend tokens from.
+    /// @param recipient Address attempting to send tokens to.
+    /// @param value Amount of tokens attempted to spend.
+    error ERC20TransferFailed(address token, address account, address recipient, uint256 value);
+
     /// @notice SpendPermission was approved via transaction.
     ///
     /// @param hash The unique hash representing the spend permission.
@@ -488,14 +496,22 @@ contract SpendPermissionManager is EIP712 {
         // transfer tokens from account to recipient
         if (token == NATIVE_TOKEN) {
             _execute({account: account, target: recipient, value: value, data: hex""});
-        } else {
+            return;
+        }
+        // set infinite allowance if not yet set
+        uint256 allowance = IERC20(token).allowance(account, address(this));
+        if (allowance != type(uint256).max) {
             _execute({
                 account: account,
                 target: token,
                 value: 0,
-                data: abi.encodeWithSelector(IERC20.transfer.selector, recipient, value)
+                data: abi.encodeWithSelector(IERC20.approve.selector, address(this), type(uint256).max)
             });
         }
+
+        // use ERC-20 allowance to transfer from account to recipient
+        bool success = IERC20(token).transferFrom(account, recipient, value);
+        if (!success) revert ERC20TransferFailed(token, account, recipient, value);
     }
 
     /// @notice Execute a single call on an account.

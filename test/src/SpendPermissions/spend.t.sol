@@ -2,6 +2,7 @@
 pragma solidity ^0.8.23;
 
 import {MockERC20} from "solady/../test/utils/mocks/MockERC20.sol";
+import {ReturnsFalseToken} from "solady/../test/utils/weird-tokens/ReturnsFalseToken.sol";
 
 import {SpendPermissionManager} from "../../../src/SpendPermissionManager.sol";
 
@@ -9,6 +10,7 @@ import {SpendPermissionManagerBase} from "../../base/SpendPermissionManagerBase.
 
 contract SpendTest is SpendPermissionManagerBase {
     MockERC20 mockERC20 = new MockERC20("mockERC20", "TEST", 18);
+    ReturnsFalseToken mockERC20ReturnsFalse = new ReturnsFalseToken();
 
     function setUp() public {
         _initializeSpendPermissionManager();
@@ -278,5 +280,52 @@ contract SpendTest is SpendPermissionManagerBase {
         assertEq(usage.start, start);
         assertEq(usage.end, _safeAddUint48(start, period, end));
         assertEq(usage.spend, spend);
+    }
+
+    function test_spend_reverts_ERC20FailedTransfer(
+        address spender,
+        uint48 start,
+        uint48 end,
+        uint48 period,
+        uint160 allowance,
+        uint256 salt,
+        bytes memory extraData,
+        uint160 spend
+    ) public {
+        vm.assume(spender != address(0));
+        vm.assume(spender != address(account)); // otherwise balance checks can fail
+        vm.assume(start > 0);
+        vm.assume(end > 0);
+        vm.assume(start < end);
+        vm.assume(period > 0);
+        vm.assume(spend > 0);
+        vm.assume(allowance > 0);
+        vm.assume(allowance >= spend);
+        SpendPermissionManager.SpendPermission memory spendPermission = SpendPermissionManager.SpendPermission({
+            account: address(account),
+            spender: spender,
+            token: address(mockERC20ReturnsFalse),
+            start: start,
+            end: end,
+            period: period,
+            allowance: allowance,
+            salt: salt,
+            extraData: extraData
+        });
+        vm.prank(address(account));
+        mockSpendPermissionManager.approve(spendPermission);
+        vm.warp(start);
+
+        vm.startPrank(spender);
+        vm.expectRevert(
+            abi.encodeWithSelector(
+                SpendPermissionManager.ERC20TransferFailed.selector,
+                address(mockERC20ReturnsFalse),
+                address(account),
+                spender,
+                spend
+            )
+        );
+        mockSpendPermissionManager.spend(spendPermission, spend);
     }
 }
