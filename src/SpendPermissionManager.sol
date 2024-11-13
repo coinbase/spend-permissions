@@ -226,7 +226,8 @@ contract SpendPermissionManager is EIP712 {
         ) {
             revert InvalidSignature();
         }
-
+        uint256 ownerIndex = _extractOwnerIndexFromSignatureWrapper(signature);
+        // TODO: get owner from index and pass that to _approve?
         _approve(spendPermission);
     }
 
@@ -519,11 +520,12 @@ contract SpendPermissionManager is EIP712 {
     function _extractOwnerIndexFromSignatureWrapper(bytes calldata signature) internal pure returns (uint256) {
         bytes memory indexWrappedSignature = signature;
         // if signature is an ERC6492 signature, extract the inner signature
-        bool isErc6492Signature =
-            bytes32(_signature[_signature.length - 32:_signature.length]) == ERC6492_DETECTION_SUFFIX;
+        bool isErc6492Signature = bytes32(signature[signature.length - 32:signature.length]) == ERC6492_DETECTION_SUFFIX;
         if (isErc6492Signature) {
-            (_, _factoryCalldata, indexWrappedSignature) =
-                abi.decode(_signature[0:_signature.length - 32], (address, bytes, bytes));
+            address factory;
+            bytes memory factoryCalldata;
+            (factory, factoryCalldata, indexWrappedSignature) =
+                abi.decode(signature[0:signature.length - 32], (address, bytes, bytes));
         }
         CoinbaseSmartWallet.SignatureWrapper memory wrapper =
             abi.decode(indexWrappedSignature, (CoinbaseSmartWallet.SignatureWrapper));
