@@ -1,7 +1,7 @@
 [profile.default]
 src = "src"
 out = "out"
-libs = ["lib"]
+libs = ["lib", "dependencies"]
 
 [profile.deploy]
 optimizer = true
@@ -10,3 +10,7 @@ optimizer_runs = 999999
 [fmt]
 sort_imports = true
 wrap_comments = true
+
+[dependencies]
+forge-std = "1.9.4"
+solady = "0.0.267"
