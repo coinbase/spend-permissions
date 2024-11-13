@@ -93,13 +93,13 @@ contract SpendPermissionManager is EIP712 {
     address public constant NATIVE_TOKEN = 0xEeeeeEeeeEeEeeEeEeEeeEEEeeeeEeeeeeeeEEeE;
 
     /// @notice Spend permission is revoked.
-    mapping(bytes32 hash => mapping(address account => bool revoked)) internal _isRevoked;
+    mapping(bytes32 hash => bool revoked) internal _isRevoked;
 
     /// @notice Spend permission is approved.
-    mapping(bytes32 hash => mapping(address account => bool approved)) internal _isApproved;
+    mapping(bytes32 hash => bool approved) internal _isApproved;
 
     /// @notice Last updated period for a spend permission.
-    mapping(bytes32 hash => mapping(address account => PeriodSpend)) internal _lastUpdatedPeriod;
+    mapping(bytes32 hash => PeriodSpend) internal _lastUpdatedPeriod;
 
     /// @notice Invalid sender for the external call.
     ///
@@ -286,7 +286,7 @@ contract SpendPermissionManager is EIP712 {
     /// @param spendPermission Details of the spend permission.
     function revoke(SpendPermission calldata spendPermission) external requireSender(spendPermission.account) {
         bytes32 hash = getHash(spendPermission);
-        _isRevoked[hash][spendPermission.account] = true;
+        _isRevoked[hash] = true;
         emit SpendPermissionRevoked(hash, spendPermission);
     }
 
@@ -364,7 +364,7 @@ contract SpendPermissionManager is EIP712 {
     /// @return approved True if spend permission is approved and not revoked.
     function isApproved(SpendPermission memory spendPermission) public view returns (bool) {
         bytes32 hash = getHash(spendPermission);
-        return !_isRevoked[hash][spendPermission.account] && _isApproved[hash][spendPermission.account];
+        return !_isRevoked[hash] && _isApproved[hash];
     }
 
     /// @notice Get start, end, and spend of the current period.
@@ -385,7 +385,7 @@ contract SpendPermissionManager is EIP712 {
         }
 
         // return last period if still active, otherwise compute new active period start time with no spend
-        PeriodSpend memory lastUpdatedPeriod = _lastUpdatedPeriod[getHash(spendPermission)][spendPermission.account];
+        PeriodSpend memory lastUpdatedPeriod = _lastUpdatedPeriod[getHash(spendPermission)];
 
         // last period exists if spend is non-zero
         bool lastPeriodExists = lastUpdatedPeriod.spend != 0;
@@ -436,7 +436,7 @@ contract SpendPermissionManager is EIP712 {
         }
 
         bytes32 hash = getHash(spendPermission);
-        _isApproved[hash][spendPermission.account] = true;
+        _isApproved[hash] = true;
         emit SpendPermissionApproved(hash, spendPermission);
     }
 
@@ -466,7 +466,7 @@ contract SpendPermissionManager is EIP712 {
 
         // save new spend for active period
         currentPeriod.spend = uint160(totalSpend);
-        _lastUpdatedPeriod[hash][spendPermission.account] = currentPeriod;
+        _lastUpdatedPeriod[hash] = currentPeriod;
         emit SpendPermissionUsed(
             hash,
             spendPermission.account,
