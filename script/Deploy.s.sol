@@ -8,6 +8,11 @@ import {PublicERC6492Validator} from "../src/PublicERC6492Validator.sol";
 import {SpendPermissionManager} from "../src/SpendPermissionManager.sol";
 
 /**
+ * @notice Deploy the SpendPermissionManager contract and its dependencies.
+ *
+ * @dev Before deploying contracts, make sure dependencies have been installed at the latest or otherwise specific
+ * versions using `forge install [OPTIONS] [DEPENDENCIES]`.
+ *
  * forge script Deploy --account dev --sender $SENDER --rpc-url $BASE_SEPOLIA_RPC --verify --verifier-url
  * $SEPOLIA_BASESCAN_API --etherscan-api-key $BASESCAN_API_KEY --broadcast -vvvv
  */
