@@ -1,9 +1,12 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.23;
 
-import {MockERC20} from "solady/../test/utils/mocks/MockERC20.sol";
-
 import {MockERC20MissingReturn} from "../../mocks/MockERC20MissingReturn.sol";
+
+import {SafeERC20} from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
+
+import {ERC20} from "solady/../src/tokens/ERC20.sol";
+import {MockERC20} from "solady/../test/utils/mocks/MockERC20.sol";
 import {ReturnsFalseToken} from "solady/../test/utils/weird-tokens/ReturnsFalseToken.sol";
 
 import {SpendPermissionManager} from "../../../src/SpendPermissionManager.sol";
@@ -332,7 +335,47 @@ contract SpendTest is SpendPermissionManagerBase {
         assertEq(usage.spend, spend);
     }
 
-    function test_spend_reverts_ERC20FailedTransfer(
+    function test_spend_reverts_ERC20FailedTransfer_ERC20Reverts(
+        address spender,
+        uint48 start,
+        uint48 end,
+        uint48 period,
+        uint160 allowance,
+        uint256 salt,
+        bytes memory extraData,
+        uint160 spend
+    ) public {
+        vm.assume(spender != address(0));
+        vm.assume(spender != address(account)); // otherwise balance checks can fail
+        vm.assume(start > 0);
+        vm.assume(end > 0);
+        vm.assume(start < end);
+        vm.assume(period > 0);
+        vm.assume(spend > 0);
+        vm.assume(allowance > 0);
+        vm.assume(allowance >= spend);
+        SpendPermissionManager.SpendPermission memory spendPermission = SpendPermissionManager.SpendPermission({
+            account: address(account),
+            spender: spender,
+            token: address(mockERC20),
+            start: start,
+            end: end,
+            period: period,
+            allowance: allowance,
+            salt: salt,
+            extraData: extraData
+        });
+        vm.prank(address(account));
+        mockSpendPermissionManager.approve(spendPermission);
+        vm.warp(start);
+
+        vm.startPrank(spender);
+        // account has no balance, so the transfer will fail
+        vm.expectRevert(abi.encodeWithSelector(ERC20.InsufficientBalance.selector));
+        mockSpendPermissionManager.spend(spendPermission, spend);
+    }
+
+    function test_spend_reverts_ERC20FailedTransfer_ERC20ReturnsFalse(
         address spender,
         uint48 start,
         uint48 end,
@@ -368,13 +411,7 @@ contract SpendTest is SpendPermissionManagerBase {
 
         vm.startPrank(spender);
         vm.expectRevert(
-            abi.encodeWithSelector(
-                SpendPermissionManager.ERC20TransferFailed.selector,
-                address(mockERC20ReturnsFalse),
-                address(account),
-                spender,
-                spend
-            )
+            abi.encodeWithSelector(SafeERC20.SafeERC20FailedOperation.selector, address(mockERC20ReturnsFalse))
         );
         mockSpendPermissionManager.spend(spendPermission, spend);
     }
