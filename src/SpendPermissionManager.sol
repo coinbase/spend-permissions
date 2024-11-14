@@ -162,14 +162,6 @@ contract SpendPermissionManager is EIP712 {
     /// @param allowance Allowance value that was exceeded.
     error ExceededSpendPermission(uint256 value, uint256 allowance);
 
-    /// @notice External `IERC20.transferFrom` call did not return success when spending tokens.
-    ///
-    /// @param token Contract address for token.
-    /// @param account User address attempting to spend tokens from.
-    /// @param recipient Address attempting to send tokens to.
-    /// @param value Amount of tokens attempted to spend.
-    error ERC20TransferFailed(address token, address account, address recipient, uint256 value);
-
     /// @notice SpendPermission was approved via transaction.
     ///
     /// @param hash The unique hash representing the spend permission.
