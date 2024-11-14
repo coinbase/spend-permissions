@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.0;
 
+import {SafeERC20} from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 import {IERC1271} from "openzeppelin-contracts/contracts/interfaces/IERC1271.sol";
 import {IERC20} from "openzeppelin-contracts/contracts/token/ERC20/IERC20.sol";
 import {CoinbaseSmartWallet} from "smart-wallet/CoinbaseSmartWallet.sol";
@@ -16,6 +17,8 @@ import {PublicERC6492Validator} from "./PublicERC6492Validator.sol";
 ///
 /// @author Coinbase (https://github.com/coinbase/spend-permissions)
 contract SpendPermissionManager is EIP712 {
+    using SafeERC20 for IERC20;
+
     /// @notice A spend permission for an external entity to be able to spend an account's tokens.
     struct SpendPermission {
         /// @dev Smart account this spend permission is valid for.
@@ -488,14 +491,22 @@ contract SpendPermissionManager is EIP712 {
         // transfer tokens from account to recipient
         if (token == NATIVE_TOKEN) {
             _execute({account: account, target: recipient, value: value, data: hex""});
-        } else {
+            return;
+        }
+        // set infinite allowance if not yet set
+        uint256 allowance = IERC20(token).allowance(account, address(this));
+        if (allowance != type(uint256).max) {
             _execute({
                 account: account,
                 target: token,
                 value: 0,
-                data: abi.encodeWithSelector(IERC20.transfer.selector, recipient, value)
+                data: abi.encodeWithSelector(IERC20.approve.selector, address(this), type(uint256).max)
             });
         }
+
+        // use ERC-20 allowance to transfer from account to recipient
+        // safeTransferFrom will revert if transfer fails, regardless of ERC-20 implementation
+        IERC20(token).safeTransferFrom(account, recipient, value);
     }
 
     /// @notice Execute a single call on an account.
