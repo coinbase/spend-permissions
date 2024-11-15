@@ -57,11 +57,8 @@ contract SpendTest is SpendPermissionManagerBase {
         });
         vm.prank(account);
         mockSpendPermissionManager.approve(spendPermission);
-
-        address[] memory expectedSenders = new address[](1);
-        expectedSenders[0] = address(spender);
         vm.startPrank(sender);
-        vm.expectRevert(abi.encodeWithSelector(SpendPermissionManager.InvalidSender.selector, sender, expectedSenders));
+        vm.expectRevert(abi.encodeWithSelector(SpendPermissionManager.InvalidSender.selector, sender, spender));
         mockSpendPermissionManager.spend(spendPermission, spend);
         vm.stopPrank();
     }

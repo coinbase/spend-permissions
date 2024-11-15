@@ -5,12 +5,12 @@ import {SpendPermissionManager} from "../../../src/SpendPermissionManager.sol";
 
 import {SpendPermissionManagerBase} from "../../base/SpendPermissionManagerBase.sol";
 
-contract RevokeTest is SpendPermissionManagerBase {
+contract SpenderRevokeTest is SpendPermissionManagerBase {
     function setUp() public {
         _initializeSpendPermissionManager();
     }
 
-    function test_revoke_revert_invalidSender(
+    function test_spenderRevoke_revert_invalidSender(
         address sender,
         address account,
         address spender,
@@ -28,7 +28,7 @@ contract RevokeTest is SpendPermissionManagerBase {
         vm.assume(period > 0);
         vm.assume(allowance > 0);
         vm.assume(sender != address(0));
-        vm.assume(sender != account);
+        vm.assume(sender != spender);
 
         SpendPermissionManager.SpendPermission memory spendPermission = SpendPermissionManager.SpendPermission({
             account: account,
@@ -47,11 +47,11 @@ contract RevokeTest is SpendPermissionManagerBase {
         assertTrue(mockSpendPermissionManager.isApproved(spendPermission));
         vm.startPrank(sender);
         vm.expectRevert(abi.encodeWithSelector(SpendPermissionManager.InvalidSender.selector, sender, account));
-        mockSpendPermissionManager.revoke(spendPermission);
+        mockSpendPermissionManager.spenderRevoke(spendPermission);
         vm.stopPrank();
     }
 
-    function test_revoke_success_isNoLongerAuthorized(
+    function test_spenderRevoke_success_isNoLongerAuthorized(
         address account,
         address spender,
         address token,
@@ -79,14 +79,15 @@ contract RevokeTest is SpendPermissionManagerBase {
             salt: salt,
             extraData: extraData
         });
-        vm.startPrank(account);
+        vm.prank(account);
         mockSpendPermissionManager.approve(spendPermission);
         assertTrue(mockSpendPermissionManager.isApproved(spendPermission));
-        mockSpendPermissionManager.revoke(spendPermission);
+        vm.prank(spender);
+        mockSpendPermissionManager.spenderRevoke(spendPermission);
         assertFalse(mockSpendPermissionManager.isApproved(spendPermission));
     }
 
-    function test_revoke_success_emitsEvent(
+    function test_spenderRevoke_success_emitsEvent(
         address account,
         address spender,
         address token,
@@ -114,14 +115,15 @@ contract RevokeTest is SpendPermissionManagerBase {
             salt: salt,
             extraData: extraData
         });
-        vm.startPrank(account);
+        vm.prank(account);
         mockSpendPermissionManager.approve(spendPermission);
         assertTrue(mockSpendPermissionManager.isApproved(spendPermission));
+        vm.startPrank(spender);
         vm.expectEmit(address(mockSpendPermissionManager));
         emit SpendPermissionManager.SpendPermissionRevoked({
             hash: mockSpendPermissionManager.getHash(spendPermission),
             spendPermission: spendPermission
         });
-        mockSpendPermissionManager.revoke(spendPermission);
+        mockSpendPermissionManager.spenderRevoke(spendPermission);
     }
 }
