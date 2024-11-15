@@ -211,20 +211,6 @@ contract SpendPermissionManager is EIP712 {
         _;
     }
 
-    /// @notice Require that two spend permissions have the same `account` field.
-    ///
-    /// @param firstSpendPermission First spend permission to compare.
-    /// @param secondSpendPermission Second spend permission to compare.
-    modifier requireSameAccount(
-        SpendPermission calldata firstSpendPermission,
-        SpendPermission calldata secondSpendPermission
-    ) {
-        if (firstSpendPermission.account != secondSpendPermission.account) {
-            revert MismatchedAccounts(firstSpendPermission.account, secondSpendPermission.account);
-        }
-        _;
-    }
-
     /// @notice Approve a spend permission via a direct call from the account.
     ///
     /// @dev Can only be called by the `account` of a permission.
@@ -305,23 +291,26 @@ contract SpendPermissionManager is EIP712 {
         _transferFrom(spendPermission.token, spendPermission.account, spendPermission.spender, value);
     }
 
-    /// @notice Revokes a spend permission and approves a new one atomically.
+    /// @notice Approves a permission while revoking another if its last update has not changed.
     ///
     /// @dev Enforces that the last updated period of the permission being revoked matches the last valid updated period
-    ///      submitted as an argument. This is to prevent frontrunning `replace` with additional last-minute spends.
-    ///
+    ///      submitted as an argument. This is to prevent frontrunning `approveWithRevoke` with additional last-minute
+    /// spends.
     /// @dev The `account` of the permissions must match, but the remaining fields can differ.
-    ///
     /// @dev Can only be called by the `account` of a permission.
     ///
-    /// @param permissionToRevoke Details of the spend permission to revoke.
     /// @param permissionToApprove Details of the spend permission to approve.
+    /// @param permissionToRevoke Details of the spend permission to revoke.
     /// @param lastValidUpdatedPeriod Last valid updated period for the spend permission being revoked.
-    function replace(
-        SpendPermission calldata permissionToRevoke,
+    function approveWithRevoke(
         SpendPermission calldata permissionToApprove,
+        SpendPermission calldata permissionToRevoke,
         PeriodSpend calldata lastValidUpdatedPeriod
-    ) external requireSender(permissionToApprove.account) requireSameAccount(permissionToRevoke, permissionToApprove) {
+    ) external requireSender(permissionToApprove.account) {
+        // require both spend permissions apply to the same account
+        if (permissionToApprove.account != permissionToRevoke.account) {
+            revert MismatchedAccounts(permissionToApprove.account, permissionToRevoke.account);
+        }
         // validate that no spending has occurred since the last updated period passed to the function
         PeriodSpend memory lastUpdatedPeriod = getLastUpdatedPeriod(permissionToRevoke);
         if (
@@ -437,7 +426,7 @@ contract SpendPermissionManager is EIP712 {
     ///
     /// @return lastUpdatedPeriod Last updated period for the spend permission.
     function getLastUpdatedPeriod(SpendPermission memory spendPermission) public view returns (PeriodSpend memory) {
-        return _lastUpdatedPeriod[getHash(spendPermission)][spendPermission.account];
+        return _lastUpdatedPeriod[getHash(spendPermission)];
     }
 
     /// @notice Get start, end, and spend of the current period.
