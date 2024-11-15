@@ -288,9 +288,16 @@ contract SpendPermissionManager is EIP712 {
     ///
     /// @param spendPermission Details of the spend permission.
     function revoke(SpendPermission calldata spendPermission) external requireSender(spendPermission.account) {
-        bytes32 hash = getHash(spendPermission);
-        _isRevoked[hash] = true;
-        emit SpendPermissionRevoked(hash, spendPermission);
+        _revoke(spendPermission);
+    }
+
+    /// @notice Revoke a spend permission to disable its use indefinitely.
+    ///
+    /// @dev Can only be called by the `spender` of a permission.
+    ///
+    /// @param spendPermission Details of the spend permission.
+    function spenderRevoke(SpendPermission calldata spendPermission) external requireSender(spendPermission.spender) {
+        _revoke(spendPermission);
     }
 
     /// @notice Hash a SpendPermission struct for signing in accordance with EIP-712
@@ -441,6 +448,15 @@ contract SpendPermissionManager is EIP712 {
         bytes32 hash = getHash(spendPermission);
         _isApproved[hash] = true;
         emit SpendPermissionApproved(hash, spendPermission);
+    }
+
+    /// @notice Revoke a spend permission.
+    ///
+    /// @param spendPermission Details of the spend permission.
+    function _revoke(SpendPermission memory spendPermission) internal {
+        bytes32 hash = getHash(spendPermission);
+        _isRevoked[hash] = true;
+        emit SpendPermissionRevoked(hash, spendPermission);
     }
 
     /// @notice Use a spend permission.
