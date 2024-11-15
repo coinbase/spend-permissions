@@ -455,7 +455,7 @@ contract SpendPermissionManager is EIP712 {
     /// @param spendPermission Details of the spend permission.
     function _revoke(SpendPermission memory spendPermission) internal {
         bytes32 hash = getHash(spendPermission);
-        _isRevoked[hash][spendPermission.account] = true;
+        _isRevoked[hash] = true;
         emit SpendPermissionRevoked(hash, spendPermission);
     }
 
