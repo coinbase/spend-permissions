@@ -568,7 +568,6 @@ contract SpendPermissionManager is EIP712 {
             value: 0,
             data: abi.encodeWithSelector(IERC20.approve.selector, address(this), value)
         });
-        }
 
         // use ERC-20 allowance to transfer from account to recipient
         // safeTransferFrom will revert if transfer fails, regardless of ERC-20 implementation
