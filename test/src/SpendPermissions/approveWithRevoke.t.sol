@@ -52,6 +52,39 @@ contract ApproveWithRevokeTest is SpendPermissionManagerBase {
         vm.stopPrank();
     }
 
+    function test_approveWithRevoke_revert_mismatchedAccounts(
+        address newAccount,
+        address spender,
+        uint48 start,
+        uint48 end,
+        uint48 period,
+        uint160 allowance,
+        uint256 salt,
+        bytes memory extraData
+    ) public {
+        vm.assume(newAccount != address(0));
+        vm.assume(newAccount != address(account));
+        SpendPermissionManager.SpendPermission memory newSpendPermission = SpendPermissionManager.SpendPermission({
+            account: newAccount,
+            spender: spender,
+            token: NATIVE_TOKEN,
+            start: start,
+            end: end,
+            period: period,
+            allowance: allowance,
+            salt: salt,
+            extraData: extraData
+        });
+        vm.startPrank(newAccount);
+        vm.expectRevert(
+            abi.encodeWithSelector(SpendPermissionManager.MismatchedAccounts.selector, newAccount, address(account))
+        );
+        mockSpendPermissionManager.approveWithRevoke(
+            newSpendPermission, existingSpendPermission, lastValidUpdatedPeriod
+        );
+        vm.stopPrank();
+    }
+
     function test_approveWithRevoke_revert_invalidLastUpdatedPeriod_moreSpendSamePeriod(
         address spender,
         uint48 start,
@@ -203,39 +236,6 @@ contract ApproveWithRevokeTest is SpendPermissionManagerBase {
                 invalidLastUpdatedPeriod,
                 lastValidUpdatedPeriod
             )
-        );
-        mockSpendPermissionManager.approveWithRevoke(
-            newSpendPermission, existingSpendPermission, lastValidUpdatedPeriod
-        );
-        vm.stopPrank();
-    }
-
-    function test_approveWithRevoke_revert_mismatchedAccounts(
-        address newAccount,
-        address spender,
-        uint48 start,
-        uint48 end,
-        uint48 period,
-        uint160 allowance,
-        uint256 salt,
-        bytes memory extraData
-    ) public {
-        vm.assume(newAccount != address(0));
-        vm.assume(newAccount != address(account));
-        SpendPermissionManager.SpendPermission memory newSpendPermission = SpendPermissionManager.SpendPermission({
-            account: newAccount,
-            spender: spender,
-            token: NATIVE_TOKEN,
-            start: start,
-            end: end,
-            period: period,
-            allowance: allowance,
-            salt: salt,
-            extraData: extraData
-        });
-        vm.startPrank(newAccount);
-        vm.expectRevert(
-            abi.encodeWithSelector(SpendPermissionManager.MismatchedAccounts.selector, newAccount, address(account))
         );
         mockSpendPermissionManager.approveWithRevoke(
             newSpendPermission, existingSpendPermission, lastValidUpdatedPeriod
