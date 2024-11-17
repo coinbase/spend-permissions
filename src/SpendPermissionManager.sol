@@ -112,15 +112,6 @@ contract SpendPermissionManager is EIP712 {
     /// @notice Invalid signature.
     error InvalidSignature();
 
-    /// @notice Last updated period is different from the expected last updated period.
-    error InvalidLastUpdatedPeriod(PeriodSpend actualLastUpdatedPeriod, PeriodSpend expectedLastUpdatedPeriod);
-
-    /// @notice Mismatched accounts for spend permission.
-    ///
-    /// @param firstAccount First account in the spend permission.
-    /// @param secondAccount Second account in the spend permission.
-    error MismatchedAccounts(address firstAccount, address secondAccount);
-
     /// @notice Empty batch of spend permissions.
     error EmptySpendPermissionBatch();
 
@@ -291,56 +282,15 @@ contract SpendPermissionManager is EIP712 {
         _transferFrom(spendPermission.token, spendPermission.account, spendPermission.spender, value);
     }
 
-    /// @notice Approves a permission while revoking another if its last update has not changed.
-    ///
-    /// @dev Enforces that the last updated period of the permission being revoked matches the last valid updated period
-    ///      submitted as an argument. This is to prevent frontrunning `approveWithRevoke` with additional last-minute
-    /// spends.
-    /// @dev The `account` of the permissions must match, but the remaining fields can differ.
-    /// @dev Can only be called by the `account` of a permission.
-    ///
-    /// @param permissionToApprove Details of the spend permission to approve.
-    /// @param permissionToRevoke Details of the spend permission to revoke.
-    /// @param lastValidUpdatedPeriod Last valid updated period for the spend permission being revoked.
-    function approveWithRevoke(
-        SpendPermission calldata permissionToApprove,
-        SpendPermission calldata permissionToRevoke,
-        PeriodSpend calldata lastValidUpdatedPeriod
-    ) external requireSender(permissionToApprove.account) {
-        // require both spend permissions apply to the same account
-        if (permissionToApprove.account != permissionToRevoke.account) {
-            revert MismatchedAccounts(permissionToApprove.account, permissionToRevoke.account);
-        }
-        // validate that no spending has occurred since the last updated period passed to the function
-        PeriodSpend memory lastUpdatedPeriod = getLastUpdatedPeriod(permissionToRevoke);
-        if (
-            lastUpdatedPeriod.spend != lastValidUpdatedPeriod.spend
-                || lastUpdatedPeriod.start != lastValidUpdatedPeriod.start
-                || lastUpdatedPeriod.end != lastValidUpdatedPeriod.end
-        ) {
-            revert InvalidLastUpdatedPeriod(lastUpdatedPeriod, lastValidUpdatedPeriod);
-        }
-        // revoke old and approve new spend permissions
-        _revoke(permissionToRevoke);
-        _approve(permissionToApprove);
-    }
-
     /// @notice Revoke a spend permission to disable its use indefinitely.
     ///
     /// @dev Can only be called by the `account` of a permission.
     ///
     /// @param spendPermission Details of the spend permission.
     function revoke(SpendPermission calldata spendPermission) external requireSender(spendPermission.account) {
-        _revoke(spendPermission);
-    }
-
-    /// @notice Revoke a spend permission to disable its use indefinitely.
-    ///
-    /// @dev Can only be called by the `spender` of a permission.
-    ///
-    /// @param spendPermission Details of the spend permission.
-    function spenderRevoke(SpendPermission calldata spendPermission) external requireSender(spendPermission.spender) {
-        _revoke(spendPermission);
+        bytes32 hash = getHash(spendPermission);
+        _isRevoked[hash] = true;
+        emit SpendPermissionRevoked(hash, spendPermission);
     }
 
     /// @notice Hash a SpendPermission struct for signing in accordance with EIP-712
@@ -420,15 +370,6 @@ contract SpendPermissionManager is EIP712 {
         return !_isRevoked[hash] && _isApproved[hash];
     }
 
-    /// @notice Get last updated period for a spend permission.
-    ///
-    /// @param spendPermission Details of the spend permission.
-    ///
-    /// @return lastUpdatedPeriod Last updated period for the spend permission.
-    function getLastUpdatedPeriod(SpendPermission memory spendPermission) public view returns (PeriodSpend memory) {
-        return _lastUpdatedPeriod[getHash(spendPermission)];
-    }
-
     /// @notice Get start, end, and spend of the current period.
     ///
     /// @dev Reverts if spend permission has not started or has already ended.
@@ -502,15 +443,6 @@ contract SpendPermissionManager is EIP712 {
         emit SpendPermissionApproved(hash, spendPermission);
     }
 
-    /// @notice Revoke a spend permission.
-    ///
-    /// @param spendPermission Details of the spend permission.
-    function _revoke(SpendPermission memory spendPermission) internal {
-        bytes32 hash = getHash(spendPermission);
-        _isRevoked[hash] = true;
-        emit SpendPermissionRevoked(hash, spendPermission);
-    }
-
     /// @notice Use a spend permission.
     ///
     /// @param spendPermission Details of the spend permission.
@@ -561,16 +493,13 @@ contract SpendPermissionManager is EIP712 {
             _execute({account: account, target: recipient, value: value, data: hex""});
             return;
         }
-        // set infinite allowance if not yet set
-        uint256 allowance = IERC20(token).allowance(account, address(this));
-        if (allowance != type(uint256).max) {
-            _execute({
-                account: account,
-                target: token,
-                value: 0,
-                data: abi.encodeWithSelector(IERC20.approve.selector, address(this), type(uint256).max)
-            });
-        }
+        // if ERC-20 token, set allowance for this contract to spend on behalf of account
+        _execute({
+            account: account,
+            target: token,
+            value: 0,
+            data: abi.encodeWithSelector(IERC20.approve.selector, address(this), value)
+        });
 
         // use ERC-20 allowance to transfer from account to recipient
         // safeTransferFrom will revert if transfer fails, regardless of ERC-20 implementation
