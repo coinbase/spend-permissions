@@ -549,7 +549,7 @@ contract SpendPermissionManager is EIP712 {
 
     /// @notice Transfer assets from an account to a recipient.
     ///
-    /// @dev Assumes ERC-20 contract will revert if transfer fails. If silently fails, spend still marked as used.
+    /// @dev Uses `safeTransferFrom` for ERC-20 tokens to enforce revert on failure.
     ///
     /// @param token Address of the token contract.
     /// @param account Address of the user account.
@@ -561,16 +561,13 @@ contract SpendPermissionManager is EIP712 {
             _execute({account: account, target: recipient, value: value, data: hex""});
             return;
         }
-        // set infinite allowance if not yet set
-        uint256 allowance = IERC20(token).allowance(account, address(this));
-        if (allowance != type(uint256).max) {
-            _execute({
-                account: account,
-                target: token,
-                value: 0,
-                data: abi.encodeWithSelector(IERC20.approve.selector, address(this), type(uint256).max)
-            });
-        }
+        // if ERC-20 token, set allowance for this contract to spend on behalf of account
+        _execute({
+            account: account,
+            target: token,
+            value: 0,
+            data: abi.encodeWithSelector(IERC20.approve.selector, address(this), value)
+        });
 
         // use ERC-20 allowance to transfer from account to recipient
         // safeTransferFrom will revert if transfer fails, regardless of ERC-20 implementation
