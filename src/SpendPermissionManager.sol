@@ -478,8 +478,18 @@ contract SpendPermissionManager is EIP712 {
 
     /// @notice Approve spend permission.
     ///
+    /// @dev Emits a {SpendPermissionApproved} event if the spend permission is newly approved and not already revoked.
+    ///
     /// @param spendPermission Details of the spend permission.
-    function _approve(SpendPermission memory spendPermission) internal {
+    ///
+    /// @return approved True if spend permission is approved and not revoked.
+    function _approve(SpendPermission memory spendPermission) internal returns (bool) {
+        // return false early if spend permission is already revoked
+        if (_isRevoked[getHash(spendPermission)]) return false;
+
+        // return early if spend permission is already approved
+        if (_isApproved[getHash(spendPermission)]) return true;
+
         // check token is non-zero
         if (spendPermission.token == address(0)) revert ZeroToken();
 
@@ -500,12 +510,17 @@ contract SpendPermissionManager is EIP712 {
         bytes32 hash = getHash(spendPermission);
         _isApproved[hash] = true;
         emit SpendPermissionApproved(hash, spendPermission);
+        return true;
     }
 
     /// @notice Revoke a spend permission.
     ///
+    /// @dev Emits a {SpendPermissionRevoked} event if the spend permission is newly revoked.
+    ///
     /// @param spendPermission Details of the spend permission.
     function _revoke(SpendPermission memory spendPermission) internal {
+        // return early if spend permission is already revoked
+        if (_isRevoked[getHash(spendPermission)]) return;
         bytes32 hash = getHash(spendPermission);
         _isRevoked[hash] = true;
         emit SpendPermissionRevoked(hash, spendPermission);
