@@ -468,4 +468,55 @@ contract SpendTest is SpendPermissionManagerBase {
         );
         mockSpendPermissionManager.spend(spendPermission, spend);
     }
+
+    function test_spend_success_ERC20_approvalSetToZero(
+        address spender,
+        uint48 start,
+        uint48 end,
+        uint48 period,
+        uint160 allowance,
+        uint256 salt,
+        bytes memory extraData,
+        uint160 spend
+    ) public {
+        vm.assume(spender != address(0));
+        vm.assume(spender != address(account)); // otherwise balance checks can fail
+        vm.assume(start > 0);
+        vm.assume(end > 0);
+        vm.assume(start < end);
+        vm.assume(period > 0);
+        vm.assume(spend > 0);
+        vm.assume(allowance > 0);
+        vm.assume(allowance >= spend);
+        SpendPermissionManager.SpendPermission memory spendPermission = SpendPermissionManager.SpendPermission({
+            account: address(account),
+            spender: spender,
+            token: address(mockERC20),
+            start: start,
+            end: end,
+            period: period,
+            allowance: allowance,
+            salt: salt,
+            extraData: extraData
+        });
+        mockERC20.mint(address(account), allowance);
+        vm.startPrank(address(account));
+        mockSpendPermissionManager.approve(spendPermission);
+        mockERC20.approve(address(mockSpendPermissionManager), 0);
+        vm.stopPrank();
+        vm.warp(start);
+
+        assertEq(mockERC20.balanceOf(address(account)), allowance);
+        assertEq(mockERC20.balanceOf(spender), 0);
+        assertEq(mockERC20.allowance(address(account), address(mockSpendPermissionManager)), 0);
+        vm.prank(spender);
+        mockSpendPermissionManager.spend(spendPermission, spend);
+        assertEq(mockERC20.balanceOf(address(account)), allowance - spend);
+        assertEq(mockERC20.balanceOf(spender), spend);
+        assertEq(mockERC20.allowance(address(account), address(mockSpendPermissionManager)), 0);
+        SpendPermissionManager.PeriodSpend memory usage = mockSpendPermissionManager.getCurrentPeriod(spendPermission);
+        assertEq(usage.start, start);
+        assertEq(usage.end, _safeAddUint48(start, period, end));
+        assertEq(usage.spend, spend);
+    }
 }
