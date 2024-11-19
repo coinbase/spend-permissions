@@ -81,15 +81,15 @@ contract SpendPermissionManager is EIP712 {
     ///         (https://eips.ethereum.org/EIPS/eip-6492).
     PublicERC6492Validator public immutable publicERC6492Validator;
 
-    bytes32 constant PERMISSION_TYPEHASH = keccak256(
+    bytes32 public constant PERMISSION_TYPEHASH = keccak256(
         "SpendPermission(address account,address spender,address token,uint160 allowance,uint48 period,uint48 start,uint48 end,uint256 salt,bytes extraData)"
     );
 
-    bytes32 constant PERMISSION_BATCH_TYPEHASH = keccak256(
+    bytes32 public constant PERMISSION_BATCH_TYPEHASH = keccak256(
         "SpendPermissionBatch(address account,uint48 period,uint48 start,uint48 end,PermissionDetails[] permissions)PermissionDetails(address spender,address token,uint160 allowance,uint256 salt,bytes extraData)"
     );
 
-    bytes32 constant PERMISSION_DETAILS_TYPEHASH =
+    bytes32 public constant PERMISSION_DETAILS_TYPEHASH =
         keccak256("PermissionDetails(address spender,address token,uint160 allowance,uint256 salt,bytes extraData)");
 
     /// @notice ERC-7528 address convention for native token (https://eips.ethereum.org/EIPS/eip-7528).
@@ -453,7 +453,7 @@ contract SpendPermissionManager is EIP712 {
         bool lastPeriodExists = lastUpdatedPeriod.spend != 0;
 
         // last period still active if current timestamp within [start, end - 1] range.
-        bool lastPeriodStillActive = currentTimestamp < uint256(lastUpdatedPeriod.end);
+        bool lastPeriodStillActive = currentTimestamp < lastUpdatedPeriod.end;
 
         if (lastPeriodExists && lastPeriodStillActive) {
             return lastUpdatedPeriod;
