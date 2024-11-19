@@ -223,7 +223,7 @@ contract ApproveTest is SpendPermissionManagerBase {
         });
         vm.prank(account);
         mockSpendPermissionManager.approve(spendPermission);
-        vm.assertTrue(mockSpendPermissionManager.isApproved(spendPermission));
+        vm.assertTrue(mockSpendPermissionManager.isValid(spendPermission));
     }
 
     function test_approve_success_emitsEvent(
@@ -290,7 +290,7 @@ contract ApproveTest is SpendPermissionManagerBase {
         vm.prank(account);
         bool approved = mockSpendPermissionManager.approve(spendPermission);
         vm.assertTrue(approved);
-        vm.assertTrue(mockSpendPermissionManager.isApproved(spendPermission));
+        vm.assertTrue(mockSpendPermissionManager.isValid(spendPermission));
     }
 
     function test_approve_success_returnsTrueNoEventEmittedIfAlreadyApproved(
@@ -326,7 +326,7 @@ contract ApproveTest is SpendPermissionManagerBase {
         Vm.Log[] memory logs = vm.getRecordedLogs();
         vm.assertEq(logs.length, 0); // no event emitted
         vm.assertTrue(approved);
-        vm.assertTrue(mockSpendPermissionManager.isApproved(spendPermission));
+        vm.assertTrue(mockSpendPermissionManager.isValid(spendPermission));
     }
 
     function test_approve_success_returnsFalseIfPermissionRevoked(

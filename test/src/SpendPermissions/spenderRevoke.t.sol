@@ -44,7 +44,7 @@ contract SpenderRevokeTest is SpendPermissionManagerBase {
 
         vm.prank(account);
         mockSpendPermissionManager.approve(spendPermission);
-        assertTrue(mockSpendPermissionManager.isApproved(spendPermission));
+        assertTrue(mockSpendPermissionManager.isValid(spendPermission));
         vm.startPrank(sender);
         vm.expectRevert(abi.encodeWithSelector(SpendPermissionManager.InvalidSender.selector, sender, spender));
         mockSpendPermissionManager.spenderRevoke(spendPermission);
@@ -81,10 +81,10 @@ contract SpenderRevokeTest is SpendPermissionManagerBase {
         });
         vm.prank(account);
         mockSpendPermissionManager.approve(spendPermission);
-        assertTrue(mockSpendPermissionManager.isApproved(spendPermission));
+        assertTrue(mockSpendPermissionManager.isValid(spendPermission));
         vm.prank(spender);
         mockSpendPermissionManager.spenderRevoke(spendPermission);
-        assertFalse(mockSpendPermissionManager.isApproved(spendPermission));
+        assertFalse(mockSpendPermissionManager.isValid(spendPermission));
     }
 
     function test_spenderRevoke_success_emitsEvent(
@@ -117,7 +117,7 @@ contract SpenderRevokeTest is SpendPermissionManagerBase {
         });
         vm.prank(account);
         mockSpendPermissionManager.approve(spendPermission);
-        assertTrue(mockSpendPermissionManager.isApproved(spendPermission));
+        assertTrue(mockSpendPermissionManager.isValid(spendPermission));
         vm.startPrank(spender);
         vm.expectEmit(address(mockSpendPermissionManager));
         emit SpendPermissionManager.SpendPermissionRevoked({

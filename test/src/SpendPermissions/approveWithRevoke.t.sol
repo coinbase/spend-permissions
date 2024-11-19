@@ -277,8 +277,8 @@ contract ApproveWithRevokeTest is SpendPermissionManagerBase {
             newSpendPermission, existingSpendPermission, lastValidUpdatedPeriod
         );
         vm.stopPrank();
-        vm.assertFalse(mockSpendPermissionManager.isApproved(existingSpendPermission));
-        vm.assertTrue(mockSpendPermissionManager.isApproved(newSpendPermission));
+        vm.assertFalse(mockSpendPermissionManager.isValid(existingSpendPermission));
+        vm.assertTrue(mockSpendPermissionManager.isValid(newSpendPermission));
     }
 
     function test_approveWithRevoke_success_returnsTrueOldRevokedNewApproved(
@@ -314,8 +314,8 @@ contract ApproveWithRevokeTest is SpendPermissionManagerBase {
         );
         vm.stopPrank();
         vm.assertTrue(isApproved);
-        vm.assertFalse(mockSpendPermissionManager.isApproved(existingSpendPermission));
-        vm.assertTrue(mockSpendPermissionManager.isApproved(newSpendPermission));
+        vm.assertFalse(mockSpendPermissionManager.isValid(existingSpendPermission));
+        vm.assertTrue(mockSpendPermissionManager.isValid(newSpendPermission));
     }
 
     function test_approveWithRevoke_success_returnsFalseIfOldRevokedNewApprovedAfterBeingRevoked(
@@ -360,8 +360,8 @@ contract ApproveWithRevokeTest is SpendPermissionManagerBase {
         assertEq(logs.length, 1); // only the revoke log emitted
         vm.stopPrank();
         vm.assertFalse(isApproved);
-        vm.assertFalse(mockSpendPermissionManager.isApproved(existingSpendPermission));
-        vm.assertFalse(mockSpendPermissionManager.isApproved(newSpendPermission));
+        vm.assertFalse(mockSpendPermissionManager.isValid(existingSpendPermission));
+        vm.assertFalse(mockSpendPermissionManager.isValid(newSpendPermission));
     }
 
     function test_approveWithRevoke_success_emitsEvents(
@@ -441,8 +441,8 @@ contract ApproveWithRevokeTest is SpendPermissionManagerBase {
             newSpendPermission, existingSpendPermission, lastValidUpdatedPeriod
         );
         vm.stopPrank();
-        vm.assertFalse(mockSpendPermissionManager.isApproved(existingSpendPermission));
-        vm.assertTrue(mockSpendPermissionManager.isApproved(newSpendPermission));
+        vm.assertFalse(mockSpendPermissionManager.isValid(existingSpendPermission));
+        vm.assertTrue(mockSpendPermissionManager.isValid(newSpendPermission));
     }
 
     function test_approveWithRevoke_success_nonZeroSpend(
@@ -482,7 +482,7 @@ contract ApproveWithRevokeTest is SpendPermissionManagerBase {
         vm.startPrank(address(account));
         mockSpendPermissionManager.approveWithRevoke(newSpendPermission, existingSpendPermission, latestPeriodSpend);
         vm.stopPrank();
-        vm.assertFalse(mockSpendPermissionManager.isApproved(existingSpendPermission));
-        vm.assertTrue(mockSpendPermissionManager.isApproved(newSpendPermission));
+        vm.assertFalse(mockSpendPermissionManager.isValid(existingSpendPermission));
+        vm.assertTrue(mockSpendPermissionManager.isValid(newSpendPermission));
     }
 }
