@@ -142,6 +142,47 @@ contract SpendTest is SpendPermissionManagerBase {
         vm.stopPrank();
     }
 
+    function test_spend_reverts_undeployedToken(
+        address spender,
+        address token,
+        uint48 start,
+        uint48 end,
+        uint48 period,
+        uint160 allowance,
+        uint256 salt,
+        bytes memory extraData,
+        uint160 spend
+    ) public {
+        vm.assume(token.code.length == 0); // token is not deployed
+        vm.assume(spender != address(0));
+        vm.assume(spender != address(account)); // otherwise balance checks can fail
+        vm.assume(start > 0);
+        vm.assume(end > 0);
+        vm.assume(start < end);
+        vm.assume(period > 0);
+        vm.assume(spend > 0);
+        vm.assume(allowance > 0);
+        vm.assume(allowance >= spend);
+        SpendPermissionManager.SpendPermission memory spendPermission = SpendPermissionManager.SpendPermission({
+            account: address(account),
+            spender: spender,
+            token: token,
+            start: start,
+            end: end,
+            period: period,
+            allowance: allowance,
+            salt: salt,
+            extraData: extraData
+        });
+        vm.prank(address(account));
+        mockSpendPermissionManager.approve(spendPermission);
+        vm.warp(start);
+
+        vm.startPrank(spender);
+        vm.expectRevert(abi.encodeWithSelector(SafeERC20.SafeERC20FailedOperation.selector, token));
+        mockSpendPermissionManager.spend(spendPermission, spend);
+    }
+
     function test_spend_success_ether(
         address spender,
         uint48 start,
