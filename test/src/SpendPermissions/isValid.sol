@@ -5,12 +5,12 @@ import {SpendPermissionManager} from "../../../src/SpendPermissionManager.sol";
 
 import {SpendPermissionManagerBase} from "../../base/SpendPermissionManagerBase.sol";
 
-contract IsApprovedTest is SpendPermissionManagerBase {
+contract IsValidTest is SpendPermissionManagerBase {
     function setUp() public {
         _initializeSpendPermissionManager();
     }
 
-    function test_isApproved_true(
+    function test_isValid_true(
         address account,
         address spender,
         address token,
@@ -44,7 +44,7 @@ contract IsApprovedTest is SpendPermissionManagerBase {
         vm.assertTrue(mockSpendPermissionManager.isValid(spendPermission));
     }
 
-    function test_isApproved_false_uninitialized(
+    function test_isValid_false_uninitialized(
         address account,
         address spender,
         address token,
@@ -71,7 +71,7 @@ contract IsApprovedTest is SpendPermissionManagerBase {
         vm.assertFalse(mockSpendPermissionManager.isValid(spendPermission));
     }
 
-    function test_isApproved_false_wasRevoked(
+    function test_isValid_false_wasRevoked(
         address account,
         address spender,
         address token,
