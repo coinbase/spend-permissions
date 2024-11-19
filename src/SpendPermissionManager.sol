@@ -275,6 +275,8 @@ contract SpendPermissionManager is EIP712 {
         bool allApproved = true;
         uint256 batchLen = spendPermissionBatch.permissions.length;
         for (uint256 i; i < batchLen; i++) {
+            // approve each spend permission in the batch, capturing a false return to surface if any return false (are
+            // already revoked)
             if (
                 !_approve(
                     SpendPermission({
@@ -499,18 +501,12 @@ contract SpendPermissionManager is EIP712 {
 
     /// @notice Approve spend permission.
     ///
-    /// @dev Emits a {SpendPermissionApproved} event if the spend permission is newly approved and not already revoked.
+    /// @dev Emits a `SpendPermissionApproved` event if the spend permission is newly approved and not already revoked.
     ///
     /// @param spendPermission Details of the spend permission.
     ///
     /// @return approved True if spend permission is approved and not revoked.
     function _approve(SpendPermission memory spendPermission) internal returns (bool) {
-        // return false early if spend permission is already revoked
-        if (_isRevoked[getHash(spendPermission)]) return false;
-
-        // return early if spend permission is already approved
-        if (_isApproved[getHash(spendPermission)]) return true;
-
         // check token is non-zero
         if (spendPermission.token == address(0)) revert ZeroToken();
 
@@ -529,6 +525,13 @@ contract SpendPermissionManager is EIP712 {
         }
 
         bytes32 hash = getHash(spendPermission);
+
+        // return false early if spend permission is already revoked
+        if (_isRevoked[hash]) return false;
+
+        // return early if spend permission is already approved
+        if (_isApproved[hash]) return true;
+
         _isApproved[hash] = true;
         emit SpendPermissionApproved(hash, spendPermission);
         return true;
@@ -536,15 +539,18 @@ contract SpendPermissionManager is EIP712 {
 
     /// @notice Revoke a spend permission.
     ///
-    /// @dev Emits a {SpendPermissionRevoked} event if the spend permission is newly revoked.
+    /// @dev Emits a `SpendPermissionRevoked` event if the spend permission is newly revoked.
     ///
     /// @param spendPermission Details of the spend permission.
-    function _revoke(SpendPermission memory spendPermission) internal {
-        // return early if spend permission is already revoked
-        if (_isRevoked[getHash(spendPermission)]) return;
+    ///
+    /// @return revoked True if spend permission is revoked.
+    function _revoke(SpendPermission memory spendPermission) internal returns (bool) {
         bytes32 hash = getHash(spendPermission);
+        // return early if spend permission is already revoked
+        if (_isRevoked[hash]) return true;
         _isRevoked[hash] = true;
         emit SpendPermissionRevoked(hash, spendPermission);
+        return true;
     }
 
     /// @notice Use a spend permission.

@@ -5,6 +5,8 @@ import {SpendPermissionManager} from "../../../src/SpendPermissionManager.sol";
 
 import {SpendPermissionManagerBase} from "../../base/SpendPermissionManagerBase.sol";
 
+import {Vm} from "forge-std/Test.sol";
+
 contract ApproveBatchWithSignatureTest is SpendPermissionManagerBase {
     function setUp() public {
         _initializeSpendPermissionManager();
@@ -281,7 +283,11 @@ contract ApproveBatchWithSignatureTest is SpendPermissionManagerBase {
         vm.prank(address(account));
         mockSpendPermissionManager.revoke(expectedSpendPermissions[0]); // preemptive revoke of first spend permission
         bytes memory signature = _signSpendPermissionBatch(spendPermissionBatch, ownerPk, 0);
+        vm.recordLogs();
+
         bool allApproved = mockSpendPermissionManager.approveBatchWithSignature(spendPermissionBatch, signature);
+        Vm.Log[] memory logs = vm.getRecordedLogs();
+        vm.assertEq(logs.length, 1); // one approval event emitted
         vm.assertFalse(allApproved);
         vm.assertFalse(mockSpendPermissionManager.isApproved(expectedSpendPermissions[0]));
         vm.assertTrue(mockSpendPermissionManager.isApproved(expectedSpendPermissions[1]));

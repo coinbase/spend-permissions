@@ -5,6 +5,8 @@ import {SpendPermissionManager} from "../../../src/SpendPermissionManager.sol";
 
 import {SpendPermissionManagerBase} from "../../base/SpendPermissionManagerBase.sol";
 
+import {Vm} from "forge-std/Test.sol";
+
 contract ApproveWithRevokeTest is SpendPermissionManagerBase {
     SpendPermissionManager.SpendPermission existingSpendPermission;
     SpendPermissionManager.PeriodSpend lastValidUpdatedPeriod;
@@ -345,9 +347,17 @@ contract ApproveWithRevokeTest is SpendPermissionManagerBase {
         });
         vm.startPrank(address(account));
         mockSpendPermissionManager.revoke(newSpendPermission); // preemptively revoke the new spend permission
+        vm.expectEmit(address(mockSpendPermissionManager));
+        emit SpendPermissionManager.SpendPermissionRevoked({
+            hash: mockSpendPermissionManager.getHash(existingSpendPermission),
+            spendPermission: existingSpendPermission
+        });
+        vm.recordLogs();
         bool isApproved = mockSpendPermissionManager.approveWithRevoke(
             newSpendPermission, existingSpendPermission, lastValidUpdatedPeriod
         );
+        Vm.Log[] memory logs = vm.getRecordedLogs();
+        assertEq(logs.length, 1); // only the revoke log emitted
         vm.stopPrank();
         vm.assertFalse(isApproved);
         vm.assertFalse(mockSpendPermissionManager.isApproved(existingSpendPermission));

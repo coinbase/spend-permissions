@@ -357,7 +357,11 @@ contract ApproveTest is SpendPermissionManagerBase {
         });
         vm.startPrank(account);
         mockSpendPermissionManager.revoke(spendPermission); // revoke permission before approval
+        vm.recordLogs();
         bool approved = mockSpendPermissionManager.approve(spendPermission);
-        vm.assertFalse(approved);
+        Vm.Log[] memory logs = vm.getRecordedLogs();
+        vm.assertEq(logs.length, 0); // no event emitted
+        vm.assertFalse(approved); // returns false
+        vm.assertFalse(mockSpendPermissionManager.isApproved(spendPermission)); // permission is not approved
     }
 }
