@@ -5,6 +5,8 @@ import {SpendPermissionManager} from "../../../src/SpendPermissionManager.sol";
 
 import {SpendPermissionManagerBase} from "../../base/SpendPermissionManagerBase.sol";
 
+import {Vm} from "forge-std/Test.sol";
+
 contract ApproveTest is SpendPermissionManagerBase {
     function setUp() public {
         _initializeSpendPermissionManager();
@@ -257,5 +259,109 @@ contract ApproveTest is SpendPermissionManagerBase {
             spendPermission: spendPermission
         });
         mockSpendPermissionManager.approve(spendPermission);
+    }
+
+    function test_approve_success_returnsTrue(
+        address account,
+        address spender,
+        uint48 start,
+        uint48 end,
+        uint48 period,
+        uint160 allowance,
+        uint256 salt,
+        bytes memory extraData
+    ) public {
+        vm.assume(spender != address(0));
+        vm.assume(start < end);
+        vm.assume(period > 0);
+        vm.assume(allowance > 0);
+
+        SpendPermissionManager.SpendPermission memory spendPermission = SpendPermissionManager.SpendPermission({
+            account: account,
+            spender: spender,
+            token: NATIVE_TOKEN,
+            start: start,
+            end: end,
+            period: period,
+            allowance: allowance,
+            salt: salt,
+            extraData: extraData
+        });
+        vm.prank(account);
+        bool approved = mockSpendPermissionManager.approve(spendPermission);
+        vm.assertTrue(approved);
+        vm.assertTrue(mockSpendPermissionManager.isApproved(spendPermission));
+    }
+
+    function test_approve_success_returnsTrueNoEventEmittedIfAlreadyApproved(
+        address account,
+        address spender,
+        uint48 start,
+        uint48 end,
+        uint48 period,
+        uint160 allowance,
+        uint256 salt,
+        bytes memory extraData
+    ) public {
+        vm.assume(spender != address(0));
+        vm.assume(start < end);
+        vm.assume(period > 0);
+        vm.assume(allowance > 0);
+
+        SpendPermissionManager.SpendPermission memory spendPermission = SpendPermissionManager.SpendPermission({
+            account: account,
+            spender: spender,
+            token: NATIVE_TOKEN,
+            start: start,
+            end: end,
+            period: period,
+            allowance: allowance,
+            salt: salt,
+            extraData: extraData
+        });
+        vm.startPrank(account);
+        mockSpendPermissionManager.approve(spendPermission); // approve permission before second approval
+        vm.recordLogs();
+        bool approved = mockSpendPermissionManager.approve(spendPermission);
+        Vm.Log[] memory logs = vm.getRecordedLogs();
+        vm.assertEq(logs.length, 0); // no event emitted
+        vm.assertTrue(approved);
+        vm.assertTrue(mockSpendPermissionManager.isApproved(spendPermission));
+    }
+
+    function test_approve_success_returnsFalseIfPermissionRevoked(
+        address account,
+        address spender,
+        uint48 start,
+        uint48 end,
+        uint48 period,
+        uint160 allowance,
+        uint256 salt,
+        bytes memory extraData
+    ) public {
+        vm.assume(spender != address(0));
+        vm.assume(start < end);
+        vm.assume(period > 0);
+        vm.assume(allowance > 0);
+
+        SpendPermissionManager.SpendPermission memory spendPermission = SpendPermissionManager.SpendPermission({
+            account: account,
+            spender: spender,
+            token: NATIVE_TOKEN,
+            start: start,
+            end: end,
+            period: period,
+            allowance: allowance,
+            salt: salt,
+            extraData: extraData
+        });
+        vm.startPrank(account);
+        mockSpendPermissionManager.revoke(spendPermission); // revoke permission before approval
+        vm.recordLogs();
+        bool approved = mockSpendPermissionManager.approve(spendPermission);
+        Vm.Log[] memory logs = vm.getRecordedLogs();
+        vm.assertEq(logs.length, 0); // no event emitted
+        vm.assertFalse(approved); // returns false
+        vm.assertFalse(mockSpendPermissionManager.isApproved(spendPermission)); // permission is not approved
     }
 }

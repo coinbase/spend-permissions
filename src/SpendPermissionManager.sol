@@ -216,8 +216,14 @@ contract SpendPermissionManager is EIP712 {
     /// @dev Can only be called by the `account` of a permission.
     ///
     /// @param spendPermission Details of the spend permission.
-    function approve(SpendPermission calldata spendPermission) external requireSender(spendPermission.account) {
-        _approve(spendPermission);
+    ///
+    /// @return approved True if spend permission is approved and not revoked.
+    function approve(SpendPermission calldata spendPermission)
+        external
+        requireSender(spendPermission.account)
+        returns (bool)
+    {
+        return _approve(spendPermission);
     }
 
     /// @notice Approve a spend permission via a signature from the account.
@@ -226,7 +232,12 @@ contract SpendPermissionManager is EIP712 {
     ///
     /// @param spendPermission Details of the spend permission.
     /// @param signature Signed approval from the user.
-    function approveWithSignature(SpendPermission calldata spendPermission, bytes calldata signature) external {
+    ///
+    /// @return approved True if spend permission is approved and not revoked.
+    function approveWithSignature(SpendPermission calldata spendPermission, bytes calldata signature)
+        external
+        returns (bool)
+    {
         // validate signature over spend permission data, deploying or preparing account if necessary
         if (
             !publicERC6492Validator.isValidSignatureNowAllowSideEffects(
@@ -235,8 +246,7 @@ contract SpendPermissionManager is EIP712 {
         ) {
             revert InvalidSignature();
         }
-
-        _approve(spendPermission);
+        return _approve(spendPermission);
     }
 
     /// @notice Approve a spend permission batch via a signature from the account.
@@ -246,8 +256,11 @@ contract SpendPermissionManager is EIP712 {
     ///
     /// @param spendPermissionBatch Details of the spend permission batch.
     /// @param signature Signed approval from the user.
+    ///
+    /// @return allApproved True if all spend permissions in the batch are approved and not revoked.
     function approveBatchWithSignature(SpendPermissionBatch memory spendPermissionBatch, bytes calldata signature)
         external
+        returns (bool)
     {
         // validate signature over spend permission batch data
         if (
@@ -259,22 +272,30 @@ contract SpendPermissionManager is EIP712 {
         }
 
         // loop through each spend permission in the batch and approve it
+        bool allApproved = true;
         uint256 batchLen = spendPermissionBatch.permissions.length;
         for (uint256 i; i < batchLen; i++) {
-            _approve(
-                SpendPermission({
-                    account: spendPermissionBatch.account,
-                    spender: spendPermissionBatch.permissions[i].spender,
-                    token: spendPermissionBatch.permissions[i].token,
-                    allowance: spendPermissionBatch.permissions[i].allowance,
-                    period: spendPermissionBatch.period,
-                    start: spendPermissionBatch.start,
-                    end: spendPermissionBatch.end,
-                    salt: spendPermissionBatch.permissions[i].salt,
-                    extraData: spendPermissionBatch.permissions[i].extraData
-                })
-            );
+            // approve each spend permission in the batch, capturing a false return to surface if any return false (are
+            // already revoked)
+            if (
+                !_approve(
+                    SpendPermission({
+                        account: spendPermissionBatch.account,
+                        spender: spendPermissionBatch.permissions[i].spender,
+                        token: spendPermissionBatch.permissions[i].token,
+                        allowance: spendPermissionBatch.permissions[i].allowance,
+                        period: spendPermissionBatch.period,
+                        start: spendPermissionBatch.start,
+                        end: spendPermissionBatch.end,
+                        salt: spendPermissionBatch.permissions[i].salt,
+                        extraData: spendPermissionBatch.permissions[i].extraData
+                    })
+                )
+            ) {
+                allApproved = false;
+            }
         }
+        return allApproved;
     }
 
     /// @notice Spend tokens using a spend permission, transferring them from `account` to `spender`.
@@ -302,11 +323,13 @@ contract SpendPermissionManager is EIP712 {
     /// @param permissionToApprove Details of the spend permission to approve.
     /// @param permissionToRevoke Details of the spend permission to revoke.
     /// @param lastValidUpdatedPeriod Last valid updated period for the spend permission being revoked.
+    ///
+    /// @return approved True if new spend permission is approved and not revoked.
     function approveWithRevoke(
         SpendPermission calldata permissionToApprove,
         SpendPermission calldata permissionToRevoke,
         PeriodSpend calldata lastValidUpdatedPeriod
-    ) external requireSender(permissionToApprove.account) {
+    ) external requireSender(permissionToApprove.account) returns (bool) {
         // require both spend permissions apply to the same account
         if (permissionToApprove.account != permissionToRevoke.account) {
             revert MismatchedAccounts(permissionToApprove.account, permissionToRevoke.account);
@@ -322,7 +345,7 @@ contract SpendPermissionManager is EIP712 {
         }
         // revoke old and approve new spend permissions
         _revoke(permissionToRevoke);
-        _approve(permissionToApprove);
+        return _approve(permissionToApprove);
     }
 
     /// @notice Revoke a spend permission to disable its use indefinitely.
@@ -478,8 +501,12 @@ contract SpendPermissionManager is EIP712 {
 
     /// @notice Approve spend permission.
     ///
+    /// @dev Emits a `SpendPermissionApproved` event if the spend permission is newly approved and not already revoked.
+    ///
     /// @param spendPermission Details of the spend permission.
-    function _approve(SpendPermission memory spendPermission) internal {
+    ///
+    /// @return approved True if spend permission is approved and not revoked.
+    function _approve(SpendPermission memory spendPermission) internal returns (bool) {
         // check token is non-zero
         if (spendPermission.token == address(0)) revert ZeroToken();
 
@@ -498,17 +525,32 @@ contract SpendPermissionManager is EIP712 {
         }
 
         bytes32 hash = getHash(spendPermission);
+
+        // return false early if spend permission is already revoked
+        if (_isRevoked[hash]) return false;
+
+        // return early if spend permission is already approved
+        if (_isApproved[hash]) return true;
+
         _isApproved[hash] = true;
         emit SpendPermissionApproved(hash, spendPermission);
+        return true;
     }
 
     /// @notice Revoke a spend permission.
     ///
+    /// @dev Emits a `SpendPermissionRevoked` event if the spend permission is newly revoked.
+    ///
     /// @param spendPermission Details of the spend permission.
-    function _revoke(SpendPermission memory spendPermission) internal {
+    ///
+    /// @return revoked True if spend permission is revoked.
+    function _revoke(SpendPermission memory spendPermission) internal returns (bool) {
         bytes32 hash = getHash(spendPermission);
+        // return early if spend permission is already revoked
+        if (_isRevoked[hash]) return true;
         _isRevoked[hash] = true;
         emit SpendPermissionRevoked(hash, spendPermission);
+        return true;
     }
 
     /// @notice Use a spend permission.

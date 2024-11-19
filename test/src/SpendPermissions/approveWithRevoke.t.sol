@@ -5,6 +5,8 @@ import {SpendPermissionManager} from "../../../src/SpendPermissionManager.sol";
 
 import {SpendPermissionManagerBase} from "../../base/SpendPermissionManagerBase.sol";
 
+import {Vm} from "forge-std/Test.sol";
+
 contract ApproveWithRevokeTest is SpendPermissionManagerBase {
     SpendPermissionManager.SpendPermission existingSpendPermission;
     SpendPermissionManager.PeriodSpend lastValidUpdatedPeriod;
@@ -277,6 +279,89 @@ contract ApproveWithRevokeTest is SpendPermissionManagerBase {
         vm.stopPrank();
         vm.assertFalse(mockSpendPermissionManager.isApproved(existingSpendPermission));
         vm.assertTrue(mockSpendPermissionManager.isApproved(newSpendPermission));
+    }
+
+    function test_approveWithRevoke_success_returnsTrueOldRevokedNewApproved(
+        address spender,
+        uint48 start,
+        uint48 end,
+        uint48 period,
+        uint160 allowance,
+        uint256 salt,
+        bytes memory extraData
+    ) public {
+        vm.assume(spender != address(0));
+        vm.assume(spender != address(account));
+        vm.assume(start > 0);
+        vm.assume(start < end);
+        vm.assume(period > 0);
+        vm.assume(allowance > 0);
+
+        SpendPermissionManager.SpendPermission memory newSpendPermission = SpendPermissionManager.SpendPermission({
+            account: address(account),
+            spender: spender,
+            token: NATIVE_TOKEN,
+            start: start,
+            end: end,
+            period: period,
+            allowance: allowance,
+            salt: salt,
+            extraData: extraData
+        });
+        vm.startPrank(address(account));
+        bool isApproved = mockSpendPermissionManager.approveWithRevoke(
+            newSpendPermission, existingSpendPermission, lastValidUpdatedPeriod
+        );
+        vm.stopPrank();
+        vm.assertTrue(isApproved);
+        vm.assertFalse(mockSpendPermissionManager.isApproved(existingSpendPermission));
+        vm.assertTrue(mockSpendPermissionManager.isApproved(newSpendPermission));
+    }
+
+    function test_approveWithRevoke_success_returnsFalseIfOldRevokedNewApprovedAfterBeingRevoked(
+        address spender,
+        uint48 start,
+        uint48 end,
+        uint48 period,
+        uint160 allowance,
+        uint256 salt,
+        bytes memory extraData
+    ) public {
+        vm.assume(spender != address(0));
+        vm.assume(spender != address(account));
+        vm.assume(start > 0);
+        vm.assume(start < end);
+        vm.assume(period > 0);
+        vm.assume(allowance > 0);
+
+        SpendPermissionManager.SpendPermission memory newSpendPermission = SpendPermissionManager.SpendPermission({
+            account: address(account),
+            spender: spender,
+            token: NATIVE_TOKEN,
+            start: start,
+            end: end,
+            period: period,
+            allowance: allowance,
+            salt: salt,
+            extraData: extraData
+        });
+        vm.startPrank(address(account));
+        mockSpendPermissionManager.revoke(newSpendPermission); // preemptively revoke the new spend permission
+        vm.expectEmit(address(mockSpendPermissionManager));
+        emit SpendPermissionManager.SpendPermissionRevoked({
+            hash: mockSpendPermissionManager.getHash(existingSpendPermission),
+            spendPermission: existingSpendPermission
+        });
+        vm.recordLogs();
+        bool isApproved = mockSpendPermissionManager.approveWithRevoke(
+            newSpendPermission, existingSpendPermission, lastValidUpdatedPeriod
+        );
+        Vm.Log[] memory logs = vm.getRecordedLogs();
+        assertEq(logs.length, 1); // only the revoke log emitted
+        vm.stopPrank();
+        vm.assertFalse(isApproved);
+        vm.assertFalse(mockSpendPermissionManager.isApproved(existingSpendPermission));
+        vm.assertFalse(mockSpendPermissionManager.isApproved(newSpendPermission));
     }
 
     function test_approveWithRevoke_success_emitsEvents(
