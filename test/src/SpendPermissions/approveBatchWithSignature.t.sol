@@ -181,6 +181,112 @@ contract ApproveBatchWithSignatureTest is SpendPermissionManagerBase {
         _assertSpendPermissionBatchApproved(spendPermissionBatch, mockSpendPermissionManager);
     }
 
+    function test_approveBatchWithSignature_success_returnsTrueIfAllApproved(
+        address spender,
+        address token,
+        uint48 start,
+        uint48 end,
+        uint48 period,
+        uint160 allowance1,
+        uint160 allowance2,
+        uint256 salt1,
+        uint256 salt2
+    ) public {
+        vm.assume(spender != address(0));
+        vm.assume(token != address(0));
+        vm.assume(start < end);
+        vm.assume(period > 0);
+        vm.assume(allowance1 > 0);
+        vm.assume(allowance2 > 0);
+
+        SpendPermissionManager.PermissionDetails memory permissionDetails1 = SpendPermissionManager.PermissionDetails({
+            token: token,
+            allowance: allowance1,
+            spender: spender,
+            salt: salt1,
+            extraData: "0x"
+        });
+        SpendPermissionManager.PermissionDetails memory permissionDetails2 = SpendPermissionManager.PermissionDetails({
+            token: token,
+            allowance: allowance2,
+            spender: spender,
+            salt: salt2,
+            extraData: "0x"
+        });
+        SpendPermissionManager.PermissionDetails[] memory permissions =
+            new SpendPermissionManager.PermissionDetails[](2);
+        permissions[0] = permissionDetails1;
+        permissions[1] = permissionDetails2;
+        SpendPermissionManager.SpendPermissionBatch memory spendPermissionBatch = SpendPermissionManager
+            .SpendPermissionBatch({
+            account: address(account),
+            start: start,
+            end: end,
+            period: period,
+            permissions: permissions
+        });
+
+        bytes memory signature = _signSpendPermissionBatch(spendPermissionBatch, ownerPk, 0);
+        bool allApproved = mockSpendPermissionManager.approveBatchWithSignature(spendPermissionBatch, signature);
+        vm.assertTrue(allApproved);
+        _assertSpendPermissionBatchApproved(spendPermissionBatch, mockSpendPermissionManager);
+    }
+
+    function test_approveBatchWithSignature_success_returnsFalseIfAnyAlreadyRevoked(
+        address spender,
+        address token,
+        uint48 start,
+        uint48 end,
+        uint48 period,
+        uint160 allowance1,
+        uint160 allowance2,
+        uint256 salt1,
+        uint256 salt2
+    ) public {
+        vm.assume(spender != address(0));
+        vm.assume(token != address(0));
+        vm.assume(start < end);
+        vm.assume(period > 0);
+        vm.assume(allowance1 > 0);
+        vm.assume(allowance2 > 0);
+
+        SpendPermissionManager.PermissionDetails memory permissionDetails1 = SpendPermissionManager.PermissionDetails({
+            token: token,
+            allowance: allowance1,
+            spender: spender,
+            salt: salt1,
+            extraData: "0x"
+        });
+        SpendPermissionManager.PermissionDetails memory permissionDetails2 = SpendPermissionManager.PermissionDetails({
+            token: token,
+            allowance: allowance2,
+            spender: spender,
+            salt: salt2,
+            extraData: "0x"
+        });
+        SpendPermissionManager.PermissionDetails[] memory permissions =
+            new SpendPermissionManager.PermissionDetails[](2);
+        permissions[0] = permissionDetails1;
+        permissions[1] = permissionDetails2;
+        SpendPermissionManager.SpendPermissionBatch memory spendPermissionBatch = SpendPermissionManager
+            .SpendPermissionBatch({
+            account: address(account),
+            start: start,
+            end: end,
+            period: period,
+            permissions: permissions
+        });
+        SpendPermissionManager.SpendPermission[] memory expectedSpendPermissions =
+            _generateSpendPermissionArrayFromBatch(spendPermissionBatch);
+        vm.prank(address(account));
+        mockSpendPermissionManager.revoke(expectedSpendPermissions[0]); // preemptive revoke of first spend permission
+        bytes memory signature = _signSpendPermissionBatch(spendPermissionBatch, ownerPk, 0);
+        bool allApproved = mockSpendPermissionManager.approveBatchWithSignature(spendPermissionBatch, signature);
+        vm.assertFalse(allApproved);
+        vm.assertFalse(mockSpendPermissionManager.isApproved(expectedSpendPermissions[0]));
+        vm.assertTrue(mockSpendPermissionManager.isApproved(expectedSpendPermissions[1]));
+    }
+
     function test_approveBatchWithSignature_success_emitsEvents(
         address spender,
         address token,

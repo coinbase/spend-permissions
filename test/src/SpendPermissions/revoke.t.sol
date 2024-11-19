@@ -5,6 +5,8 @@ import {SpendPermissionManager} from "../../../src/SpendPermissionManager.sol";
 
 import {SpendPermissionManagerBase} from "../../base/SpendPermissionManagerBase.sol";
 
+import {Vm} from "forge-std/Test.sol";
+
 contract RevokeTest is SpendPermissionManagerBase {
     function setUp() public {
         _initializeSpendPermissionManager();
@@ -123,5 +125,45 @@ contract RevokeTest is SpendPermissionManagerBase {
             spendPermission: spendPermission
         });
         mockSpendPermissionManager.revoke(spendPermission);
+    }
+
+    function test_revoke_success_returnsEarlyNoEventIfAlreadyRevoked(
+        address account,
+        address spender,
+        address token,
+        uint48 start,
+        uint48 end,
+        uint48 period,
+        uint160 allowance,
+        uint256 salt,
+        bytes memory extraData
+    ) public {
+        vm.assume(spender != address(0));
+        vm.assume(token != address(0));
+        vm.assume(start < end);
+        vm.assume(period > 0);
+        vm.assume(allowance > 0);
+
+        SpendPermissionManager.SpendPermission memory spendPermission = SpendPermissionManager.SpendPermission({
+            account: account,
+            spender: spender,
+            token: token,
+            start: start,
+            end: end,
+            period: period,
+            allowance: allowance,
+            salt: salt,
+            extraData: extraData
+        });
+        vm.startPrank(account);
+        mockSpendPermissionManager.approve(spendPermission);
+        assertTrue(mockSpendPermissionManager.isApproved(spendPermission));
+        mockSpendPermissionManager.revoke(spendPermission); // first revoke
+        vm.recordLogs();
+        mockSpendPermissionManager.revoke(spendPermission); // second revoke
+        vm.getRecordedLogs();
+        Vm.Log[] memory logs = vm.getRecordedLogs();
+        assertTrue(logs.length == 0);
+        assertFalse(mockSpendPermissionManager.isApproved(spendPermission));
     }
 }
