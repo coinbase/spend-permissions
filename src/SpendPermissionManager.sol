@@ -4,6 +4,7 @@ pragma solidity ^0.8.0;
 import {SafeERC20} from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 import {IERC1271} from "openzeppelin-contracts/contracts/interfaces/IERC1271.sol";
 import {IERC20} from "openzeppelin-contracts/contracts/token/ERC20/IERC20.sol";
+import {Address} from "openzeppelin-contracts/contracts/utils/Address.sol";
 import {CoinbaseSmartWallet} from "smart-wallet/CoinbaseSmartWallet.sol";
 import {EIP712} from "solady/utils/EIP712.sol";
 
@@ -103,6 +104,9 @@ contract SpendPermissionManager is EIP712 {
 
     /// @notice Last updated period for a spend permission.
     mapping(bytes32 hash => PeriodSpend) internal _lastUpdatedPeriod;
+
+    /// @dev replace with TSTORE
+    mapping(address account => uint256 expectedForward) _forwards;
 
     /// @notice Invalid sender for the external call.
     ///
@@ -310,6 +314,22 @@ contract SpendPermissionManager is EIP712 {
     {
         _useSpendPermission(spendPermission, value);
         _transferFrom(spendPermission.token, spendPermission.account, spendPermission.spender, value);
+    }
+
+    /// @notice Forward native token to recipient.
+    ///
+    /// @dev Reverts if forward amount not equivalent to expected.
+    ///
+    /// @param recipient Account to forward native token to.
+    function forward(address payable recipient) external payable {
+        // check expected forward value matches call value
+        if (_forwards[recipient] != msg.value) revert();
+
+        // forward value to recipient
+        Address.sendValue(recipient, msg.value);
+
+        // clear forwarding value storage
+        delete _forwards[recipient];
     }
 
     /// @notice Approves a permission while revoking another if its last update has not changed.
@@ -600,9 +620,24 @@ contract SpendPermissionManager is EIP712 {
     function _transferFrom(address token, address account, address recipient, uint256 value) internal {
         // transfer tokens from account to recipient
         if (token == NATIVE_TOKEN) {
-            _execute({account: account, target: recipient, value: value, data: hex""});
+            // set transient storage for expected forward value
+            _forwards[recipient] += value;
+
+            // call account to call `this.forward`
+            _execute({
+                account: account,
+                target: address(this),
+                value: value,
+                data: abi.encodeWithSelector(this.forward.selector, recipient)
+            });
+
+            // check if forward has been reset
+            if (_forwards[recipient] != 0) revert();
+
+            // early return to prevent running ERC-20 case
             return;
         }
+
         // if ERC-20 token, set allowance for this contract to spend on behalf of account
         _execute({
             account: account,
