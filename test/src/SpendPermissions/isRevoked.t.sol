@@ -5,12 +5,12 @@ import {SpendPermissionManager} from "../../../src/SpendPermissionManager.sol";
 
 import {SpendPermissionManagerBase} from "../../base/SpendPermissionManagerBase.sol";
 
-contract IsApprovedTest is SpendPermissionManagerBase {
+contract IsRevokedTest is SpendPermissionManagerBase {
     function setUp() public {
         _initializeSpendPermissionManager();
     }
 
-    function test_isApproved_true(
+    function test_isRevoked_true(
         address account,
         address spender,
         uint48 start,
@@ -36,13 +36,14 @@ contract IsApprovedTest is SpendPermissionManagerBase {
             salt: salt,
             extraData: extraData
         });
-        vm.prank(account);
+        vm.startPrank(account);
         mockSpendPermissionManager.approve(spendPermission);
         vm.assertTrue(mockSpendPermissionManager.isValid(spendPermission));
-        vm.assertTrue(mockSpendPermissionManager.isApproved(mockSpendPermissionManager.getHash(spendPermission)));
+        mockSpendPermissionManager.revoke(spendPermission);
+        vm.assertTrue(mockSpendPermissionManager.isRevoked(mockSpendPermissionManager.getHash(spendPermission)));
     }
 
-    function test_isApproved_false(
+    function test_isRevoked_false(
         address account,
         address spender,
         uint48 start,
@@ -70,6 +71,8 @@ contract IsApprovedTest is SpendPermissionManagerBase {
         });
         // no approval
         vm.assertFalse(mockSpendPermissionManager.isValid(spendPermission));
-        vm.assertFalse(mockSpendPermissionManager.isApproved(mockSpendPermissionManager.getHash(spendPermission)));
+        vm.prank(account);
+        mockSpendPermissionManager.revoke(spendPermission);
+        vm.assertTrue(mockSpendPermissionManager.isRevoked(mockSpendPermissionManager.getHash(spendPermission)));
     }
 }

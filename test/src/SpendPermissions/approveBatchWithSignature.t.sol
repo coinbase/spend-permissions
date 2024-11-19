@@ -289,8 +289,8 @@ contract ApproveBatchWithSignatureTest is SpendPermissionManagerBase {
         Vm.Log[] memory logs = vm.getRecordedLogs();
         vm.assertEq(logs.length, 1); // one approval event emitted
         vm.assertFalse(allApproved);
-        vm.assertFalse(mockSpendPermissionManager.isApproved(expectedSpendPermissions[0]));
-        vm.assertTrue(mockSpendPermissionManager.isApproved(expectedSpendPermissions[1]));
+        vm.assertFalse(mockSpendPermissionManager.isValid(expectedSpendPermissions[0]));
+        vm.assertTrue(mockSpendPermissionManager.isValid(expectedSpendPermissions[1]));
     }
 
     function test_approveBatchWithSignature_success_emitsEvents(
@@ -446,7 +446,7 @@ contract ApproveBatchWithSignatureTest is SpendPermissionManagerBase {
                 salt: permissionDetails.salt,
                 extraData: permissionDetails.extraData
             });
-            vm.assertTrue(spendPermissionManager.isApproved(spendPermission));
+            vm.assertTrue(spendPermissionManager.isValid(spendPermission));
         }
     }
 
@@ -468,7 +468,7 @@ contract ApproveBatchWithSignatureTest is SpendPermissionManagerBase {
                 salt: permissionDetails.salt,
                 extraData: permissionDetails.extraData
             });
-            vm.assertFalse(spendPermissionManager.isApproved(spendPermission));
+            vm.assertFalse(spendPermissionManager.isValid(spendPermission));
         }
     }
 }

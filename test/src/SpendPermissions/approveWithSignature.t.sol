@@ -165,7 +165,7 @@ contract ApproveWithSignatureTest is SpendPermissionManagerBase {
 
         bytes memory signature = _signSpendPermission(spendPermission, ownerPk, 0);
         mockSpendPermissionManager.approveWithSignature(spendPermission, signature);
-        vm.assertTrue(mockSpendPermissionManager.isApproved(spendPermission));
+        vm.assertTrue(mockSpendPermissionManager.isValid(spendPermission));
     }
 
     function test_approveWithSignature_success_returnsTrue(
@@ -199,7 +199,7 @@ contract ApproveWithSignatureTest is SpendPermissionManagerBase {
         bytes memory signature = _signSpendPermission(spendPermission, ownerPk, 0);
         bool isApproved = mockSpendPermissionManager.approveWithSignature(spendPermission, signature);
         vm.assertTrue(isApproved);
-        vm.assertTrue(mockSpendPermissionManager.isApproved(spendPermission));
+        vm.assertTrue(mockSpendPermissionManager.isValid(spendPermission));
     }
 
     function test_approveWithSignature_success_returnsFalseIfAlreadyRevoked(
@@ -286,7 +286,7 @@ contract ApproveWithSignatureTest is SpendPermissionManagerBase {
 
         // verify that the account is now deployed (has code) and that a call to isValidSignature returns true
         vm.assertGt(counterfactualAccount.code.length, 0);
-        vm.assertTrue(mockSpendPermissionManager.isApproved(spendPermission));
+        vm.assertTrue(mockSpendPermissionManager.isValid(spendPermission));
     }
 
     function test_approveWithSignature_success_emitsEvent(

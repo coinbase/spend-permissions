@@ -46,7 +46,7 @@ contract RevokeTest is SpendPermissionManagerBase {
 
         vm.prank(account);
         mockSpendPermissionManager.approve(spendPermission);
-        assertTrue(mockSpendPermissionManager.isApproved(spendPermission));
+        assertTrue(mockSpendPermissionManager.isValid(spendPermission));
         vm.startPrank(sender);
         vm.expectRevert(abi.encodeWithSelector(SpendPermissionManager.InvalidSender.selector, sender, account));
         mockSpendPermissionManager.revoke(spendPermission);
@@ -83,9 +83,9 @@ contract RevokeTest is SpendPermissionManagerBase {
         });
         vm.startPrank(account);
         mockSpendPermissionManager.approve(spendPermission);
-        assertTrue(mockSpendPermissionManager.isApproved(spendPermission));
+        assertTrue(mockSpendPermissionManager.isValid(spendPermission));
         mockSpendPermissionManager.revoke(spendPermission);
-        assertFalse(mockSpendPermissionManager.isApproved(spendPermission));
+        assertFalse(mockSpendPermissionManager.isValid(spendPermission));
     }
 
     function test_revoke_success_emitsEvent(
@@ -118,7 +118,7 @@ contract RevokeTest is SpendPermissionManagerBase {
         });
         vm.startPrank(account);
         mockSpendPermissionManager.approve(spendPermission);
-        assertTrue(mockSpendPermissionManager.isApproved(spendPermission));
+        assertTrue(mockSpendPermissionManager.isValid(spendPermission));
         vm.expectEmit(address(mockSpendPermissionManager));
         emit SpendPermissionManager.SpendPermissionRevoked({
             hash: mockSpendPermissionManager.getHash(spendPermission),
@@ -157,13 +157,13 @@ contract RevokeTest is SpendPermissionManagerBase {
         });
         vm.startPrank(account);
         mockSpendPermissionManager.approve(spendPermission);
-        assertTrue(mockSpendPermissionManager.isApproved(spendPermission));
+        assertTrue(mockSpendPermissionManager.isValid(spendPermission));
         mockSpendPermissionManager.revoke(spendPermission); // first revoke
         vm.recordLogs();
         mockSpendPermissionManager.revoke(spendPermission); // second revoke
         vm.getRecordedLogs();
         Vm.Log[] memory logs = vm.getRecordedLogs();
         assertTrue(logs.length == 0);
-        assertFalse(mockSpendPermissionManager.isApproved(spendPermission));
+        assertFalse(mockSpendPermissionManager.isValid(spendPermission));
     }
 }

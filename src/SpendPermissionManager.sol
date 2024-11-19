@@ -96,10 +96,10 @@ contract SpendPermissionManager is EIP712 {
     address public constant NATIVE_TOKEN = 0xEeeeeEeeeEeEeeEeEeEeeEEEeeeeEeeeeeeeEEeE;
 
     /// @notice Spend permission is revoked.
-    mapping(bytes32 hash => bool revoked) internal _isRevoked;
+    mapping(bytes32 hash => bool revoked) public isRevoked;
 
     /// @notice Spend permission is approved.
-    mapping(bytes32 hash => bool approved) internal _isApproved;
+    mapping(bytes32 hash => bool approved) public isApproved;
 
     /// @notice Last updated period for a spend permission.
     mapping(bytes32 hash => PeriodSpend) internal _lastUpdatedPeriod;
@@ -438,9 +438,9 @@ contract SpendPermissionManager is EIP712 {
     /// @param spendPermission Details of the spend permission.
     ///
     /// @return approved True if spend permission is approved and not revoked.
-    function isApproved(SpendPermission memory spendPermission) public view returns (bool) {
+    function isValid(SpendPermission memory spendPermission) public view returns (bool) {
         bytes32 hash = getHash(spendPermission);
-        return !_isRevoked[hash] && _isApproved[hash];
+        return !isRevoked[hash] && isApproved[hash];
     }
 
     /// @notice Get last updated period for a spend permission.
@@ -562,7 +562,7 @@ contract SpendPermissionManager is EIP712 {
         if (value == 0) revert ZeroValue();
 
         // require spend permission is approved and not revoked
-        if (!isApproved(spendPermission)) revert UnauthorizedSpendPermission();
+        if (!isValid(spendPermission)) revert UnauthorizedSpendPermission();
 
         PeriodSpend memory currentPeriod = getCurrentPeriod(spendPermission);
         uint256 totalSpend = value + uint256(currentPeriod.spend);
