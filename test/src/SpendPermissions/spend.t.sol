@@ -75,11 +75,13 @@ contract SpendTest is SpendPermissionManagerBase {
             mockSpendPermissionManager.getLastUpdatedPeriod(spendPermission);
         assertEq(address(mockMaliciousCoinbaseSmartWallet).balance, allowance);
         assertEq(spender.balance, 0);
+        assertEq(address(mockSpendPermissionManager).balance, 0); // assure SPM has no balance before pulling from user
         vm.startPrank(spender);
         vm.expectRevert(abi.encodeWithSelector(Errors.InsufficientBalance.selector, 0, spend));
         mockSpendPermissionManager.spend(spendPermission, spend);
         assertEq(address(mockMaliciousCoinbaseSmartWallet).balance, allowance); // original balances still there
         assertEq(spender.balance, 0); // original balances still there
+        assertEq(address(mockSpendPermissionManager).balance, 0);
         SpendPermissionManager.PeriodSpend memory usage =
             mockSpendPermissionManager.getLastUpdatedPeriod(spendPermission); // no change
         assertEq(usage.start, originalUsage.start);
