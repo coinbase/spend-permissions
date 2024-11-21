@@ -663,9 +663,9 @@ contract SpendPermissionManager is EIP712 {
         // transfer tokens from account to recipient
         if (token == NATIVE_TOKEN) {
             // call account to send native token to this contract
-            _execute({account: account, target: address(this), value: value});
+            _execute({account: account, target: address(this), value: value, data: hex""});
             // forward native token to recipient, which will revert if funds are not actually available
-            Address.sendValue(recipient, value);
+            Address.sendValue(payable(recipient), value);
             return;
         }
         // if ERC-20 token, set allowance for this contract to spend on behalf of account
