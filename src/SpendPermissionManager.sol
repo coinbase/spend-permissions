@@ -5,6 +5,7 @@ import {MagicSpend} from "magic-spend/MagicSpend.sol";
 import {IERC1271} from "openzeppelin-contracts/contracts/interfaces/IERC1271.sol";
 import {IERC20} from "openzeppelin-contracts/contracts/token/ERC20/IERC20.sol";
 import {SafeERC20} from "openzeppelin-contracts/contracts/token/ERC20/utils/SafeERC20.sol";
+import {Address} from "openzeppelin-contracts/contracts/utils/Address.sol";
 import {CoinbaseSmartWallet} from "smart-wallet/CoinbaseSmartWallet.sol";
 import {EIP712} from "solady/utils/EIP712.sol";
 
@@ -220,6 +221,12 @@ contract SpendPermissionManager is EIP712 {
         publicERC6492Validator = _publicERC6492Validator;
         magicSpend = _magicSpend;
     }
+
+    /// @notice Allow the contract to receive native token transfers.
+    ///
+    /// @dev Used to enforce success of native token transfers by overseeing routing to spender
+    //     and reverting on failure.
+    receive() external payable {}
 
     /// @notice Require a specific sender for an external call.
     ///
@@ -645,7 +652,8 @@ contract SpendPermissionManager is EIP712 {
 
     /// @notice Transfer assets from an account to a recipient.
     ///
-    /// @dev Uses `safeTransferFrom` for ERC-20 tokens to enforce revert on failure.
+    /// @dev Enforces successful transfer of native token, reverts on failure.
+    /// @dev Uses `safeTransferFrom` for ERC-20 token transfers to enforce revert on failure.
     ///
     /// @param token Address of the token contract.
     /// @param account Address of the user account.
@@ -654,7 +662,10 @@ contract SpendPermissionManager is EIP712 {
     function _transferFrom(address token, address account, address recipient, uint256 value) internal {
         // transfer tokens from account to recipient
         if (token == NATIVE_TOKEN) {
-            _execute({account: account, target: recipient, value: value, data: hex""});
+            // call account to send native token to this contract
+            _execute({account: account, target: address(this), value: value});
+            // forward native token to recipient, which will revert if funds are not actually available
+            Address.sendValue(recipient, value);
             return;
         }
         // if ERC-20 token, set allowance for this contract to spend on behalf of account
