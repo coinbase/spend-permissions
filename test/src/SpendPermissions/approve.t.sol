@@ -362,6 +362,6 @@ contract ApproveTest is SpendPermissionManagerBase {
         Vm.Log[] memory logs = vm.getRecordedLogs();
         vm.assertEq(logs.length, 0); // no event emitted
         vm.assertFalse(approved); // returns false
-        vm.assertFalse(mockSpendPermissionManager.isApproved(spendPermission)); // permission is not approved
+        vm.assertFalse(mockSpendPermissionManager.isValid(spendPermission)); // permission is not approved
     }
 }

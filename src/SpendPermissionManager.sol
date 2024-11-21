@@ -527,12 +527,12 @@ contract SpendPermissionManager is EIP712 {
         bytes32 hash = getHash(spendPermission);
 
         // return false early if spend permission is already revoked
-        if (_isRevoked[hash]) return false;
+        if (isRevoked[hash]) return false;
 
         // return early if spend permission is already approved
-        if (_isApproved[hash]) return true;
+        if (isApproved[hash]) return true;
 
-        _isApproved[hash] = true;
+        isApproved[hash] = true;
         emit SpendPermissionApproved(hash, spendPermission);
         return true;
     }
@@ -547,8 +547,8 @@ contract SpendPermissionManager is EIP712 {
     function _revoke(SpendPermission memory spendPermission) internal returns (bool) {
         bytes32 hash = getHash(spendPermission);
         // return early if spend permission is already revoked
-        if (_isRevoked[hash]) return true;
-        _isRevoked[hash] = true;
+        if (isRevoked[hash]) return true;
+        isRevoked[hash] = true;
         emit SpendPermissionRevoked(hash, spendPermission);
         return true;
     }

@@ -238,7 +238,7 @@ contract ApproveWithSignatureTest is SpendPermissionManagerBase {
         Vm.Log[] memory logs = vm.getRecordedLogs();
         vm.assertEq(logs.length, 0);
         vm.assertFalse(isApproved);
-        vm.assertFalse(mockSpendPermissionManager.isApproved(spendPermission));
+        vm.assertFalse(mockSpendPermissionManager.isValid(spendPermission));
     }
 
     function test_approveWithSignature_success_erc6492SignaturePreDeploy(
