@@ -1,9 +1,10 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.0;
 
-import {SafeERC20} from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
+import {MagicSpend} from "magic-spend/MagicSpend.sol";
 import {IERC1271} from "openzeppelin-contracts/contracts/interfaces/IERC1271.sol";
 import {IERC20} from "openzeppelin-contracts/contracts/token/ERC20/IERC20.sol";
+import {SafeERC20} from "openzeppelin-contracts/contracts/token/ERC20/utils/SafeERC20.sol";
 import {CoinbaseSmartWallet} from "smart-wallet/CoinbaseSmartWallet.sol";
 import {EIP712} from "solady/utils/EIP712.sol";
 
@@ -80,6 +81,9 @@ contract SpendPermissionManager is EIP712 {
     /// @notice Separated contract for validating signatures and executing ERC-6492 side effects
     ///         (https://eips.ethereum.org/EIPS/eip-6492).
     PublicERC6492Validator public immutable publicERC6492Validator;
+
+    /// @notice MagicSpend singleton (https://github.com/coinbase/MagicSpend).
+    address public immutable magicSpend;
 
     bytes32 public constant PERMISSION_TYPEHASH = keccak256(
         "SpendPermission(address account,address spender,address token,uint160 allowance,uint48 period,uint48 start,uint48 end,uint256 salt,bytes extraData)"
@@ -171,6 +175,18 @@ contract SpendPermissionManager is EIP712 {
     /// @param allowance Allowance value that was exceeded.
     error ExceededSpendPermission(uint256 value, uint256 allowance);
 
+    /// @notice `SpendPermission.token` and `WithdrawRequest.asset` are not equal.
+    ///
+    /// @param spendToken Token belonging to the SpendPermission.
+    /// @param withdrawAsset Asset belonging to the WithdrawRequest.
+    error SpendTokenWithdrawAssetMismatch(address spendToken, address withdrawAsset);
+
+    /// @notice Attempted spend value and `WithdrawRequest.amount` are not equal.
+    ///
+    /// @param spendValue Value of token attempting to be spent.
+    /// @param withdrawAmount Amount of asset attempting to withdraw from MagicSpend.
+    error SpendValueWithdrawAmountMismatch(uint256 spendValue, uint256 withdrawAmount);
+
     /// @notice SpendPermission was approved via transaction.
     ///
     /// @param hash The unique hash representing the spend permission.
@@ -198,9 +214,11 @@ contract SpendPermissionManager is EIP712 {
     ///
     /// @dev The PublicERC6492Validator contract is used to validate ERC-6492 signatures.
     ///
-    /// @param _publicERC6492Validator Address of the PublicERC6492Validator contract.
-    constructor(PublicERC6492Validator _publicERC6492Validator) {
+    /// @param _publicERC6492Validator PublicERC6492Validator contract.
+    /// @param _magicSpend Address of the MagicSpend contract.
+    constructor(PublicERC6492Validator _publicERC6492Validator, address _magicSpend) {
         publicERC6492Validator = _publicERC6492Validator;
+        magicSpend = _magicSpend;
     }
 
     /// @notice Require a specific sender for an external call.
@@ -309,6 +327,42 @@ contract SpendPermissionManager is EIP712 {
         requireSender(spendPermission.spender)
     {
         _useSpendPermission(spendPermission, value);
+        _transferFrom(spendPermission.token, spendPermission.account, spendPermission.spender, value);
+    }
+
+    /// @notice Spend tokens from account with an initial call to MagicSpend to fund the account.
+    ///
+    /// @dev Can only be called by the `spender` of a permission.
+    /// @dev Requires withdraw signature from MagicSpend owner.
+    ///
+    /// @param spendPermission Details of the spend permission.
+    /// @param value Amount of token attempting to spend.
+    /// @param withdrawRequest Request to withdraw tokens from MagicSpend into the account.
+    function spendWithWithdraw(
+        SpendPermission memory spendPermission,
+        uint160 value,
+        MagicSpend.WithdrawRequest memory withdrawRequest
+    ) external requireSender(spendPermission.spender) {
+        // check spend token and withdraw asset are the same
+        if (
+            !(spendPermission.token == NATIVE_TOKEN && withdrawRequest.asset == address(0))
+                && spendPermission.token != withdrawRequest.asset
+        ) {
+            revert SpendTokenWithdrawAssetMismatch(spendPermission.token, withdrawRequest.asset);
+        }
+
+        // check spend value equals withdraw request amount
+        if (value != withdrawRequest.amount) {
+            revert SpendValueWithdrawAmountMismatch(value, withdrawRequest.amount);
+        }
+
+        _useSpendPermission(spendPermission, value);
+        _execute({
+            account: spendPermission.account,
+            target: magicSpend,
+            value: 0,
+            data: abi.encodeWithSelector(MagicSpend.withdraw.selector, withdrawRequest)
+        });
         _transferFrom(spendPermission.token, spendPermission.account, spendPermission.spender, value);
     }
 

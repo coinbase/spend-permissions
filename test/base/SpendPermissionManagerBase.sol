@@ -1,13 +1,15 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.23;
 
-import {SpendPermissionManager} from "../../src/SpendPermissionManager.sol";
-import {MockSpendPermissionManager} from "../mocks/MockSpendPermissionManager.sol";
-import {Base} from "./Base.sol";
-
-import {PublicERC6492Validator} from "../../src/PublicERC6492Validator.sol";
+import {MagicSpend} from "magic-spend/MagicSpend.sol";
 import {CoinbaseSmartWallet} from "smart-wallet/CoinbaseSmartWallet.sol";
 import {CoinbaseSmartWalletFactory} from "smart-wallet/CoinbaseSmartWalletFactory.sol";
+
+import {PublicERC6492Validator} from "../../src/PublicERC6492Validator.sol";
+import {SpendPermissionManager} from "../../src/SpendPermissionManager.sol";
+
+import {MockSpendPermissionManager} from "../mocks/MockSpendPermissionManager.sol";
+import {Base} from "./Base.sol";
 
 contract SpendPermissionManagerBase is Base {
     address constant NATIVE_TOKEN = 0xEeeeeEeeeEeEeeEeEeEeeEEEeeeeEeeeeeeeEEeE;
@@ -15,6 +17,7 @@ contract SpendPermissionManagerBase is Base {
     bytes32 constant CBSW_MESSAGE_TYPEHASH = keccak256("CoinbaseSmartWalletMessage(bytes32 hash)");
 
     PublicERC6492Validator publicERC6492Validator;
+    MagicSpend magicSpend;
     MockSpendPermissionManager mockSpendPermissionManager;
     CoinbaseSmartWalletFactory mockCoinbaseSmartWalletFactory;
 
@@ -22,7 +25,8 @@ contract SpendPermissionManagerBase is Base {
         _initialize(); // Base
         mockCoinbaseSmartWalletFactory = new CoinbaseSmartWalletFactory(address(account));
         publicERC6492Validator = new PublicERC6492Validator();
-        mockSpendPermissionManager = new MockSpendPermissionManager(publicERC6492Validator);
+        magicSpend = new MagicSpend(owner, 1);
+        mockSpendPermissionManager = new MockSpendPermissionManager(publicERC6492Validator, address(magicSpend));
     }
 
     /**
