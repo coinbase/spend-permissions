@@ -138,6 +138,25 @@ contract SpendPermissionManagerBase is Base {
         return eip6492Signature;
     }
 
+    function _createWithdrawRequest() internal pure returns (MagicSpend.WithdrawRequest memory withdrawRequest) {
+        return MagicSpend.WithdrawRequest({
+            asset: address(0),
+            amount: 0,
+            nonce: 0,
+            expiry: type(uint48).max,
+            signature: hex""
+        });
+    }
+
+    function _signWithdrawRequest(address account, MagicSpend.WithdrawRequest memory withdrawRequest)
+        internal
+        view
+        returns (bytes memory signature)
+    {
+        bytes32 hash = magicSpend.getHash(account, withdrawRequest);
+        return _sign(ownerPk, hash);
+    }
+
     function _safeAddUint48(uint48 a, uint48 b, uint48 end) internal pure returns (uint48 c) {
         bool overflow = uint256(a) + uint256(b) > end;
         return overflow ? end : a + b;

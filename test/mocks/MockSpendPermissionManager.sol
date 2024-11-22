@@ -6,7 +6,7 @@ import {SpendPermissionManager} from "../../src/SpendPermissionManager.sol";
 
 contract MockSpendPermissionManager is SpendPermissionManager {
     constructor(PublicERC6492Validator _publicERC6492Validator, address _magicSpend)
-        SpendPermissionManager(_publicERC6492Validator, magicSpend)
+        SpendPermissionManager(_publicERC6492Validator, _magicSpend)
     {}
 
     function useSpendPermission(SpendPermission memory spendPermission, uint256 value) public {

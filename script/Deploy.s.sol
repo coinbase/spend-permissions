@@ -17,6 +17,7 @@ import {SpendPermissionManager} from "../src/SpendPermissionManager.sol";
  * $SEPOLIA_BASESCAN_API --etherscan-api-key $BASESCAN_API_KEY --broadcast -vvvv
  */
 contract Deploy is Script {
+    // https://github.com/coinbase/MagicSpend/releases/tag/v1.0.0
     address constant MAGIC_SPEND = 0x011A61C07DbF256A68256B1cB51A5e246730aB92;
 
     function run() public {

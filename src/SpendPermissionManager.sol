@@ -82,7 +82,7 @@ contract SpendPermissionManager is EIP712 {
     ///         (https://eips.ethereum.org/EIPS/eip-6492).
     PublicERC6492Validator public immutable publicERC6492Validator;
 
-    /// @notice MagicSpend singleton (https://github.com/coinbase/MagicSpend).
+    /// @notice MagicSpend singleton (https://github.com/coinbase/magic-spend).
     address public immutable magicSpend;
 
     bytes32 public constant PERMISSION_TYPEHASH = keccak256(
