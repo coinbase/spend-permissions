@@ -231,8 +231,7 @@ contract SpendPermissionManager is EIP712 {
 
     /// @notice Allow the contract to receive native token transfers.
     ///
-    /// @dev Used to enforce success of native token transfers by overseeing routing to spender
-    //     and reverting on failure.
+    /// @dev Can only be called during execution of `spend` for native tokens.
     receive() external payable {
         if (!canReceive) revert ReceiveCalledOutsideSpend();
     }
