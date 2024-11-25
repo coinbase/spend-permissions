@@ -102,7 +102,7 @@ contract SpendPermissionManager is EIP712 {
 
     /// @notice A flag to indicate if the contract can receive native token transfers.
     /// @dev Contract can only receive during the execution of `spend` for native tokens.
-    bool canReceive = false;
+    bool private _canReceive = false;
 
     /// @notice Spend permission is revoked.
     mapping(bytes32 hash => bool revoked) public isRevoked;
@@ -233,7 +233,7 @@ contract SpendPermissionManager is EIP712 {
     ///
     /// @dev Can only be called during execution of `spend` for native tokens.
     receive() external payable {
-        if (!canReceive) revert ReceiveCalledOutsideSpend();
+        if (!_canReceive) revert ReceiveCalledOutsideSpend();
     }
 
     /// @notice Require a specific sender for an external call.
@@ -671,10 +671,10 @@ contract SpendPermissionManager is EIP712 {
         // transfer tokens from account to recipient
         if (token == NATIVE_TOKEN) {
             // set flag to allow contract to receive native token
-            canReceive = true;
+            _canReceive = true;
             // call account to send native token to this contract
             _execute({account: account, target: address(this), value: value, data: hex""});
-            canReceive = false;
+            _canReceive = false;
             // forward native token to recipient, which will revert if funds are not actually available
             Address.sendValue(payable(recipient), value);
             return;

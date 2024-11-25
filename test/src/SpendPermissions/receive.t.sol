@@ -3,6 +3,7 @@ pragma solidity ^0.8.23;
 
 import {MockERC20MissingReturn} from "../../mocks/MockERC20MissingReturn.sol";
 
+import {SpendPermissionManager} from "../../../src/SpendPermissionManager.sol";
 import {SafeERC20} from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 import {Errors} from "@openzeppelin/contracts/utils/Errors.sol";
 import {ERC20} from "solady/../src/tokens/ERC20.sol";
@@ -10,9 +11,9 @@ import {MockERC20} from "solady/../test/utils/mocks/MockERC20.sol";
 import {MockERC20LikeUSDT} from "solady/../test/utils/mocks/MockERC20LikeUSDT.sol";
 import {ReturnsFalseToken} from "solady/../test/utils/weird-tokens/ReturnsFalseToken.sol";
 
-import {SpendPermissionManager} from "../../../src/SpendPermissionManager.sol";
-
 import {SpendPermissionManagerBase} from "../../base/SpendPermissionManagerBase.sol";
+
+import {MockCoinbaseSmartWalletUnderspends} from "../../mocks/MockCoinbaseSmartWalletUnderspends.sol";
 import {MockMaliciousCoinbaseSmartWallet} from "../../mocks/MockMaliciousCoinbaseSmartWallet.sol";
 
 contract ReceiveTest is SpendPermissionManagerBase {
@@ -44,7 +45,79 @@ contract ReceiveTest is SpendPermissionManagerBase {
         account.execute({target: address(mockSpendPermissionManager), value: amount, data: hex""});
     }
 
-    function test_receive_success_ether(
+    function test_receive_revertsOnInsufficientTransferByUser(
+        address spender,
+        uint48 start,
+        uint48 end,
+        uint48 period,
+        uint160 allowance,
+        uint256 salt,
+        bytes memory extraData,
+        uint160 spend
+    ) public {
+        vm.assume(spender != address(0));
+        vm.assume(spender != address(account));
+        assumePayable(spender);
+        vm.assume(start > 0);
+        vm.assume(end > 0);
+        vm.assume(start < end);
+        vm.assume(period > 0);
+        vm.assume(spend > 0);
+        vm.assume(allowance > 0);
+        vm.assume(allowance >= spend);
+
+        // Set up underspending wallet
+        MockCoinbaseSmartWalletUnderspends underspendingWallet = new MockCoinbaseSmartWalletUnderspends();
+
+        // Initialize wallet with owner
+        bytes[] memory owners = new bytes[](1);
+        owners[0] = abi.encode(owner);
+        underspendingWallet.initialize(owners);
+
+        // Add SpendPermissionManager as an owner
+        vm.startPrank(owner);
+        underspendingWallet.addOwnerAddress(address(mockSpendPermissionManager));
+        vm.stopPrank();
+
+        SpendPermissionManager.SpendPermission memory spendPermission = SpendPermissionManager.SpendPermission({
+            account: address(underspendingWallet),
+            spender: spender,
+            token: NATIVE_TOKEN,
+            start: start,
+            end: end,
+            period: period,
+            allowance: allowance,
+            salt: salt,
+            extraData: extraData
+        });
+
+        // Fund the underspending wallet
+        vm.deal(address(underspendingWallet), allowance);
+        assertEq(address(underspendingWallet).balance, allowance);
+        vm.deal(spender, 0);
+        assertEq(spender.balance, 0);
+
+        bytes memory signature = _signSpendPermission(spendPermission, ownerPk, 0);
+
+        vm.warp(start);
+
+        vm.startPrank(spender);
+        mockSpendPermissionManager.approveWithSignature(spendPermission, signature);
+
+        // Attempt spend - should revert when SPM tries to forward funds to spender because user wallet only sends half
+        // the amount
+        vm.expectRevert(abi.encodeWithSelector(Errors.InsufficientBalance.selector, spend / 2, spend));
+        mockSpendPermissionManager.spend(spendPermission, spend);
+
+        // Verify balances remained unchanged
+        assertEq(address(underspendingWallet).balance, allowance);
+        assertEq(spender.balance, 0);
+
+        SpendPermissionManager.PeriodSpend memory usage = mockSpendPermissionManager.getCurrentPeriod(spendPermission);
+        assertEq(usage.spend, 0);
+    }
+
+    function test_receive_success_withinSpend(
         address spender,
         uint48 start,
         uint48 end,
