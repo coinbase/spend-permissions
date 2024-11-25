@@ -3,10 +3,10 @@ pragma solidity ^0.8.23;
 
 import {MagicSpend} from "magic-spend/MagicSpend.sol";
 import {SafeERC20} from "openzeppelin-contracts/contracts/token/ERC20/utils/SafeERC20.sol";
-import {ERC20} from "solady/../src/tokens/ERC20.sol";
 import {MockERC20} from "solady/../test/utils/mocks/MockERC20.sol";
 import {MockERC20LikeUSDT} from "solady/../test/utils/mocks/MockERC20LikeUSDT.sol";
 import {ReturnsFalseToken} from "solady/../test/utils/weird-tokens/ReturnsFalseToken.sol";
+import {ERC20} from "solady/tokens/ERC20.sol";
 
 import {SpendPermissionManager} from "../../../src/SpendPermissionManager.sol";
 
@@ -335,7 +335,7 @@ contract SpendWithWithdrawTest is SpendPermissionManagerBase {
         uint256 spenderBalance = address(spender).balance;
 
         vm.startPrank(spender);
-        vm.expectRevert(); // out of funds
+        vm.expectRevert(abi.encodeWithSelector(MagicSpend.WithdrawTooLarge.selector, spend, 0)); // no funds
         mockSpendPermissionManager.spendWithWithdraw(spendPermission, spend, withdrawRequest);
 
         // assert spend not marked as used and balances unchanged
@@ -356,6 +356,7 @@ contract SpendWithWithdrawTest is SpendPermissionManagerBase {
     ) public {
         vm.assume(spender != address(0));
         vm.assume(spender != address(account)); // otherwise balance checks can fail
+        vm.assume(spender != address(magicSpend)); // otherwise balance checks can fail
         assumePayable(spender);
         vm.assume(start > 0);
         vm.assume(end > 0);
@@ -411,6 +412,7 @@ contract SpendWithWithdrawTest is SpendPermissionManagerBase {
     ) public {
         vm.assume(spender != address(0));
         vm.assume(spender != address(account)); // otherwise balance checks can fail
+        vm.assume(spender != address(magicSpend)); // otherwise balance checks can fail
         assumePayable(spender);
         vm.assume(start > 0);
         vm.assume(end > 0);
