@@ -15,3 +15,7 @@ out/
 
 # vsCode
 .vscode
+
+# Cursor
+.cursorignore
+.cursorrules
