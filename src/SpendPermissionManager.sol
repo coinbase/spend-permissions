@@ -100,9 +100,9 @@ contract SpendPermissionManager is EIP712 {
     /// @notice ERC-7528 address convention for native token (https://eips.ethereum.org/EIPS/eip-7528).
     address public constant NATIVE_TOKEN = 0xEeeeeEeeeEeEeeEeEeEeeEEEeeeeEeeeeeeeEEeE;
 
-    /// @notice A flag to indicate if the contract can receive native token transfers.
-    /// @dev Contract can only receive during the execution of `spend` for native tokens.
-    bool private _canReceive = false;
+    /// @notice A flag to indicate if the contract can receive native token transfers, and the expected amount.
+    /// @dev Contract can only receive exactly the expected amount during the execution of `spend` for native tokens.
+    uint256 private _expectedReceiveAmount = 0;
 
     /// @notice Spend permission is revoked.
     mapping(bytes32 hash => bool revoked) public isRevoked;
@@ -192,8 +192,9 @@ contract SpendPermissionManager is EIP712 {
     /// @param withdrawAmount Amount of asset attempting to withdraw from MagicSpend.
     error SpendValueWithdrawAmountMismatch(uint256 spendValue, uint256 withdrawAmount);
 
-    /// @notice Contract cannot receive native token outside of `spend` execution.
-    error ReceiveCalledOutsideSpend();
+    /// @notice Contract cannot receive native token outside of `spend` execution, and must
+    /// receive exactly the expected amount.
+    error UnexpectedReceiveAmount(uint256 received, uint256 expected);
 
     /// @notice SpendPermission was approved via transaction.
     ///
@@ -233,7 +234,7 @@ contract SpendPermissionManager is EIP712 {
     ///
     /// @dev Can only be called during execution of `spend` for native tokens.
     receive() external payable {
-        if (!_canReceive) revert ReceiveCalledOutsideSpend();
+        if (msg.value != _expectedReceiveAmount) revert UnexpectedReceiveAmount(msg.value, _expectedReceiveAmount);
     }
 
     /// @notice Require a specific sender for an external call.
@@ -670,11 +671,11 @@ contract SpendPermissionManager is EIP712 {
     function _transferFrom(address token, address account, address recipient, uint256 value) internal {
         // transfer tokens from account to recipient
         if (token == NATIVE_TOKEN) {
-            // set flag to allow contract to receive native token
-            _canReceive = true;
+            // set flag to allow contract to receive expected amount of native token
+            _expectedReceiveAmount = value;
             // call account to send native token to this contract
             _execute({account: account, target: address(this), value: value, data: hex""});
-            _canReceive = false;
+            _expectedReceiveAmount = 0;
             // forward native token to recipient, which will revert if funds are not actually available
             Address.sendValue(payable(recipient), value);
             return;

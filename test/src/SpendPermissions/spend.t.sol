@@ -218,6 +218,7 @@ contract SpendTest is SpendPermissionManagerBase {
     ) public {
         vm.assume(token.code.length == 0); // token is not deployed
         assumeNotPrecompile(token);
+        vm.assume(token != address(0));
         vm.assume(spender != address(0));
         vm.assume(spender != address(account)); // otherwise balance checks can fail
         vm.assume(start > 0);

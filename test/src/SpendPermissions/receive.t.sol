@@ -28,21 +28,30 @@ contract ReceiveTest is SpendPermissionManagerBase {
     }
 
     function test_receive_revertsOutsideSpendCall(uint256 amount) public {
-        vm.deal(address(account), amount);
-        assertEq(address(account).balance, amount);
-        vm.startPrank(address(account));
-        vm.expectRevert(abi.encodeWithSelector(SpendPermissionManager.ReceiveCalledOutsideSpend.selector));
-        account.execute({target: address(mockSpendPermissionManager), value: amount, data: hex""});
+        vm.assume(amount > 0);
+        vm.deal(owner, amount);
+        assertEq(owner.balance, amount);
+
+        // Directly send ETH from EOA to SPM
+        vm.startPrank(owner);
+        vm.expectRevert(abi.encodeWithSelector(SpendPermissionManager.UnexpectedReceiveAmount.selector, amount, 0));
+        (bool success,) = address(mockSpendPermissionManager).call{value: amount}("");
+        vm.stopPrank();
     }
 
     function test_receive_revertsOutsideSpendCallMultipleAttempts(uint256 amount) public {
-        vm.deal(address(account), amount);
-        assertEq(address(account).balance, amount);
-        vm.startPrank(address(account));
-        vm.expectRevert(abi.encodeWithSelector(SpendPermissionManager.ReceiveCalledOutsideSpend.selector));
-        account.execute({target: address(mockSpendPermissionManager), value: amount, data: hex""});
-        vm.expectRevert(abi.encodeWithSelector(SpendPermissionManager.ReceiveCalledOutsideSpend.selector));
-        account.execute({target: address(mockSpendPermissionManager), value: amount, data: hex""});
+        vm.assume(amount > 0);
+        vm.deal(owner, amount);
+        assertEq(owner.balance, amount);
+
+        // Try sending ETH directly multiple times
+        vm.startPrank(owner);
+        vm.expectRevert(abi.encodeWithSelector(SpendPermissionManager.UnexpectedReceiveAmount.selector, amount, 0));
+        (bool success,) = address(mockSpendPermissionManager).call{value: amount}("");
+
+        vm.expectRevert(abi.encodeWithSelector(SpendPermissionManager.UnexpectedReceiveAmount.selector, amount, 0));
+        (bool success2,) = address(mockSpendPermissionManager).call{value: amount}("");
+        vm.stopPrank();
     }
 
     function test_receive_revertsOnInsufficientTransferByUser(
@@ -106,7 +115,7 @@ contract ReceiveTest is SpendPermissionManagerBase {
 
         // Attempt spend - should revert when SPM tries to forward funds to spender because user wallet only sends half
         // the amount
-        vm.expectRevert(abi.encodeWithSelector(Errors.InsufficientBalance.selector, spend / 2, spend));
+        vm.expectRevert("ETH transfer failed"); // Mock coinbase smart wallet throws if execute call fails
         mockSpendPermissionManager.spend(spendPermission, spend);
 
         // Verify balances remained unchanged
