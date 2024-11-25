@@ -1,13 +1,15 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.23;
 
-import {SpendPermissionManager} from "../../src/SpendPermissionManager.sol";
-import {MockSpendPermissionManager} from "../mocks/MockSpendPermissionManager.sol";
-import {Base} from "./Base.sol";
-
-import {PublicERC6492Validator} from "../../src/PublicERC6492Validator.sol";
+import {MagicSpend} from "magic-spend/MagicSpend.sol";
 import {CoinbaseSmartWallet} from "smart-wallet/CoinbaseSmartWallet.sol";
 import {CoinbaseSmartWalletFactory} from "smart-wallet/CoinbaseSmartWalletFactory.sol";
+
+import {PublicERC6492Validator} from "../../src/PublicERC6492Validator.sol";
+import {SpendPermissionManager} from "../../src/SpendPermissionManager.sol";
+
+import {MockSpendPermissionManager} from "../mocks/MockSpendPermissionManager.sol";
+import {Base} from "./Base.sol";
 
 contract SpendPermissionManagerBase is Base {
     address constant NATIVE_TOKEN = 0xEeeeeEeeeEeEeeEeEeEeeEEEeeeeEeeeeeeeEEeE;
@@ -15,6 +17,7 @@ contract SpendPermissionManagerBase is Base {
     bytes32 constant CBSW_MESSAGE_TYPEHASH = keccak256("CoinbaseSmartWalletMessage(bytes32 hash)");
 
     PublicERC6492Validator publicERC6492Validator;
+    MagicSpend magicSpend;
     MockSpendPermissionManager mockSpendPermissionManager;
     CoinbaseSmartWalletFactory mockCoinbaseSmartWalletFactory;
 
@@ -22,7 +25,8 @@ contract SpendPermissionManagerBase is Base {
         _initialize(); // Base
         mockCoinbaseSmartWalletFactory = new CoinbaseSmartWalletFactory(address(account));
         publicERC6492Validator = new PublicERC6492Validator();
-        mockSpendPermissionManager = new MockSpendPermissionManager(publicERC6492Validator);
+        magicSpend = new MagicSpend(owner, 1);
+        mockSpendPermissionManager = new MockSpendPermissionManager(publicERC6492Validator, address(magicSpend));
     }
 
     /**
@@ -132,6 +136,25 @@ contract SpendPermissionManagerBase is Base {
         bytes memory eip6492Signature = abi.encode(factory, factoryCallData, wrappedSignature);
         eip6492Signature = abi.encodePacked(eip6492Signature, EIP6492_MAGIC_VALUE);
         return eip6492Signature;
+    }
+
+    function _createWithdrawRequest() internal pure returns (MagicSpend.WithdrawRequest memory withdrawRequest) {
+        return MagicSpend.WithdrawRequest({
+            asset: address(0),
+            amount: 0,
+            nonce: 0,
+            expiry: type(uint48).max,
+            signature: hex""
+        });
+    }
+
+    function _signWithdrawRequest(address account, MagicSpend.WithdrawRequest memory withdrawRequest)
+        internal
+        view
+        returns (bytes memory signature)
+    {
+        bytes32 hash = magicSpend.getHash(account, withdrawRequest);
+        return _sign(ownerPk, hash);
     }
 
     function _safeAddUint48(uint48 a, uint48 b, uint48 end) internal pure returns (uint48 c) {
