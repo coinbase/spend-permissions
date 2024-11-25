@@ -12,7 +12,7 @@ import {PublicERC6492Validator} from "./PublicERC6492Validator.sol";
 
 /// @title SpendPermissionManager
 ///
-/// @notice Allow spending native and ERC-20 tokens with a spend permission.
+/// @notice Allow spending native and ERC-20 tokens from a `CoinbaseSmartWalletV1` with a spend permission.
 ///
 /// @dev Allowance and spend values capped at uint160 ~ 1e48.
 ///
@@ -32,9 +32,9 @@ contract SpendPermissionManager is EIP712 {
         uint160 allowance;
         /// @dev Time duration for resetting used `allowance` on a recurring basis (seconds).
         uint48 period;
-        /// @dev Timestamp this spend permission is valid after (unix seconds).
+        /// @dev Timestamp this spend permission is valid after (inclusive, unix seconds).
         uint48 start;
-        /// @dev Timestamp this spend permission is valid until (unix seconds).
+        /// @dev Timestamp this spend permission is valid until (exclusive, unix seconds).
         uint48 end;
         /// @dev An arbitrary salt to differentiate unique spend permissions with otherwise identical data.
         uint256 salt;
@@ -47,11 +47,11 @@ contract SpendPermissionManager is EIP712 {
         address account;
         /// @dev Time duration for resetting used allowance on a recurring basis (seconds).
         uint48 period;
-        /// @dev Timestamp this spend permission is valid after (unix seconds).
+        /// @dev Timestamp this spend permission is valid after (inclusive, unix seconds).
         uint48 start;
-        /// @dev Timestamp this spend permission is valid until (unix seconds).
+        /// @dev Timestamp this spend permission is valid until (exclusive, unix seconds).
         uint48 end;
-        /// @dev Array of PermissionDetails structs defining properties that apply per-permission.
+        /// @dev Array of `PermissionDetails` structs defining properties that apply per-permission.
         PermissionDetails[] permissions;
     }
 
@@ -161,7 +161,7 @@ contract SpendPermissionManager is EIP712 {
     /// @notice Recurring period has already ended.
     ///
     /// @param currentTimestamp Current timestamp (unix seconds).
-    /// @param end Timestamp this spend permission is valid until (unix seconds).
+    /// @param end Timestamp this spend permission is valid until (exclusive, unix seconds).
     error AfterSpendPermissionEnd(uint48 currentTimestamp, uint48 end);
 
     /// @notice Spend value exceeds max size of uint160.
@@ -193,7 +193,7 @@ contract SpendPermissionManager is EIP712 {
     /// @param spendPermission Details of the spend permission.
     event SpendPermissionApproved(bytes32 indexed hash, SpendPermission spendPermission);
 
-    /// @notice SpendPermission was revoked by account.
+    /// @notice SpendPermission was revoked.
     ///
     /// @param hash The unique hash representing the spend permission.
     /// @param spendPermission Details of the spend permission.
@@ -270,7 +270,7 @@ contract SpendPermissionManager is EIP712 {
     /// @notice Approve a spend permission batch via a signature from the account.
     ///
     /// @dev Compatible with ERC-6492 signatures including side effects (https://eips.ethereum.org/EIPS/eip-6492).
-    /// @dev Does not enforce uniqueness of permissions within a batch, allowing duplicate approvals.
+    /// @dev Does not enforce uniqueness of permissions within a batch, allowing duplicate idempotent approvals.
     ///
     /// @param spendPermissionBatch Details of the spend permission batch.
     /// @param signature Signed approval from the user.
@@ -370,7 +370,7 @@ contract SpendPermissionManager is EIP712 {
     ///
     /// @dev Enforces that the last updated period of the permission being revoked matches the last valid updated period
     ///      submitted as an argument. This is to prevent frontrunning `approveWithRevoke` with additional last-minute
-    /// spends.
+    ///      spends.
     /// @dev The `account` of the permissions must match, but the remaining fields can differ.
     /// @dev Can only be called by the `account` of a permission.
     ///
