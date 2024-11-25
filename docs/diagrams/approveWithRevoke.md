@@ -12,7 +12,7 @@ approval of the new spend permission in the case that a spender abuses a user's 
 Note that an old spend permission and the new spend permission need only share the `account` property. All other properties can be
 different between the two permissions, and no cumulative spend state is carried over from one permission to the next.
 
-```
+```mermaid
 sequenceDiagram
     autonumber
     participant S as Spender
