@@ -81,10 +81,10 @@ contract SpendPermissionManager is EIP712 {
 
     /// @notice Separated contract for validating signatures and executing ERC-6492 side effects
     ///         (https://eips.ethereum.org/EIPS/eip-6492).
-    PublicERC6492Validator public immutable publicERC6492Validator;
+    PublicERC6492Validator public immutable PUBLIC_ERC6492_VALIDATOR;
 
     /// @notice MagicSpend singleton (https://github.com/coinbase/magic-spend).
-    address public immutable magicSpend;
+    address public immutable MAGIC_SPEND;
 
     bytes32 public constant PERMISSION_TYPEHASH = keccak256(
         "SpendPermission(address account,address spender,address token,uint160 allowance,uint48 period,uint48 start,uint48 end,uint256 salt,bytes extraData)"
@@ -226,8 +226,8 @@ contract SpendPermissionManager is EIP712 {
     /// @param _publicERC6492Validator PublicERC6492Validator contract.
     /// @param _magicSpend Address of the MagicSpend contract.
     constructor(PublicERC6492Validator _publicERC6492Validator, address _magicSpend) {
-        publicERC6492Validator = _publicERC6492Validator;
-        magicSpend = _magicSpend;
+        PUBLIC_ERC6492_VALIDATOR = _publicERC6492Validator;
+        MAGIC_SPEND = _magicSpend;
     }
 
     /// @notice Allow the contract to receive native token transfers.
@@ -274,7 +274,7 @@ contract SpendPermissionManager is EIP712 {
     {
         // validate signature over spend permission data, deploying or preparing account if necessary
         if (
-            !publicERC6492Validator.isValidSignatureNowAllowSideEffects(
+            !PUBLIC_ERC6492_VALIDATOR.isValidSignatureNowAllowSideEffects(
                 spendPermission.account, getHash(spendPermission), signature
             )
         ) {
@@ -298,7 +298,7 @@ contract SpendPermissionManager is EIP712 {
     {
         // validate signature over spend permission batch data
         if (
-            !publicERC6492Validator.isValidSignatureNowAllowSideEffects(
+            !PUBLIC_ERC6492_VALIDATOR.isValidSignatureNowAllowSideEffects(
                 spendPermissionBatch.account, getBatchHash(spendPermissionBatch), signature
             )
         ) {
@@ -432,7 +432,7 @@ contract SpendPermissionManager is EIP712 {
         _useSpendPermission(spendPermission, value);
         _execute({
             account: spendPermission.account,
-            target: magicSpend,
+            target: MAGIC_SPEND,
             value: 0,
             data: abi.encodeWithSelector(MagicSpend.withdraw.selector, withdrawRequest)
         });
