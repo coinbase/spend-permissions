@@ -39,7 +39,7 @@ contract IsApprovedTest is SpendPermissionManagerBase {
         vm.prank(account);
         mockSpendPermissionManager.approve(spendPermission);
         vm.assertTrue(mockSpendPermissionManager.isValid(spendPermission));
-        vm.assertTrue(mockSpendPermissionManager.isApproved(mockSpendPermissionManager.getHash(spendPermission)));
+        vm.assertTrue(mockSpendPermissionManager.isApproved(spendPermission));
     }
 
     function test_isApproved_false(
@@ -70,6 +70,6 @@ contract IsApprovedTest is SpendPermissionManagerBase {
         });
         // no approval
         vm.assertFalse(mockSpendPermissionManager.isValid(spendPermission));
-        vm.assertFalse(mockSpendPermissionManager.isApproved(mockSpendPermissionManager.getHash(spendPermission)));
+        vm.assertFalse(mockSpendPermissionManager.isApproved(spendPermission));
     }
 }
