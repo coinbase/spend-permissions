@@ -4,7 +4,7 @@ pragma solidity ^0.8.23;
 import {MockERC20MissingReturn} from "../../mocks/MockERC20MissingReturn.sol";
 
 import {SafeERC20} from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
-
+import {Errors} from "@openzeppelin/contracts/utils/Errors.sol";
 import {ERC20} from "solady/../src/tokens/ERC20.sol";
 import {MockERC20} from "solady/../test/utils/mocks/MockERC20.sol";
 import {MockERC20LikeUSDT} from "solady/../test/utils/mocks/MockERC20LikeUSDT.sol";
@@ -13,17 +13,80 @@ import {ReturnsFalseToken} from "solady/../test/utils/weird-tokens/ReturnsFalseT
 import {SpendPermissionManager} from "../../../src/SpendPermissionManager.sol";
 
 import {SpendPermissionManagerBase} from "../../base/SpendPermissionManagerBase.sol";
+import {MockMaliciousCoinbaseSmartWallet} from "../../mocks/MockMaliciousCoinbaseSmartWallet.sol";
 
 contract SpendTest is SpendPermissionManagerBase {
     MockERC20 mockERC20 = new MockERC20("mockERC20", "TEST", 18);
     ReturnsFalseToken mockERC20ReturnsFalse = new ReturnsFalseToken();
     MockERC20MissingReturn mockERC20MissingReturn = new MockERC20MissingReturn("mockERC20MissingReturn", "TEST", 18);
     MockERC20LikeUSDT mockERC20LikeUSDT = new MockERC20LikeUSDT();
+    MockMaliciousCoinbaseSmartWallet mockMaliciousCoinbaseSmartWallet = new MockMaliciousCoinbaseSmartWallet();
 
     function setUp() public {
         _initializeSpendPermissionManager();
-        vm.prank(owner);
+        vm.startPrank(owner);
         account.addOwnerAddress(address(mockSpendPermissionManager));
+
+        bytes[] memory owners = new bytes[](1);
+        owners[0] = abi.encode(owner);
+        mockMaliciousCoinbaseSmartWallet.initialize(owners);
+        mockMaliciousCoinbaseSmartWallet.addOwnerAddress(address(mockSpendPermissionManager));
+        vm.stopPrank();
+    }
+
+    function test_spend_reverts_maliciousUserWalletDoesNotSendETH(
+        address spender,
+        uint48 start,
+        uint48 end,
+        uint48 period,
+        uint160 allowance,
+        uint256 salt,
+        bytes memory extraData,
+        uint160 spend
+    ) public {
+        vm.assume(spender != address(0));
+        vm.assume(spender != address(mockMaliciousCoinbaseSmartWallet)); // otherwise balance checks can fail
+        assumePayable(spender);
+        vm.assume(start > 0);
+        vm.assume(end > 0);
+        vm.assume(start < end);
+        vm.assume(period > 0);
+        vm.assume(spend > 0);
+        vm.assume(allowance > 0);
+        vm.assume(allowance >= spend);
+        SpendPermissionManager.SpendPermission memory spendPermission = SpendPermissionManager.SpendPermission({
+            account: address(mockMaliciousCoinbaseSmartWallet),
+            spender: spender,
+            token: NATIVE_TOKEN,
+            start: start,
+            end: end,
+            period: period,
+            allowance: allowance,
+            salt: salt,
+            extraData: extraData
+        });
+        vm.deal(address(mockMaliciousCoinbaseSmartWallet), allowance);
+        vm.deal(spender, 0);
+        vm.prank(address(mockMaliciousCoinbaseSmartWallet));
+        mockSpendPermissionManager.approve(spendPermission);
+        vm.warp(start);
+
+        SpendPermissionManager.PeriodSpend memory originalUsage =
+            mockSpendPermissionManager.getLastUpdatedPeriod(spendPermission);
+        assertEq(address(mockMaliciousCoinbaseSmartWallet).balance, allowance);
+        assertEq(spender.balance, 0);
+        assertEq(address(mockSpendPermissionManager).balance, 0); // assure SPM has no balance before pulling from user
+        vm.startPrank(spender);
+        vm.expectRevert(abi.encodeWithSelector(Errors.InsufficientBalance.selector, 0, spend));
+        mockSpendPermissionManager.spend(spendPermission, spend);
+        assertEq(address(mockMaliciousCoinbaseSmartWallet).balance, allowance); // original balances still there
+        assertEq(spender.balance, 0); // original balances still there
+        assertEq(address(mockSpendPermissionManager).balance, 0);
+        SpendPermissionManager.PeriodSpend memory usage =
+            mockSpendPermissionManager.getLastUpdatedPeriod(spendPermission); // no change
+        assertEq(usage.start, originalUsage.start);
+        assertEq(usage.end, originalUsage.end);
+        assertEq(usage.spend, originalUsage.spend);
     }
 
     function test_spend_revert_invalidSender(
@@ -155,6 +218,7 @@ contract SpendTest is SpendPermissionManagerBase {
     ) public {
         vm.assume(token.code.length == 0); // token is not deployed
         assumeNotPrecompile(token);
+        vm.assume(token != address(0));
         vm.assume(spender != address(0));
         vm.assume(spender != address(account)); // otherwise balance checks can fail
         vm.assume(start > 0);
