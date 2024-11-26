@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: MIT
-pragma solidity ^0.8.0;
+pragma solidity ^0.8.28;
 
 import {MagicSpend} from "magic-spend/MagicSpend.sol";
 import {IERC1271} from "openzeppelin-contracts/contracts/interfaces/IERC1271.sol";
@@ -102,7 +102,7 @@ contract SpendPermissionManager is EIP712 {
 
     /// @notice A flag to indicate if the contract can receive native token transfers, and the expected amount.
     /// @dev Contract can only receive exactly the expected amount during the execution of `spend` for native tokens.
-    uint256 private _expectedReceiveAmount = 0;
+    uint256 transient private _expectedReceiveAmount;
 
     /// @notice Spend permission is revoked.
     mapping(bytes32 hash => bool revoked) public isRevoked;
