@@ -17,7 +17,8 @@
 [submodule "lib/smart-wallet"]
 	path = lib/smart-wallet
 	url = https://github.com/coinbase/smart-wallet
+	branch = caret-0.8.23
 [submodule "lib/magic-spend"]
 	path = lib/magic-spend
 	url = https://github.com/coinbase/magic-spend
-	branch = clean-imports
+	branch = caret-0.8.23
