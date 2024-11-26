@@ -40,7 +40,7 @@ contract IsRevokedTest is SpendPermissionManagerBase {
         mockSpendPermissionManager.approve(spendPermission);
         vm.assertTrue(mockSpendPermissionManager.isValid(spendPermission));
         mockSpendPermissionManager.revoke(spendPermission);
-        vm.assertTrue(mockSpendPermissionManager.isRevoked(mockSpendPermissionManager.getHash(spendPermission)));
+        vm.assertTrue(mockSpendPermissionManager.isRevoked(spendPermission));
     }
 
     function test_isRevoked_false(
@@ -73,6 +73,6 @@ contract IsRevokedTest is SpendPermissionManagerBase {
         vm.assertFalse(mockSpendPermissionManager.isValid(spendPermission));
         vm.prank(account);
         mockSpendPermissionManager.revoke(spendPermission);
-        vm.assertTrue(mockSpendPermissionManager.isRevoked(mockSpendPermissionManager.getHash(spendPermission)));
+        vm.assertTrue(mockSpendPermissionManager.isRevoked(spendPermission));
     }
 }

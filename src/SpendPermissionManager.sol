@@ -105,10 +105,10 @@ contract SpendPermissionManager is EIP712 {
     uint256 transient private _expectedReceiveAmount;
 
     /// @notice Spend permission is revoked.
-    mapping(bytes32 hash => bool revoked) public isRevoked;
+    mapping(bytes32 hash => bool revoked) internal _isRevoked;
 
     /// @notice Spend permission is approved.
-    mapping(bytes32 hash => bool approved) public isApproved;
+    mapping(bytes32 hash => bool approved) internal _isApproved;
 
     /// @notice Last updated period for a spend permission.
     mapping(bytes32 hash => PeriodSpend) internal _lastUpdatedPeriod;
@@ -439,6 +439,24 @@ contract SpendPermissionManager is EIP712 {
         _transferFrom(spendPermission.token, spendPermission.account, spendPermission.spender, value);
     }
 
+    /// @notice Check if a spend permission is revoked.
+    ///
+    /// @param spendPermission Details of the spend permission.
+    ///
+    /// @return revoked True if spend permission is revoked.
+    function isRevoked(SpendPermission memory spendPermission) public view returns (bool) {
+        return _isRevoked[getHash(spendPermission)];
+    }
+
+    /// @notice Check if a spend permission is approved.
+    ///
+    /// @param spendPermission Details of the spend permission.
+    ///
+    /// @return approved True if spend permission is approved.
+    function isApproved(SpendPermission memory spendPermission) public view returns (bool) {
+        return _isApproved[getHash(spendPermission)];
+    }
+
     /// @notice Return if spend permission is approved and not revoked.
     ///
     /// @param spendPermission Details of the spend permission.
@@ -446,7 +464,7 @@ contract SpendPermissionManager is EIP712 {
     /// @return approved True if spend permission is approved and not revoked.
     function isValid(SpendPermission memory spendPermission) public view returns (bool) {
         bytes32 hash = getHash(spendPermission);
-        return !isRevoked[hash] && isApproved[hash];
+        return !_isRevoked[hash] && _isApproved[hash];
     }
 
     /// @notice Get last updated period for a spend permission.
@@ -600,12 +618,12 @@ contract SpendPermissionManager is EIP712 {
         bytes32 hash = getHash(spendPermission);
 
         // return false early if spend permission is already revoked
-        if (isRevoked[hash]) return false;
+        if (_isRevoked[hash]) return false;
 
         // return early if spend permission is already approved
-        if (isApproved[hash]) return true;
+        if (_isApproved[hash]) return true;
 
-        isApproved[hash] = true;
+        _isApproved[hash] = true;
         emit SpendPermissionApproved(hash, spendPermission);
         return true;
     }
@@ -620,8 +638,8 @@ contract SpendPermissionManager is EIP712 {
     function _revoke(SpendPermission memory spendPermission) internal returns (bool) {
         bytes32 hash = getHash(spendPermission);
         // return early if spend permission is already revoked
-        if (isRevoked[hash]) return true;
-        isRevoked[hash] = true;
+        if (_isRevoked[hash]) return true;
+        _isRevoked[hash] = true;
         emit SpendPermissionRevoked(hash, spendPermission);
         return true;
     }
