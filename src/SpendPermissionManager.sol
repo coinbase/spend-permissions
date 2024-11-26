@@ -1,13 +1,14 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.28;
 
-import {MagicSpend} from "magic-spend/MagicSpend.sol";
-import {IERC1271} from "openzeppelin-contracts/contracts/interfaces/IERC1271.sol";
-import {IERC20} from "openzeppelin-contracts/contracts/token/ERC20/IERC20.sol";
-import {SafeERC20} from "openzeppelin-contracts/contracts/token/ERC20/utils/SafeERC20.sol";
 import {CoinbaseSmartWallet} from "smart-wallet/CoinbaseSmartWallet.sol";
 import {EIP712} from "solady/utils/EIP712.sol";
+import {IERC1271} from "openzeppelin-contracts/contracts/interfaces/IERC1271.sol";
+import {IERC20} from "openzeppelin-contracts/contracts/token/ERC20/IERC20.sol";
+import {MagicSpend} from "magic-spend/MagicSpend.sol";
+import {SafeERC20} from "openzeppelin-contracts/contracts/token/ERC20/utils/SafeERC20.sol";
 import {SafeTransferLib} from "solady/utils/SafeTransferLib.sol";
+
 import {PublicERC6492Validator} from "./PublicERC6492Validator.sol";
 
 /// @title SpendPermissionManager
