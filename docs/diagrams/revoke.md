@@ -1,6 +1,6 @@
 # Revoke Permissions
 
-Users can revoke permissions at any time by calling `SpendPermissionManager.revoke`, which can also be batched via `CoinbaseSmartWallet.executeBatch`. Spenders can revoke their own spend permissions by calling `SpendPermissionManager.spenderRevoke`
+Users can revoke permissions at any time by calling `SpendPermissionManager.revoke`, which can also be batched via `CoinbaseSmartWallet.executeBatch`. Spenders can revoke their own spend permissions by calling `SpendPermissionManager.revokeAsSpender`
 
 ```mermaid
 sequenceDiagram

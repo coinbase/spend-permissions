@@ -432,7 +432,10 @@ contract SpendPermissionManager is EIP712 {
     /// @dev Can only be called by the `spender` of a permission.
     ///
     /// @param spendPermission Details of the spend permission.
-    function spenderRevoke(SpendPermission calldata spendPermission) external requireSender(spendPermission.spender) {
+    function revokeAsSpender(SpendPermission calldata spendPermission)
+        external
+        requireSender(spendPermission.spender)
+    {
         _revoke(spendPermission);
     }
 
