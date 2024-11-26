@@ -233,6 +233,9 @@ contract SpendPermissionManager is EIP712 {
     /// @notice Allow the contract to receive native token transfers.
     ///
     /// @dev Can only be called during execution of `spend` for native tokens.
+    /// @dev Reverts if the received amount is not equal to the expected amount.
+    /// @dev Note that a user could succeed in sending multiples of the expected amount during the execution of `execute`,
+    ///      but this would require intentional desire from the user to lose funds.
     receive() external payable {
         if (msg.value != _expectedReceiveAmount) revert UnexpectedReceiveAmount(msg.value, _expectedReceiveAmount);
     }
