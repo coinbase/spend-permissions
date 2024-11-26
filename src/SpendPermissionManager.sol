@@ -332,56 +332,6 @@ contract SpendPermissionManager is EIP712 {
         return allApproved;
     }
 
-    /// @notice Spend tokens using a spend permission, transferring them from `account` to `spender`.
-    ///
-    /// @dev Can only be called by the `spender` of a permission.
-    ///
-    /// @param spendPermission Details of the spend permission.
-    /// @param value Amount of token attempting to spend.
-    function spend(SpendPermission memory spendPermission, uint160 value)
-        external
-        requireSender(spendPermission.spender)
-    {
-        _useSpendPermission(spendPermission, value);
-        _transferFrom(spendPermission.token, spendPermission.account, spendPermission.spender, value);
-    }
-
-    /// @notice Spend tokens from account with an initial call to MagicSpend to fund the account.
-    ///
-    /// @dev Can only be called by the `spender` of a permission.
-    /// @dev Requires withdraw signature from MagicSpend owner.
-    ///
-    /// @param spendPermission Details of the spend permission.
-    /// @param value Amount of token attempting to spend.
-    /// @param withdrawRequest Request to withdraw tokens from MagicSpend into the account.
-    function spendWithWithdraw(
-        SpendPermission memory spendPermission,
-        uint160 value,
-        MagicSpend.WithdrawRequest memory withdrawRequest
-    ) external requireSender(spendPermission.spender) {
-        // check spend token and withdraw asset are the same
-        if (
-            !(spendPermission.token == NATIVE_TOKEN && withdrawRequest.asset == address(0))
-                && spendPermission.token != withdrawRequest.asset
-        ) {
-            revert SpendTokenWithdrawAssetMismatch(spendPermission.token, withdrawRequest.asset);
-        }
-
-        // check spend value equals withdraw request amount
-        if (value != withdrawRequest.amount) {
-            revert SpendValueWithdrawAmountMismatch(value, withdrawRequest.amount);
-        }
-
-        _useSpendPermission(spendPermission, value);
-        _execute({
-            account: spendPermission.account,
-            target: magicSpend,
-            value: 0,
-            data: abi.encodeWithSelector(MagicSpend.withdraw.selector, withdrawRequest)
-        });
-        _transferFrom(spendPermission.token, spendPermission.account, spendPermission.spender, value);
-    }
-
     /// @notice Approves a permission while revoking another if its last update has not changed.
     ///
     /// @dev Enforces that the last updated period of the permission being revoked matches the last valid updated period
@@ -437,6 +387,122 @@ contract SpendPermissionManager is EIP712 {
         requireSender(spendPermission.spender)
     {
         _revoke(spendPermission);
+    }
+
+    /// @notice Spend tokens using a spend permission, transferring them from `account` to `spender`.
+    ///
+    /// @dev Can only be called by the `spender` of a permission.
+    ///
+    /// @param spendPermission Details of the spend permission.
+    /// @param value Amount of token attempting to spend.
+    function spend(SpendPermission memory spendPermission, uint160 value)
+        external
+        requireSender(spendPermission.spender)
+    {
+        _useSpendPermission(spendPermission, value);
+        _transferFrom(spendPermission.token, spendPermission.account, spendPermission.spender, value);
+    }
+
+    /// @notice Spend tokens from account with an initial call to MagicSpend to fund the account.
+    ///
+    /// @dev Can only be called by the `spender` of a permission.
+    /// @dev Requires withdraw signature from MagicSpend owner.
+    ///
+    /// @param spendPermission Details of the spend permission.
+    /// @param value Amount of token attempting to spend.
+    /// @param withdrawRequest Request to withdraw tokens from MagicSpend into the account.
+    function spendWithWithdraw(
+        SpendPermission memory spendPermission,
+        uint160 value,
+        MagicSpend.WithdrawRequest memory withdrawRequest
+    ) external requireSender(spendPermission.spender) {
+        // check spend token and withdraw asset are the same
+        if (
+            !(spendPermission.token == NATIVE_TOKEN && withdrawRequest.asset == address(0))
+                && spendPermission.token != withdrawRequest.asset
+        ) {
+            revert SpendTokenWithdrawAssetMismatch(spendPermission.token, withdrawRequest.asset);
+        }
+
+        // check spend value equals withdraw request amount
+        if (value != withdrawRequest.amount) {
+            revert SpendValueWithdrawAmountMismatch(value, withdrawRequest.amount);
+        }
+
+        _useSpendPermission(spendPermission, value);
+        _execute({
+            account: spendPermission.account,
+            target: magicSpend,
+            value: 0,
+            data: abi.encodeWithSelector(MagicSpend.withdraw.selector, withdrawRequest)
+        });
+        _transferFrom(spendPermission.token, spendPermission.account, spendPermission.spender, value);
+    }
+
+    /// @notice Return if spend permission is approved and not revoked.
+    ///
+    /// @param spendPermission Details of the spend permission.
+    ///
+    /// @return approved True if spend permission is approved and not revoked.
+    function isValid(SpendPermission memory spendPermission) public view returns (bool) {
+        bytes32 hash = getHash(spendPermission);
+        return !isRevoked[hash] && isApproved[hash];
+    }
+
+    /// @notice Get last updated period for a spend permission.
+    ///
+    /// @param spendPermission Details of the spend permission.
+    ///
+    /// @return lastUpdatedPeriod Last updated period for the spend permission.
+    function getLastUpdatedPeriod(SpendPermission memory spendPermission) public view returns (PeriodSpend memory) {
+        return _lastUpdatedPeriod[getHash(spendPermission)];
+    }
+
+    /// @notice Get start, end, and spend of the current period.
+    ///
+    /// @dev Reverts if spend permission has not started or has already ended.
+    /// @dev Period boundaries are at fixed intervals of [start + n * period, min(end, start + (n + 1) * period) - 1].
+    ///
+    /// @param spendPermission Details of the spend permission.
+    ///
+    /// @return currentPeriod Currently active period with cumulative spend (struct).
+    function getCurrentPeriod(SpendPermission memory spendPermission) public view returns (PeriodSpend memory) {
+        // check current timestamp is within spend permission time range
+        uint48 currentTimestamp = uint48(block.timestamp);
+        if (currentTimestamp < spendPermission.start) {
+            revert BeforeSpendPermissionStart(currentTimestamp, spendPermission.start);
+        } else if (currentTimestamp >= spendPermission.end) {
+            revert AfterSpendPermissionEnd(currentTimestamp, spendPermission.end);
+        }
+
+        // return last period if still active, otherwise compute new active period start time with no spend
+        PeriodSpend memory lastUpdatedPeriod = _lastUpdatedPeriod[getHash(spendPermission)];
+
+        // last period exists if spend is non-zero
+        bool lastPeriodExists = lastUpdatedPeriod.spend != 0;
+
+        // last period still active if current timestamp within [start, end - 1] range.
+        bool lastPeriodStillActive = currentTimestamp < lastUpdatedPeriod.end;
+
+        if (lastPeriodExists && lastPeriodStillActive) {
+            return lastUpdatedPeriod;
+        } else {
+            // last active period does not exist or is outdated, determine current period
+
+            // current period progress is remainder of time since first recurring period mod reset period
+            uint48 currentPeriodProgress = (currentTimestamp - spendPermission.start) % spendPermission.period;
+
+            // current period start is progress duration before current time
+            uint48 start = currentTimestamp - currentPeriodProgress;
+
+            // current period end will overflow if period is sufficiently large
+            bool endOverflow = uint256(start) + uint256(spendPermission.period) > spendPermission.end;
+
+            // end is one period after start or spend permission's end if overflow
+            uint48 end = endOverflow ? spendPermission.end : start + spendPermission.period;
+
+            return PeriodSpend({start: start, end: end, spend: 0});
+        }
     }
 
     /// @notice Hash a SpendPermission struct for signing in accordance with EIP-712
@@ -504,72 +570,6 @@ contract SpendPermissionManager is EIP712 {
                 )
             )
         );
-    }
-
-    /// @notice Return if spend permission is approved and not revoked.
-    ///
-    /// @param spendPermission Details of the spend permission.
-    ///
-    /// @return approved True if spend permission is approved and not revoked.
-    function isValid(SpendPermission memory spendPermission) public view returns (bool) {
-        bytes32 hash = getHash(spendPermission);
-        return !isRevoked[hash] && isApproved[hash];
-    }
-
-    /// @notice Get last updated period for a spend permission.
-    ///
-    /// @param spendPermission Details of the spend permission.
-    ///
-    /// @return lastUpdatedPeriod Last updated period for the spend permission.
-    function getLastUpdatedPeriod(SpendPermission memory spendPermission) public view returns (PeriodSpend memory) {
-        return _lastUpdatedPeriod[getHash(spendPermission)];
-    }
-
-    /// @notice Get start, end, and spend of the current period.
-    ///
-    /// @dev Reverts if spend permission has not started or has already ended.
-    /// @dev Period boundaries are at fixed intervals of [start + n * period, min(end, start + (n + 1) * period) - 1].
-    ///
-    /// @param spendPermission Details of the spend permission.
-    ///
-    /// @return currentPeriod Currently active period with cumulative spend (struct).
-    function getCurrentPeriod(SpendPermission memory spendPermission) public view returns (PeriodSpend memory) {
-        // check current timestamp is within spend permission time range
-        uint48 currentTimestamp = uint48(block.timestamp);
-        if (currentTimestamp < spendPermission.start) {
-            revert BeforeSpendPermissionStart(currentTimestamp, spendPermission.start);
-        } else if (currentTimestamp >= spendPermission.end) {
-            revert AfterSpendPermissionEnd(currentTimestamp, spendPermission.end);
-        }
-
-        // return last period if still active, otherwise compute new active period start time with no spend
-        PeriodSpend memory lastUpdatedPeriod = _lastUpdatedPeriod[getHash(spendPermission)];
-
-        // last period exists if spend is non-zero
-        bool lastPeriodExists = lastUpdatedPeriod.spend != 0;
-
-        // last period still active if current timestamp within [start, end - 1] range.
-        bool lastPeriodStillActive = currentTimestamp < lastUpdatedPeriod.end;
-
-        if (lastPeriodExists && lastPeriodStillActive) {
-            return lastUpdatedPeriod;
-        } else {
-            // last active period does not exist or is outdated, determine current period
-
-            // current period progress is remainder of time since first recurring period mod reset period
-            uint48 currentPeriodProgress = (currentTimestamp - spendPermission.start) % spendPermission.period;
-
-            // current period start is progress duration before current time
-            uint48 start = currentTimestamp - currentPeriodProgress;
-
-            // current period end will overflow if period is sufficiently large
-            bool endOverflow = uint256(start) + uint256(spendPermission.period) > spendPermission.end;
-
-            // end is one period after start or spend permission's end if overflow
-            uint48 end = endOverflow ? spendPermission.end : start + spendPermission.period;
-
-            return PeriodSpend({start: start, end: end, spend: 0});
-        }
     }
 
     /// @notice Approve spend permission.
