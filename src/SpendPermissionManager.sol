@@ -5,10 +5,9 @@ import {MagicSpend} from "magic-spend/MagicSpend.sol";
 import {IERC1271} from "openzeppelin-contracts/contracts/interfaces/IERC1271.sol";
 import {IERC20} from "openzeppelin-contracts/contracts/token/ERC20/IERC20.sol";
 import {SafeERC20} from "openzeppelin-contracts/contracts/token/ERC20/utils/SafeERC20.sol";
-import {Address} from "openzeppelin-contracts/contracts/utils/Address.sol";
 import {CoinbaseSmartWallet} from "smart-wallet/CoinbaseSmartWallet.sol";
 import {EIP712} from "solady/utils/EIP712.sol";
-
+import {SafeTransferLib} from "solady/utils/SafeTransferLib.sol";
 import {PublicERC6492Validator} from "./PublicERC6492Validator.sol";
 
 /// @title SpendPermissionManager
@@ -701,7 +700,7 @@ contract SpendPermissionManager is EIP712 {
             _execute({account: account, target: address(this), value: value, data: hex""});
             _expectedReceiveAmount = 0;
             // forward native token to recipient, which will revert if funds are not actually available
-            Address.sendValue(payable(recipient), value);
+            SafeTransferLib.safeTransferETH(payable(recipient), value);
             return;
         }
         // if ERC-20 token, set allowance for this contract to spend on behalf of account
