@@ -8,9 +8,9 @@
 
 ### Base Sepolia
 
-`SpendPermissionManager`: 0x6Bb91a81aa8C4edDBe04c774015279445fE68B5A
+`SpendPermissionManager`: 0x3e32aC1f7D5Fdb34D9f095e8C940e395469E588c
 
-`PublicERC6492Validator`: 0x111c9102952eEA29b02297E9ee4b8DB6265e763e
+`PublicERC6492Validator`: 0xbaf2ebbE72Fa36C9C68447bDC2FF20E047c10b99
 
 ## Design Overview
 
