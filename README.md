@@ -8,15 +8,15 @@
 
 ### Base Sepolia
 
-`SpendPermissionManager`: 0x6Bb91a81aa8C4edDBe04c774015279445fE68B5A
+`SpendPermissionManager`: 0x3e32aC1f7D5Fdb34D9f095e8C940e395469E588c
 
-`PublicERC6492Validator`: 0x111c9102952eEA29b02297E9ee4b8DB6265e763e
+`PublicERC6492Validator`: 0xbaf2ebbE72Fa36C9C68447bDC2FF20E047c10b99
 
 ## Design Overview
 
 ### 1. Periphery addition to Coinbase Smart Wallet V1
 
-While implementing this feature as a new V2 wallet implementation was tempting, we decided to leverage the modular owner system from [Smart Wallet V1](https://github.com/coinbase/smart-wallet) and avoid a hard upgrade.
+While implementing this feature as a new V2 wallet implementation was tempting, we decided to leverage the modular owner system from [Smart Wallet V1](https://github.com/coinbase/smart-wallet) and avoid a hard upgrade. The `SpendPermissionManager` singleton is added as an owner of the user's smart wallet, giving it the ability to move user funds on behalf of a sender within the tight constraints of the spend permission logic.
 
 ### 2. Only Native and ERC-20 token support
 
