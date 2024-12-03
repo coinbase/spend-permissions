@@ -428,7 +428,7 @@ contract SpendPermissionManager is EIP712 {
         }
 
         // check spend value is not less than withdraw request amount
-        if (value < withdrawRequest.amount) {
+        if (withdrawRequest.amount > value) {
             revert SpendValueWithdrawAmountMismatch(value, withdrawRequest.amount);
         }
 
