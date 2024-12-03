@@ -5,11 +5,19 @@ import {SpendPermissionManager} from "../../../src/SpendPermissionManager.sol";
 
 import {SpendPermissionManagerBase} from "../../base/SpendPermissionManagerBase.sol";
 
-import {Vm} from "forge-std/Test.sol";
+import {Vm, console2} from "forge-std/Test.sol";
+
+import {IERC165} from "openzeppelin-contracts/contracts/utils/introspection/IERC165.sol";
+import {MockERC20} from "solady/../test/utils/mocks/MockERC20.sol";
+import {MockERC721} from "solady/../test/utils/mocks/MockERC721.sol";
 
 contract ApproveTest is SpendPermissionManagerBase {
+    MockERC721 mockERC721;
+    bytes4 public constant ERC721_INTERFACE_ID = 0x80ac58cd;
+
     function setUp() public {
         _initializeSpendPermissionManager();
+        mockERC721 = new MockERC721();
     }
 
     function test_approve_revert_invalidSender(
@@ -115,6 +123,7 @@ contract ApproveTest is SpendPermissionManagerBase {
         uint256 salt,
         bytes memory extraData
     ) public {
+        assumeNotPrecompile(token);
         vm.assume(token != address(0));
         vm.assume(start < end);
         vm.assume(allowance > 0);
@@ -363,5 +372,44 @@ contract ApproveTest is SpendPermissionManagerBase {
         vm.assertEq(logs.length, 0); // no event emitted
         vm.assertFalse(approved); // returns false
         vm.assertFalse(mockSpendPermissionManager.isValid(spendPermission)); // permission is not approved
+    }
+
+    function test_approve_revert_erc721Token(
+        address account,
+        address spender,
+        uint48 start,
+        uint48 end,
+        uint48 period,
+        uint160 allowance,
+        uint256 salt,
+        bytes memory extraData
+    ) public {
+        vm.assume(spender != address(0));
+        vm.assume(start < end);
+        vm.assume(period > 0);
+        vm.assume(allowance > 0);
+
+        // First verify our mock ERC721 actually supports the interface
+        bool supported = IERC165(address(mockERC721)).supportsInterface(ERC721_INTERFACE_ID);
+        console2.log("Direct check - ERC721 supports interface:", supported);
+
+        SpendPermissionManager.SpendPermission memory spendPermission = SpendPermissionManager.SpendPermission({
+            account: account,
+            spender: spender,
+            token: address(mockERC721),
+            start: start,
+            end: end,
+            period: period,
+            allowance: allowance,
+            salt: salt,
+            extraData: extraData
+        });
+
+        vm.startPrank(account);
+        vm.expectRevert(
+            abi.encodeWithSelector(SpendPermissionManager.ERC721TokenNotSupported.selector, address(mockERC721))
+        );
+        mockSpendPermissionManager.approve(spendPermission);
+        vm.stopPrank();
     }
 }
