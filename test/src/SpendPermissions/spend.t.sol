@@ -77,7 +77,8 @@ contract SpendTest is SpendPermissionManagerBase {
         assertEq(spender.balance, 0);
         assertEq(address(mockSpendPermissionManager).balance, 0); // assure SPM has no balance before pulling from user
         vm.startPrank(spender);
-        vm.expectRevert(abi.encodeWithSelector(Errors.InsufficientBalance.selector, 0, spend));
+        vm.expectRevert(bytes4(0xb12d13eb)); // "ETHTransferFailed()" encoded to match the error signature in Solday
+            // SafeTransferLib
         mockSpendPermissionManager.spend(spendPermission, spend);
         assertEq(address(mockMaliciousCoinbaseSmartWallet).balance, allowance); // original balances still there
         assertEq(spender.balance, 0); // original balances still there

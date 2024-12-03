@@ -56,7 +56,7 @@ contract SpendWithWithdrawTest is SpendPermissionManagerBase {
             salt: salt,
             extraData: extraData
         });
-        MagicSpend.WithdrawRequest memory withdrawRequest = _createWithdrawRequest();
+        MagicSpend.WithdrawRequest memory withdrawRequest = _createWithdrawRequest(spender);
         vm.prank(account);
         mockSpendPermissionManager.approve(spendPermission);
         vm.startPrank(sender);
@@ -98,8 +98,9 @@ contract SpendWithWithdrawTest is SpendPermissionManagerBase {
             salt: salt,
             extraData: extraData
         });
-        MagicSpend.WithdrawRequest memory withdrawRequest = _createWithdrawRequest();
+        MagicSpend.WithdrawRequest memory withdrawRequest = _createWithdrawRequest(spender);
         withdrawRequest.asset = withdrawAsset;
+        withdrawRequest.signature = _signWithdrawRequest(address(account), withdrawRequest);
 
         vm.warp(start);
         vm.startPrank(spender);
@@ -146,8 +147,9 @@ contract SpendWithWithdrawTest is SpendPermissionManagerBase {
             salt: salt,
             extraData: extraData
         });
-        MagicSpend.WithdrawRequest memory withdrawRequest = _createWithdrawRequest();
+        MagicSpend.WithdrawRequest memory withdrawRequest = _createWithdrawRequest(spender);
         withdrawRequest.asset = withdrawAsset;
+        withdrawRequest.signature = _signWithdrawRequest(address(account), withdrawRequest);
 
         vm.warp(start);
         vm.startPrank(spender);
@@ -195,9 +197,10 @@ contract SpendWithWithdrawTest is SpendPermissionManagerBase {
             salt: salt,
             extraData: extraData
         });
-        MagicSpend.WithdrawRequest memory withdrawRequest = _createWithdrawRequest();
+        MagicSpend.WithdrawRequest memory withdrawRequest = _createWithdrawRequest(spender);
         withdrawRequest.asset = spendToken;
         withdrawRequest.amount = withdrawAmount;
+        withdrawRequest.signature = _signWithdrawRequest(address(account), withdrawRequest);
 
         vm.warp(start);
         vm.startPrank(spender);
@@ -240,7 +243,8 @@ contract SpendWithWithdrawTest is SpendPermissionManagerBase {
             salt: salt,
             extraData: extraData
         });
-        MagicSpend.WithdrawRequest memory withdrawRequest = _createWithdrawRequest();
+        MagicSpend.WithdrawRequest memory withdrawRequest = _createWithdrawRequest(spender);
+        withdrawRequest.signature = _signWithdrawRequest(address(account), withdrawRequest);
 
         vm.warp(start);
         vm.startPrank(spender);
@@ -280,8 +284,9 @@ contract SpendWithWithdrawTest is SpendPermissionManagerBase {
             salt: salt,
             extraData: extraData
         });
-        MagicSpend.WithdrawRequest memory withdrawRequest = _createWithdrawRequest();
+        MagicSpend.WithdrawRequest memory withdrawRequest = _createWithdrawRequest(spender);
         withdrawRequest.amount = spend;
+        withdrawRequest.signature = _signWithdrawRequest(address(account), withdrawRequest);
 
         vm.warp(start);
         vm.startPrank(spender);
@@ -322,7 +327,7 @@ contract SpendWithWithdrawTest is SpendPermissionManagerBase {
             salt: salt,
             extraData: extraData
         });
-        MagicSpend.WithdrawRequest memory withdrawRequest = _createWithdrawRequest();
+        MagicSpend.WithdrawRequest memory withdrawRequest = _createWithdrawRequest(spender);
         withdrawRequest.amount = spend;
         withdrawRequest.signature = _signWithdrawRequest(address(account), withdrawRequest);
 
@@ -377,12 +382,13 @@ contract SpendWithWithdrawTest is SpendPermissionManagerBase {
             salt: salt,
             extraData: extraData
         });
-        MagicSpend.WithdrawRequest memory withdrawRequest = _createWithdrawRequest();
+        MagicSpend.WithdrawRequest memory withdrawRequest = _createWithdrawRequest(spender);
         withdrawRequest.amount = spend;
         withdrawRequest.signature = _signWithdrawRequest(address(account), withdrawRequest);
 
         vm.deal(address(magicSpend), allowance);
-
+        vm.deal(address(account), 0);
+        vm.deal(spender, 0);
         bytes memory signature = _signSpendPermission(spendPermission, ownerPk, 0);
 
         vm.warp(start);
@@ -433,7 +439,7 @@ contract SpendWithWithdrawTest is SpendPermissionManagerBase {
             salt: salt,
             extraData: extraData
         });
-        MagicSpend.WithdrawRequest memory withdrawRequest = _createWithdrawRequest();
+        MagicSpend.WithdrawRequest memory withdrawRequest = _createWithdrawRequest(spender);
         withdrawRequest.asset = address(mockERC20);
         withdrawRequest.amount = spend;
         withdrawRequest.signature = _signWithdrawRequest(address(account), withdrawRequest);
@@ -455,5 +461,124 @@ contract SpendWithWithdrawTest is SpendPermissionManagerBase {
         assertEq(usage.start, start);
         assertEq(usage.end, _safeAddUint48(start, period, end));
         assertEq(usage.spend, spend);
+    }
+
+    function test_spendWithWithdraw_revert_invalidEncodedSpender(
+        address spender,
+        uint48 start,
+        uint48 end,
+        uint48 period,
+        uint160 allowance,
+        uint256 salt,
+        bytes memory extraData,
+        uint160 spend,
+        address encodedSpender
+    ) public {
+        vm.assume(spender != address(0));
+        vm.assume(spender != address(account));
+        vm.assume(encodedSpender != spender); // Ensure encoded spender is different
+        vm.assume(start > 0);
+        vm.assume(end > 0);
+        vm.assume(start < end);
+        vm.assume(period > 0);
+        vm.assume(spend > 0);
+        vm.assume(allowance > 0);
+        vm.assume(allowance >= spend);
+
+        SpendPermissionManager.SpendPermission memory spendPermission = SpendPermissionManager.SpendPermission({
+            account: address(account),
+            spender: spender,
+            token: NATIVE_TOKEN,
+            start: start,
+            end: end,
+            period: period,
+            allowance: allowance,
+            salt: salt,
+            extraData: extraData
+        });
+
+        // Create withdraw request with incorrect encoded spender
+        MagicSpend.WithdrawRequest memory withdrawRequest = _createWithdrawRequest(encodedSpender);
+        withdrawRequest.amount = spend;
+        withdrawRequest.signature = _signWithdrawRequest(address(account), withdrawRequest);
+
+        vm.deal(address(magicSpend), allowance);
+
+        bytes memory signature = _signSpendPermission(spendPermission, ownerPk, 0);
+
+        vm.warp(start);
+
+        vm.startPrank(spender);
+        mockSpendPermissionManager.approveWithSignature(spendPermission, signature);
+
+        vm.expectRevert(
+            abi.encodeWithSelector(
+                SpendPermissionManager.InvalidWithdrawRequestSpender.selector, encodedSpender, spender
+            )
+        );
+        mockSpendPermissionManager.spendWithWithdraw(spendPermission, spend, withdrawRequest);
+        vm.stopPrank();
+    }
+
+    function test_spendWithWithdraw_success_withEncodedSpender(
+        address spender,
+        uint48 start,
+        uint48 end,
+        uint48 period,
+        uint160 allowance,
+        uint256 salt,
+        bytes memory extraData,
+        uint160 spend
+    ) public {
+        vm.assume(spender != address(0));
+        vm.assume(spender != address(account));
+        vm.assume(spender != address(magicSpend));
+        assumePayable(spender);
+        vm.assume(start > 0);
+        vm.assume(end > 0);
+        vm.assume(start < end);
+        vm.assume(period > 0);
+        vm.assume(spend > 0);
+        vm.assume(allowance > 0);
+        vm.assume(allowance >= spend);
+
+        SpendPermissionManager.SpendPermission memory spendPermission = SpendPermissionManager.SpendPermission({
+            account: address(account),
+            spender: spender,
+            token: NATIVE_TOKEN,
+            start: start,
+            end: end,
+            period: period,
+            allowance: allowance,
+            salt: salt,
+            extraData: extraData
+        });
+
+        // Create withdraw request with correctly encoded spender
+        MagicSpend.WithdrawRequest memory withdrawRequest = _createWithdrawRequest(spender);
+        withdrawRequest.amount = spend;
+        withdrawRequest.signature = _signWithdrawRequest(address(account), withdrawRequest);
+
+        vm.deal(address(magicSpend), allowance);
+        vm.deal(address(account), 0);
+        vm.deal(spender, 0);
+
+        bytes memory signature = _signSpendPermission(spendPermission, ownerPk, 0);
+
+        vm.warp(start);
+
+        vm.startPrank(spender);
+        mockSpendPermissionManager.approveWithSignature(spendPermission, signature);
+        mockSpendPermissionManager.spendWithWithdraw(spendPermission, spend, withdrawRequest);
+
+        // Verify balances and state changes
+        assertEq(address(magicSpend).balance, allowance - spend);
+        assertEq(address(account).balance, 0);
+        assertEq(spender.balance, spend);
+        SpendPermissionManager.PeriodSpend memory usage = mockSpendPermissionManager.getCurrentPeriod(spendPermission);
+        assertEq(usage.start, start);
+        assertEq(usage.end, _safeAddUint48(start, period, end));
+        assertEq(usage.spend, spend);
+        vm.stopPrank();
     }
 }
