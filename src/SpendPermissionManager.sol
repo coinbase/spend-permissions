@@ -192,6 +192,11 @@ contract SpendPermissionManager is EIP712 {
     /// @param withdrawAmount Amount of asset attempting to withdraw from MagicSpend.
     error SpendValueWithdrawAmountMismatch(uint256 spendValue, uint256 withdrawAmount);
 
+    /// @notice Withdraw request nonce does not encode the correct spender address.
+    /// @param encoded The lower 160 bits of the nonce typed as an address.
+    /// @param expected Expected spender address.
+    error InvalidWithdrawRequestSpender(address encoded, address expected);
+
     /// @notice Contract cannot receive native token outside of `spend` execution, and must
     /// receive exactly the expected amount.
     error UnexpectedReceiveAmount(uint256 received, uint256 expected);
@@ -430,6 +435,14 @@ contract SpendPermissionManager is EIP712 {
         // check spend value is not less than withdraw request amount
         if (withdrawRequest.amount > value) {
             revert SpendValueWithdrawAmountMismatch(value, withdrawRequest.amount);
+        }
+
+        // Extract spender address from nonce (rightmost 160 bits)
+        address encodedSpender = address(uint160(withdrawRequest.nonce));
+        
+        // Verify encoded spender matches actual spender
+        if (encodedSpender != spendPermission.spender) {
+            revert InvalidWithdrawRequestSpender(encodedSpender, spendPermission.spender);
         }
 
         _useSpendPermission(spendPermission, value);
