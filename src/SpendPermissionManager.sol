@@ -8,6 +8,7 @@ import {IERC20} from "openzeppelin-contracts/contracts/token/ERC20/IERC20.sol";
 import {MagicSpend} from "magic-spend/MagicSpend.sol";
 import {SafeERC20} from "openzeppelin-contracts/contracts/token/ERC20/utils/SafeERC20.sol";
 import {SafeTransferLib} from "solady/utils/SafeTransferLib.sol";
+import {IERC165} from "openzeppelin-contracts/contracts/interfaces/IERC165.sol";
 
 import {PublicERC6492Validator} from "./PublicERC6492Validator.sol";
 
@@ -100,6 +101,9 @@ contract SpendPermissionManager is EIP712 {
     /// @notice ERC-7528 address convention for native token (https://eips.ethereum.org/EIPS/eip-7528).
     address public constant NATIVE_TOKEN = 0xEeeeeEeeeEeEeeEeEeEeeEEEeeeeEeeeeeeeEEeE;
 
+    /// @notice ERC-721 interface ID (https://eips.ethereum.org/EIPS/eip-721)
+    bytes4 public constant ERC721_INTERFACE_ID = 0x80ac58cd;
+
     /// @notice A flag to indicate if the contract can receive native token transfers, and the expected amount.
     /// @dev Contract can only receive exactly the expected amount during the execution of `spend` for native tokens.
     uint256 transient private _expectedReceiveAmount;
@@ -118,6 +122,10 @@ contract SpendPermissionManager is EIP712 {
     /// @param sender Expected sender to be valid.
     error InvalidSender(address sender, address expected);
 
+    /// @notice Token is an ERC-721, which is not supported to prevent NFT transfers
+    /// @param token Address of the ERC-721 token contract
+    error ERC721TokenNotSupported(address token);
+    
     /// @notice Invalid signature.
     error InvalidSignature();
 
@@ -616,6 +624,17 @@ contract SpendPermissionManager is EIP712 {
     function _approve(SpendPermission memory spendPermission) internal returns (bool) {
         // check token is non-zero
         if (spendPermission.token == address(0)) revert ZeroToken();
+
+        // check token is not an ERC-721
+        if (spendPermission.token != NATIVE_TOKEN) {
+            (bool success, bytes memory data) = spendPermission.token.staticcall(
+                abi.encodeWithSelector(IERC165.supportsInterface.selector, ERC721_INTERFACE_ID)
+            );
+            if (success && data.length >= 32) {
+                bool isERC721 = abi.decode(data, (bool));
+                if (isERC721) revert ERC721TokenNotSupported(spendPermission.token);
+            }
+        }
 
         // check spender is non-zero
         if (spendPermission.spender == address(0)) revert ZeroSpender();

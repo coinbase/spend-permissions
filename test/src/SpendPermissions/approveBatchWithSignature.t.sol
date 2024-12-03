@@ -26,6 +26,7 @@ contract ApproveBatchWithSignatureTest is SpendPermissionManagerBase {
         uint256 salt2
     ) public {
         vm.assume(spender != address(0));
+        assumeNotPrecompile(token);
         vm.assume(token != address(0));
         vm.assume(start < end);
         vm.assume(period > 0);
@@ -75,6 +76,7 @@ contract ApproveBatchWithSignatureTest is SpendPermissionManagerBase {
         uint256 salt
     ) public {
         vm.assume(spender != address(0));
+        assumeNotPrecompile(token);
         vm.assume(token != address(0));
         vm.assume(start < end);
         vm.assume(period > 0);
@@ -145,6 +147,7 @@ contract ApproveBatchWithSignatureTest is SpendPermissionManagerBase {
         uint256 salt2
     ) public {
         vm.assume(spender != address(0));
+        assumeNotPrecompile(token);
         vm.assume(token != address(0));
         vm.assume(start < end);
         vm.assume(period > 0);
@@ -195,6 +198,7 @@ contract ApproveBatchWithSignatureTest is SpendPermissionManagerBase {
         uint256 salt2
     ) public {
         vm.assume(spender != address(0));
+        assumeNotPrecompile(token);
         vm.assume(token != address(0));
         vm.assume(start < end);
         vm.assume(period > 0);
@@ -246,6 +250,7 @@ contract ApproveBatchWithSignatureTest is SpendPermissionManagerBase {
         uint256 salt2
     ) public {
         vm.assume(spender != address(0));
+        assumeNotPrecompile(token);
         vm.assume(token != address(0));
         vm.assume(start < end);
         vm.assume(period > 0);
@@ -305,6 +310,7 @@ contract ApproveBatchWithSignatureTest is SpendPermissionManagerBase {
         uint256 salt2
     ) public {
         vm.assume(spender != address(0));
+        assumeNotPrecompile(token);
         vm.assume(token != address(0));
         vm.assume(start < end);
         vm.assume(period > 0);
@@ -364,6 +370,7 @@ contract ApproveBatchWithSignatureTest is SpendPermissionManagerBase {
         uint160 allowance
     ) public {
         vm.assume(spender != address(0));
+        assumeNotPrecompile(token);
         vm.assume(token != address(0));
         vm.assume(ownerPk != 0);
         vm.assume(start < end);

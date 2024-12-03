@@ -22,6 +22,7 @@ contract IsValidTest is SpendPermissionManagerBase {
         bytes memory extraData
     ) public {
         vm.assume(spender != address(0));
+        assumeNotPrecompile(token);
         vm.assume(token != address(0));
         vm.assume(start < end);
         vm.assume(period > 0);
@@ -56,6 +57,7 @@ contract IsValidTest is SpendPermissionManagerBase {
         bytes memory extraData
     ) public view {
         vm.assume(spender != address(0));
+        assumeNotPrecompile(token);
         vm.assume(token != address(0));
         SpendPermissionManager.SpendPermission memory spendPermission = SpendPermissionManager.SpendPermission({
             account: account,
@@ -83,6 +85,7 @@ contract IsValidTest is SpendPermissionManagerBase {
         bytes memory extraData
     ) public {
         vm.assume(spender != address(0));
+        assumeNotPrecompile(token);
         vm.assume(token != address(0));
         vm.assume(start < end);
         vm.assume(period > 0);

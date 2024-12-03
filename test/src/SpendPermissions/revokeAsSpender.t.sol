@@ -5,7 +5,7 @@ import {SpendPermissionManager} from "../../../src/SpendPermissionManager.sol";
 
 import {SpendPermissionManagerBase} from "../../base/SpendPermissionManagerBase.sol";
 
-contract SpenderRevokeTest is SpendPermissionManagerBase {
+contract RevokeAsSpenderTest is SpendPermissionManagerBase {
     function setUp() public {
         _initializeSpendPermissionManager();
     }
@@ -23,6 +23,7 @@ contract SpenderRevokeTest is SpendPermissionManagerBase {
         bytes memory extraData
     ) public {
         vm.assume(spender != address(0));
+        assumeNotPrecompile(token);
         vm.assume(token != address(0));
         vm.assume(start < end);
         vm.assume(period > 0);
@@ -63,6 +64,7 @@ contract SpenderRevokeTest is SpendPermissionManagerBase {
         bytes memory extraData
     ) public {
         vm.assume(spender != address(0));
+        assumeNotPrecompile(token);
         vm.assume(token != address(0));
         vm.assume(start < end);
         vm.assume(period > 0);
@@ -99,6 +101,7 @@ contract SpenderRevokeTest is SpendPermissionManagerBase {
         bytes memory extraData
     ) public {
         vm.assume(spender != address(0));
+        assumeNotPrecompile(token);
         vm.assume(token != address(0));
         vm.assume(start < end);
         vm.assume(period > 0);
