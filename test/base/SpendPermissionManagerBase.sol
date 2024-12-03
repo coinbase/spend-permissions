@@ -15,6 +15,7 @@ contract SpendPermissionManagerBase is Base {
     address constant NATIVE_TOKEN = 0xEeeeeEeeeEeEeeEeEeEeeEEEeeeeEeeeeeeeEEeE;
     bytes32 constant EIP6492_MAGIC_VALUE = 0x6492649264926492649264926492649264926492649264926492649264926492;
     bytes32 constant CBSW_MESSAGE_TYPEHASH = keccak256("CoinbaseSmartWalletMessage(bytes32 hash)");
+    uint256 constant NONCE_HASH_BITS = 96;
 
     PublicERC6492Validator publicERC6492Validator;
     MagicSpend magicSpend;
@@ -138,15 +139,25 @@ contract SpendPermissionManagerBase is Base {
         return eip6492Signature;
     }
 
-    function _createWithdrawRequest(address spender, uint256 nonceEntropy)
+    function _createWithdrawRequest(SpendPermissionManager.SpendPermission memory spendPermission, uint256 nonceEntropy)
         internal
-        pure
+        view
         returns (MagicSpend.WithdrawRequest memory withdrawRequest)
     {
+        // Get the hash and extract the portion we want
+        bytes32 permissionHash = mockSpendPermissionManager.getHash(spendPermission);
+        uint256 hashPortion = uint256(permissionHash) >> (256 - NONCE_HASH_BITS);
+
+        // Use remaining bits for actual entropy
+        uint256 entropyPortion = nonceEntropy & ((1 << (256 - NONCE_HASH_BITS)) - 1);
+
+        // Combine hash portion and entropy portion
+        uint256 nonce = (hashPortion << (256 - NONCE_HASH_BITS)) | entropyPortion;
+
         return MagicSpend.WithdrawRequest({
             asset: address(0),
             amount: 0,
-            nonce: (nonceEntropy << 160) | uint256(uint160(spender)),
+            nonce: nonce,
             expiry: type(uint48).max,
             signature: hex""
         });
