@@ -426,15 +426,17 @@ contract SpendPermissionManager is EIP712 {
     ///
     /// @dev Can only be called by the `spender` of a permission.
     /// @dev Requires withdraw signature from MagicSpend owner.
-    /// @dev Uses first NONCE_HASH_BITS bits of nonce to store partial hash of spend permission
+    /// @dev Uses first NONCE_HASH_BITS bits of nonce to store partial hash of spend permission + withdraw salt
     ///
     /// @param spendPermission Details of the spend permission.
     /// @param value Amount of token attempting to spend.
     /// @param withdrawRequest Request to withdraw tokens from MagicSpend into the account.
+    /// @param withdrawSalt Additional salt to make each withdraw request unique.
     function spendWithWithdraw(
         SpendPermission memory spendPermission,
         uint160 value,
-        MagicSpend.WithdrawRequest memory withdrawRequest
+        MagicSpend.WithdrawRequest memory withdrawRequest,
+        uint256 withdrawSalt
     ) external requireSender(spendPermission.spender) {
         // check spend token and withdraw asset are the same
         if (
@@ -452,8 +454,11 @@ contract SpendPermissionManager is EIP712 {
         // Get the hash of the spend permission
         bytes32 permissionHash = getHash(spendPermission);
         
+        // Combine permission hash with withdraw salt for unique per-request hash
+        bytes32 combinedHash = keccak256(abi.encode(permissionHash, withdrawSalt));
+        
         // Take first NONCE_HASH_BITS bits of the hash
-        uint256 expectedHashPortion = uint256(permissionHash) >> (256 - NONCE_HASH_BITS);
+        uint256 expectedHashPortion = uint256(combinedHash) >> (256 - NONCE_HASH_BITS);
         
         // Extract hash portion from nonce (leftmost NONCE_HASH_BITS bits)
         uint256 encodedHashPortion = withdrawRequest.nonce >> (256 - NONCE_HASH_BITS);
