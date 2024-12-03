@@ -162,76 +162,88 @@ contract SpendWithWithdrawTest is SpendPermissionManagerBase {
         vm.stopPrank();
     }
 
-    function test_spendWithWithdraw_revert_spendValueWithdrawAmountMismatch(
-        uint128 invalidPk,
+    function test_spendWithWithdraw_success_combinedBalance_erc20(
         address spender,
         uint48 start,
         uint48 end,
         uint48 period,
-        uint160 allowance,
+        uint160 withdrawAmount,
+        uint160 existingBalance,
         uint256 salt,
-        bytes memory extraData,
-        address spendToken,
-        uint160 spendValue,
-        uint256 withdrawAmount
+        bytes memory extraData
     ) public {
-        vm.assume(invalidPk != 0);
         vm.assume(spender != address(0));
+        vm.assume(spender != address(account));
+        vm.assume(spender != address(magicSpend));
         vm.assume(start > 0);
         vm.assume(end > 0);
         vm.assume(start < end);
         vm.assume(period > 0);
-        vm.assume(allowance > 0);
-
-        vm.assume(spendToken != NATIVE_TOKEN);
-        vm.assume(spendValue != withdrawAmount);
+        vm.assume(withdrawAmount > 0);
+        vm.assume(existingBalance > 0);
+        vm.assume(withdrawAmount < type(uint160).max - existingBalance); // Prevent overflow
+        uint160 totalSpend = withdrawAmount + existingBalance;
 
         SpendPermissionManager.SpendPermission memory spendPermission = SpendPermissionManager.SpendPermission({
             account: address(account),
             spender: spender,
-            token: spendToken,
+            token: address(mockERC20),
             start: start,
             end: end,
             period: period,
-            allowance: allowance,
+            allowance: totalSpend,
             salt: salt,
             extraData: extraData
         });
+
+        // Setup withdraw request for partial amount
         MagicSpend.WithdrawRequest memory withdrawRequest = _createWithdrawRequest(spender);
-        withdrawRequest.asset = spendToken;
+        withdrawRequest.asset = address(mockERC20);
         withdrawRequest.amount = withdrawAmount;
         withdrawRequest.signature = _signWithdrawRequest(address(account), withdrawRequest);
 
+        // Setup initial token balances
+        mockERC20.mint(address(magicSpend), withdrawAmount);
+        mockERC20.mint(address(account), existingBalance);
+
+        bytes memory signature = _signSpendPermission(spendPermission, ownerPk, 0);
+
         vm.warp(start);
+
         vm.startPrank(spender);
-        vm.expectRevert(
-            abi.encodeWithSelector(
-                SpendPermissionManager.SpendValueWithdrawAmountMismatch.selector, spendValue, withdrawAmount
-            )
-        );
-        mockSpendPermissionManager.spendWithWithdraw(spendPermission, spendValue, withdrawRequest);
-        vm.stopPrank();
+        mockSpendPermissionManager.approveWithSignature(spendPermission, signature);
+        mockSpendPermissionManager.spendWithWithdraw(spendPermission, totalSpend, withdrawRequest);
+
+        // Verify final balances
+        assertEq(mockERC20.balanceOf(address(magicSpend)), 0);
+        assertEq(mockERC20.balanceOf(address(account)), 0);
+        assertEq(mockERC20.balanceOf(spender), totalSpend);
+
+        // Verify spend permission usage
+        SpendPermissionManager.PeriodSpend memory usage = mockSpendPermissionManager.getCurrentPeriod(spendPermission);
+        assertEq(usage.start, start);
+        assertEq(usage.end, _safeAddUint48(start, period, end));
+        assertEq(usage.spend, totalSpend);
     }
 
-    function test_spendWithWithdraw_revert_zeroValue(
-        uint128 invalidPk,
+    function test_spendWithWithdraw_revert_spendLessThanWithdrawAmount(
         address spender,
         uint48 start,
         uint48 end,
         uint48 period,
-        uint160 allowance,
+        uint160 withdrawAmount,
+        uint160 spendValue,
         uint256 salt,
         bytes memory extraData
     ) public {
-        vm.assume(invalidPk != 0);
         vm.assume(spender != address(0));
+        vm.assume(spender != address(account));
         vm.assume(start > 0);
         vm.assume(end > 0);
         vm.assume(start < end);
         vm.assume(period > 0);
-        vm.assume(allowance > 0);
-        uint160 spend = 0;
-
+        vm.assume(withdrawAmount > 0);
+        vm.assume(spendValue < withdrawAmount);
         SpendPermissionManager.SpendPermission memory spendPermission = SpendPermissionManager.SpendPermission({
             account: address(account),
             spender: spender,
@@ -239,18 +251,25 @@ contract SpendWithWithdrawTest is SpendPermissionManagerBase {
             start: start,
             end: end,
             period: period,
-            allowance: allowance,
+            allowance: withdrawAmount,
             salt: salt,
             extraData: extraData
         });
         MagicSpend.WithdrawRequest memory withdrawRequest = _createWithdrawRequest(spender);
+        withdrawRequest.amount = withdrawAmount;
         withdrawRequest.signature = _signWithdrawRequest(address(account), withdrawRequest);
 
         vm.warp(start);
+        vm.prank(address(account));
+        mockSpendPermissionManager.approve(spendPermission);
+
         vm.startPrank(spender);
-        vm.expectRevert(abi.encodeWithSelector(SpendPermissionManager.ZeroValue.selector));
-        mockSpendPermissionManager.spendWithWithdraw(spendPermission, spend, withdrawRequest);
-        vm.stopPrank();
+        vm.expectRevert(
+            abi.encodeWithSelector(
+                SpendPermissionManager.SpendValueWithdrawAmountMismatch.selector, spendValue, withdrawAmount
+            )
+        );
+        mockSpendPermissionManager.spendWithWithdraw(spendPermission, spendValue, withdrawRequest);
     }
 
     function test_spendWithWithdraw_revert_unauthorizedSpendPermission(
@@ -461,6 +480,70 @@ contract SpendWithWithdrawTest is SpendPermissionManagerBase {
         assertEq(usage.start, start);
         assertEq(usage.end, _safeAddUint48(start, period, end));
         assertEq(usage.spend, spend);
+    }
+
+    function test_spendWithWithdraw_success_combinedBalance_ether(
+        address spender,
+        uint48 start,
+        uint48 end,
+        uint48 period,
+        uint160 withdrawAmount,
+        uint160 existingBalance,
+        uint256 salt,
+        bytes memory extraData
+    ) public {
+        vm.assume(spender != address(0));
+        vm.assume(spender != address(account));
+        vm.assume(spender != address(magicSpend));
+        assumePayable(spender);
+        vm.assume(start > 0);
+        vm.assume(end > 0);
+        vm.assume(start < end);
+        vm.assume(period > 0);
+        vm.assume(withdrawAmount > 0);
+        vm.assume(existingBalance > 0);
+        vm.assume(withdrawAmount < type(uint160).max - existingBalance); // Prevent overflow
+        uint160 totalSpend = withdrawAmount + existingBalance;
+
+        SpendPermissionManager.SpendPermission memory spendPermission = SpendPermissionManager.SpendPermission({
+            account: address(account),
+            spender: spender,
+            token: NATIVE_TOKEN,
+            start: start,
+            end: end,
+            period: period,
+            allowance: totalSpend,
+            salt: salt,
+            extraData: extraData
+        });
+
+        // Setup withdraw request for partial amount
+        MagicSpend.WithdrawRequest memory withdrawRequest = _createWithdrawRequest();
+        withdrawRequest.amount = withdrawAmount;
+        withdrawRequest.signature = _signWithdrawRequest(address(account), withdrawRequest);
+
+        // Setup initial balances
+        vm.deal(address(magicSpend), withdrawAmount);
+        vm.deal(address(account), existingBalance);
+
+        bytes memory signature = _signSpendPermission(spendPermission, ownerPk, 0);
+
+        vm.warp(start);
+
+        vm.startPrank(spender);
+        mockSpendPermissionManager.approveWithSignature(spendPermission, signature);
+        mockSpendPermissionManager.spendWithWithdraw(spendPermission, totalSpend, withdrawRequest);
+
+        // Verify final balances
+        assertEq(address(magicSpend).balance, 0);
+        assertEq(address(account).balance, 0);
+        assertEq(spender.balance, totalSpend);
+
+        // Verify spend permission usage
+        SpendPermissionManager.PeriodSpend memory usage = mockSpendPermissionManager.getCurrentPeriod(spendPermission);
+        assertEq(usage.start, start);
+        assertEq(usage.end, _safeAddUint48(start, period, end));
+        assertEq(usage.spend, totalSpend);
     }
 
     function test_spendWithWithdraw_revert_invalidEncodedSpender(

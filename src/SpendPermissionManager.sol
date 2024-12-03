@@ -186,9 +186,9 @@ contract SpendPermissionManager is EIP712 {
     /// @param withdrawAsset Asset belonging to the WithdrawRequest.
     error SpendTokenWithdrawAssetMismatch(address spendToken, address withdrawAsset);
 
-    /// @notice Attempted spend value and `WithdrawRequest.amount` are not equal.
+    /// @notice Attempted spend value is less than the `WithdrawRequest.amount`.
     ///
-    /// @param spendValue Value of token attempting to be spent.
+    /// @param spendValue Value attempting to spend, must not be less than withdraw amount.
     /// @param withdrawAmount Amount of asset attempting to withdraw from MagicSpend.
     error SpendValueWithdrawAmountMismatch(uint256 spendValue, uint256 withdrawAmount);
 
@@ -432,8 +432,8 @@ contract SpendPermissionManager is EIP712 {
             revert SpendTokenWithdrawAssetMismatch(spendPermission.token, withdrawRequest.asset);
         }
 
-        // check spend value equals withdraw request amount
-        if (value != withdrawRequest.amount) {
+        // check spend value is not less than withdraw request amount
+        if (withdrawRequest.amount > value) {
             revert SpendValueWithdrawAmountMismatch(value, withdrawRequest.amount);
         }
 
