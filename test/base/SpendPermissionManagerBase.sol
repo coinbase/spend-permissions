@@ -138,11 +138,15 @@ contract SpendPermissionManagerBase is Base {
         return eip6492Signature;
     }
 
-    function _createWithdrawRequest(address spender) internal pure returns (MagicSpend.WithdrawRequest memory withdrawRequest) {
+    function _createWithdrawRequest(address spender, uint256 nonceEntropy)
+        internal
+        pure
+        returns (MagicSpend.WithdrawRequest memory withdrawRequest)
+    {
         return MagicSpend.WithdrawRequest({
             asset: address(0),
             amount: 0,
-            nonce: uint256(uint160(spender)),
+            nonce: (nonceEntropy << 160) | uint256(uint160(spender)),
             expiry: type(uint48).max,
             signature: hex""
         });
