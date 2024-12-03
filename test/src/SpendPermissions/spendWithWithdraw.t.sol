@@ -14,7 +14,7 @@ import {SpendPermissionManagerBase} from "../../base/SpendPermissionManagerBase.
 import {MockERC20MissingReturn} from "../../mocks/MockERC20MissingReturn.sol";
 
 contract SpendWithWithdrawTest is SpendPermissionManagerBase {
-    struct WithdrawTestParams {
+    struct CommonTestParams {
         address spender;
         uint48 start;
         uint48 end;
@@ -26,7 +26,7 @@ contract SpendWithWithdrawTest is SpendPermissionManagerBase {
     }
 
     // Helper function to validate common assumptions
-    function _validateCommonAssumptions(WithdrawTestParams memory params) internal view {
+    function _validateCommonAssumptions(CommonTestParams memory params) internal view {
         vm.assume(params.spender != address(0));
         vm.assume(params.spender != address(account));
         vm.assume(params.spender != address(magicSpend));
@@ -48,11 +48,9 @@ contract SpendWithWithdrawTest is SpendPermissionManagerBase {
         account.addOwnerAddress(address(mockSpendPermissionManager));
     }
 
-    function test_spendWithWithdraw_revert_invalidSender(
-        WithdrawTestParams memory params,
-        address sender,
-        uint160 spend
-    ) public {
+    function test_spendWithWithdraw_revert_invalidSender(CommonTestParams memory params, address sender, uint160 spend)
+        public
+    {
         _validateCommonAssumptions(params);
         vm.assume(sender != params.spender);
         vm.assume(spend > 0);
@@ -83,7 +81,7 @@ contract SpendWithWithdrawTest is SpendPermissionManagerBase {
     }
 
     function test_spendWithWithdraw_revert_nativeTokenWithdrawAssetMismatch(
-        WithdrawTestParams memory params,
+        CommonTestParams memory params,
         address withdrawAsset
     ) public {
         _validateCommonAssumptions(params);
@@ -118,7 +116,7 @@ contract SpendWithWithdrawTest is SpendPermissionManagerBase {
     }
 
     function test_spendWithWithdraw_revert_erc20TokenWithdrawAssetMismatch(
-        WithdrawTestParams memory params,
+        CommonTestParams memory params,
         address spendToken,
         address withdrawAsset
     ) public {
@@ -155,7 +153,7 @@ contract SpendWithWithdrawTest is SpendPermissionManagerBase {
     }
 
     function test_spendWithWithdraw_success_combinedBalance_erc20(
-        WithdrawTestParams memory params,
+        CommonTestParams memory params,
         uint160 existingBalance
     ) public {
         _validateCommonAssumptions(params);
@@ -207,7 +205,7 @@ contract SpendWithWithdrawTest is SpendPermissionManagerBase {
     }
 
     function test_spendWithWithdraw_revert_spendLessThanWithdrawAmount(
-        WithdrawTestParams memory params,
+        CommonTestParams memory params,
         uint160 spendValue
     ) public {
         _validateCommonAssumptions(params);
@@ -285,7 +283,7 @@ contract SpendWithWithdrawTest is SpendPermissionManagerBase {
         vm.stopPrank();
     }
 
-    function test_spendWithWithdraw_reverts_magicSpendWithdrawFailed(WithdrawTestParams memory params, uint160 spend)
+    function test_spendWithWithdraw_reverts_magicSpendWithdrawFailed(CommonTestParams memory params, uint160 spend)
         public
     {
         _validateCommonAssumptions(params);
@@ -326,7 +324,7 @@ contract SpendWithWithdrawTest is SpendPermissionManagerBase {
         assertEq(address(params.spender).balance, spenderBalance);
     }
 
-    function test_spendWithWithdraw_success_ether(WithdrawTestParams memory params, uint160 spend) public {
+    function test_spendWithWithdraw_success_ether(CommonTestParams memory params, uint160 spend) public {
         _validateCommonAssumptions(params);
         assumePayable(params.spender);
         vm.assume(spend > 0);
@@ -370,7 +368,7 @@ contract SpendWithWithdrawTest is SpendPermissionManagerBase {
         assertEq(usage.spend, spend);
     }
 
-    function test_spendWithWithdraw_success_erc20(WithdrawTestParams memory params, uint160 spend) public {
+    function test_spendWithWithdraw_success_erc20(CommonTestParams memory params, uint160 spend) public {
         _validateCommonAssumptions(params);
         assumePayable(params.spender);
         vm.assume(spend > 0);
@@ -414,7 +412,7 @@ contract SpendWithWithdrawTest is SpendPermissionManagerBase {
     }
 
     function test_spendWithWithdraw_success_combinedBalance_ether(
-        WithdrawTestParams memory params,
+        CommonTestParams memory params,
         uint160 existingBalance
     ) public {
         _validateCommonAssumptions(params);
@@ -466,7 +464,7 @@ contract SpendWithWithdrawTest is SpendPermissionManagerBase {
     }
 
     function test_spendWithWithdraw_revert_invalidEncodedSpender(
-        WithdrawTestParams memory params,
+        CommonTestParams memory params,
         uint160 spend,
         address encodedSpender
     ) public {
@@ -510,9 +508,7 @@ contract SpendWithWithdrawTest is SpendPermissionManagerBase {
         vm.stopPrank();
     }
 
-    function test_spendWithWithdraw_success_withEncodedSpender(WithdrawTestParams memory params, uint160 spend)
-        public
-    {
+    function test_spendWithWithdraw_success_withEncodedSpender(CommonTestParams memory params, uint160 spend) public {
         _validateCommonAssumptions(params);
         assumePayable(params.spender);
         vm.assume(spend > 0);
