@@ -518,7 +518,7 @@ contract SpendWithWithdrawTest is SpendPermissionManagerBase {
         });
 
         // Setup withdraw request for partial amount
-        MagicSpend.WithdrawRequest memory withdrawRequest = _createWithdrawRequest();
+        MagicSpend.WithdrawRequest memory withdrawRequest = _createWithdrawRequest(spender);
         withdrawRequest.amount = withdrawAmount;
         withdrawRequest.signature = _signWithdrawRequest(address(account), withdrawRequest);
 
