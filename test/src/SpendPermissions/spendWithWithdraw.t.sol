@@ -283,6 +283,51 @@ contract SpendWithWithdrawTest is SpendPermissionManagerBase {
         vm.stopPrank();
     }
 
+    function test_spendWithWithdraw_revert_invalidEncodedSpender(
+        CommonTestParams memory params,
+        uint160 spend,
+        address encodedSpender
+    ) public {
+        _validateCommonAssumptions(params);
+        vm.assume(encodedSpender != params.spender); // Ensure encoded spender is different
+        vm.assume(spend > 0);
+        vm.assume(params.allowance >= spend);
+
+        SpendPermissionManager.SpendPermission memory spendPermission = SpendPermissionManager.SpendPermission({
+            account: address(account),
+            spender: params.spender,
+            token: NATIVE_TOKEN,
+            start: params.start,
+            end: params.end,
+            period: params.period,
+            allowance: params.allowance,
+            salt: params.salt,
+            extraData: params.extraData
+        });
+
+        // Create withdraw request with incorrect encoded spender
+        MagicSpend.WithdrawRequest memory withdrawRequest = _createWithdrawRequest(encodedSpender, params.entropy);
+        withdrawRequest.amount = spend;
+        withdrawRequest.signature = _signWithdrawRequest(address(account), withdrawRequest);
+
+        vm.deal(address(magicSpend), params.allowance);
+
+        bytes memory signature = _signSpendPermission(spendPermission, ownerPk, 0);
+
+        vm.warp(params.start);
+
+        vm.startPrank(params.spender);
+        mockSpendPermissionManager.approveWithSignature(spendPermission, signature);
+
+        vm.expectRevert(
+            abi.encodeWithSelector(
+                SpendPermissionManager.InvalidWithdrawRequestSpender.selector, encodedSpender, params.spender
+            )
+        );
+        mockSpendPermissionManager.spendWithWithdraw(spendPermission, spend, withdrawRequest);
+        vm.stopPrank();
+    }
+
     function test_spendWithWithdraw_reverts_magicSpendWithdrawFailed(CommonTestParams memory params, uint160 spend)
         public
     {
@@ -461,51 +506,6 @@ contract SpendWithWithdrawTest is SpendPermissionManagerBase {
         assertEq(usage.start, params.start);
         assertEq(usage.end, _safeAddUint48(params.start, params.period, params.end));
         assertEq(usage.spend, totalSpend);
-    }
-
-    function test_spendWithWithdraw_revert_invalidEncodedSpender(
-        CommonTestParams memory params,
-        uint160 spend,
-        address encodedSpender
-    ) public {
-        _validateCommonAssumptions(params);
-        vm.assume(encodedSpender != params.spender); // Ensure encoded spender is different
-        vm.assume(spend > 0);
-        vm.assume(params.allowance >= spend);
-
-        SpendPermissionManager.SpendPermission memory spendPermission = SpendPermissionManager.SpendPermission({
-            account: address(account),
-            spender: params.spender,
-            token: NATIVE_TOKEN,
-            start: params.start,
-            end: params.end,
-            period: params.period,
-            allowance: params.allowance,
-            salt: params.salt,
-            extraData: params.extraData
-        });
-
-        // Create withdraw request with incorrect encoded spender
-        MagicSpend.WithdrawRequest memory withdrawRequest = _createWithdrawRequest(encodedSpender, params.entropy);
-        withdrawRequest.amount = spend;
-        withdrawRequest.signature = _signWithdrawRequest(address(account), withdrawRequest);
-
-        vm.deal(address(magicSpend), params.allowance);
-
-        bytes memory signature = _signSpendPermission(spendPermission, ownerPk, 0);
-
-        vm.warp(params.start);
-
-        vm.startPrank(params.spender);
-        mockSpendPermissionManager.approveWithSignature(spendPermission, signature);
-
-        vm.expectRevert(
-            abi.encodeWithSelector(
-                SpendPermissionManager.InvalidWithdrawRequestSpender.selector, encodedSpender, params.spender
-            )
-        );
-        mockSpendPermissionManager.spendWithWithdraw(spendPermission, spend, withdrawRequest);
-        vm.stopPrank();
     }
 
     function test_spendWithWithdraw_success_withEncodedSpender(CommonTestParams memory params, uint160 spend) public {
