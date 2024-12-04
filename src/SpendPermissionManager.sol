@@ -200,10 +200,10 @@ contract SpendPermissionManager is EIP712 {
     /// @param withdrawAmount Amount of asset attempting to withdraw from MagicSpend.
     error SpendValueWithdrawAmountMismatch(uint256 spendValue, uint256 withdrawAmount);
 
-    /// @notice Withdraw request nonce does not encode the correct spender address.
-    /// @param encoded The lower 160 bits of the nonce typed as an address.
-    /// @param expected Expected spender address.
-    error InvalidWithdrawRequestSpender(address encoded, address expected);
+    /// @notice Withdraw request nonce is not postfixed with the lower 128 bits of the spend permission hash.
+    /// @param noncePostfix The lower 128 bits of the `WithdrawRequests.nonce`
+    /// @param permissionHashPostfix The lower 128 bits of the spend permission hash
+    error InvalidWithdrawRequestNonce(uint128 noncePostfix, uint128 permissionHashPostfix);
 
     /// @notice Contract cannot receive native token outside of `spend` execution, and must
     /// receive exactly the expected amount.
@@ -423,6 +423,7 @@ contract SpendPermissionManager is EIP712 {
     ///
     /// @dev Can only be called by the `spender` of a permission.
     /// @dev Requires withdraw signature from MagicSpend owner.
+    /// @dev Uses first NONCE_HASH_BITS bits of nonce to store partial hash of spend permission
     ///
     /// @param spendPermission Details of the spend permission.
     /// @param value Amount of token attempting to spend.
@@ -445,12 +446,12 @@ contract SpendPermissionManager is EIP712 {
             revert SpendValueWithdrawAmountMismatch(value, withdrawRequest.amount);
         }
 
-        // Extract spender address from nonce (rightmost 160 bits)
-        address encodedSpender = address(uint160(withdrawRequest.nonce));
+        // Get the hash of the spend permission
+        bytes32 permissionHash = getHash(spendPermission);
         
-        // Verify encoded spender matches actual spender
-        if (encodedSpender != spendPermission.spender) {
-            revert InvalidWithdrawRequestSpender(encodedSpender, spendPermission.spender);
+        // Verify encoded hash portion matches expected
+        if (uint128(withdrawRequest.nonce) != uint128(uint256(permissionHash))) {
+            revert InvalidWithdrawRequestNonce(uint128(withdrawRequest.nonce), uint128(uint256(permissionHash)));
         }
 
         _useSpendPermission(spendPermission, value);
