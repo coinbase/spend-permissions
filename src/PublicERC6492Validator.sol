@@ -25,17 +25,4 @@ contract PublicERC6492Validator {
     {
         return SignatureCheckerLib.isValidERC6492SignatureNowAllowSideEffects(account, hash, signature);
     }
-
-    /// @notice Validate contract signature without side effects.
-    ///
-    /// @dev If the signature is postfixed with the ERC-6492 magic value, an external call to a reverting verifier to
-    ///      deploy/prepare the account is made before calling ERC-1271 `isValidSignature` via the reverting verifier.
-    ///      The reverting verifier must be deployed or deployment/preparation cannot complete
-    ///      (https://gist.github.com/Vectorized/846a474c855eee9e441506676800a9ad).
-    /// @dev This function is reentrancy safe.
-    ///
-    /// @return isValid True if signature is valid.
-    function isValidSignatureNow(address account, bytes32 hash, bytes calldata signature) external returns (bool) {
-        return SignatureCheckerLib.isValidERC6492SignatureNow(account, hash, signature);
-    }
 }
