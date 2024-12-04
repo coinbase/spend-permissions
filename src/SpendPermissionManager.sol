@@ -105,7 +105,7 @@ contract SpendPermissionManager is EIP712 {
     bytes4 public constant ERC721_INTERFACE_ID = 0x80ac58cd;
 
     /// @notice Number of upper bits from spend permission hash to use in withdraw request nonce
-    uint256 public constant NONCE_HASH_BITS = 96; // Use 96 bits, leaving 160 bits in nonce for entropy
+    uint256 public constant NONCE_HASH_BITS = 128; // Use 128 bits, leaving 128 bits in nonce for entropy
 
     /// @notice A flag to indicate if the contract can receive native token transfers, and the expected amount.
     /// @dev Contract can only receive exactly the expected amount during the execution of `spend` for native tokens.

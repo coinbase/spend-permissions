@@ -15,7 +15,7 @@ contract SpendPermissionManagerBase is Base {
     address constant NATIVE_TOKEN = 0xEeeeeEeeeEeEeeEeEeEeeEEEeeeeEeeeeeeeEEeE;
     bytes32 constant EIP6492_MAGIC_VALUE = 0x6492649264926492649264926492649264926492649264926492649264926492;
     bytes32 constant CBSW_MESSAGE_TYPEHASH = keccak256("CoinbaseSmartWalletMessage(bytes32 hash)");
-    uint256 constant NONCE_HASH_BITS = 96;
+    uint256 constant NONCE_HASH_BITS = 128;
 
     PublicERC6492Validator publicERC6492Validator;
     MagicSpend magicSpend;
