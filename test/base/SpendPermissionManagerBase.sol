@@ -139,20 +139,17 @@ contract SpendPermissionManagerBase is Base {
         return eip6492Signature;
     }
 
-    function _createWithdrawRequest(SpendPermissionManager.SpendPermission memory spendPermission, uint256 nonceEntropy)
+    function _createWithdrawRequest(SpendPermissionManager.SpendPermission memory spendPermission, uint128 nonceEntropy)
         internal
         view
         returns (MagicSpend.WithdrawRequest memory withdrawRequest)
     {
         // Get the hash and extract the portion we want
         bytes32 permissionHash = mockSpendPermissionManager.getHash(spendPermission);
-        uint256 hashPortion = uint256(permissionHash) >> (256 - NONCE_HASH_BITS);
-
-        // Use remaining bits for actual entropy
-        uint256 entropyPortion = nonceEntropy & ((1 << (256 - NONCE_HASH_BITS)) - 1);
+        uint128 hashPortion = uint128(uint256(permissionHash));
 
         // Combine hash portion and entropy portion
-        uint256 nonce = (hashPortion << (256 - NONCE_HASH_BITS)) | entropyPortion;
+        uint256 nonce = (nonceEntropy << NONCE_HASH_BITS) | hashPortion;
 
         return MagicSpend.WithdrawRequest({
             asset: address(0),

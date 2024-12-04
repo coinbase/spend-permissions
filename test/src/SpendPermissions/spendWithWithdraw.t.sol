@@ -22,7 +22,7 @@ contract SpendWithWithdrawTest is SpendPermissionManagerBase {
         uint160 allowance;
         uint256 salt;
         bytes extraData;
-        uint256 entropy;
+        uint128 entropy;
     }
 
     // Helper function to validate common assumptions
@@ -241,43 +241,33 @@ contract SpendWithWithdrawTest is SpendPermissionManagerBase {
     }
 
     function test_spendWithWithdraw_revert_unauthorizedSpendPermission(
+        CommonTestParams memory params,
         uint128 invalidPk,
-        address spender,
-        uint48 start,
-        uint48 end,
-        uint48 period,
-        uint160 allowance,
-        uint256 salt,
-        bytes memory extraData,
-        uint160 spend,
-        uint256 entropy
+        uint160 spend
     ) public {
+        _validateCommonAssumptions(params);
         vm.assume(invalidPk != 0);
-        vm.assume(spender != address(0));
-        vm.assume(start > 0);
-        vm.assume(end > 0);
-        vm.assume(start < end);
-        vm.assume(period > 0);
         vm.assume(spend > 0);
-        vm.assume(allowance > 0);
-        vm.assume(allowance >= spend);
+        vm.assume(params.allowance >= spend);
+
         SpendPermissionManager.SpendPermission memory spendPermission = SpendPermissionManager.SpendPermission({
             account: address(account),
-            spender: spender,
+            spender: params.spender,
             token: NATIVE_TOKEN,
-            start: start,
-            end: end,
-            period: period,
-            allowance: allowance,
-            salt: salt,
-            extraData: extraData
+            start: params.start,
+            end: params.end,
+            period: params.period,
+            allowance: params.allowance,
+            salt: params.salt,
+            extraData: params.extraData
         });
-        MagicSpend.WithdrawRequest memory withdrawRequest = _createWithdrawRequest(spendPermission, entropy);
+
+        MagicSpend.WithdrawRequest memory withdrawRequest = _createWithdrawRequest(spendPermission, params.entropy);
         withdrawRequest.amount = spend;
         withdrawRequest.signature = _signWithdrawRequest(address(account), withdrawRequest);
 
-        vm.warp(start);
-        vm.startPrank(spender);
+        vm.warp(params.start);
+        vm.startPrank(params.spender);
         vm.expectRevert(abi.encodeWithSelector(SpendPermissionManager.UnauthorizedSpendPermission.selector));
         mockSpendPermissionManager.spendWithWithdraw(spendPermission, spend, withdrawRequest);
         vm.stopPrank();
@@ -305,12 +295,11 @@ contract SpendWithWithdrawTest is SpendPermissionManagerBase {
 
         // Get the correct hash portion first
         bytes32 permissionHash = mockSpendPermissionManager.getHash(spendPermission);
-        uint256 correctHashPortion = uint256(permissionHash) >> (256 - NONCE_HASH_BITS);
+        uint256 correctHashPortion = uint128(uint256(permissionHash));
 
         // Create withdraw request with incorrect hash portion
         uint256 incorrectHashPortion = correctHashPortion + 1; // Make it different
-        uint256 entropyPortion = params.entropy & ((1 << (256 - NONCE_HASH_BITS)) - 1);
-        uint256 incorrectNonce = (incorrectHashPortion << (256 - NONCE_HASH_BITS)) | entropyPortion;
+        uint256 incorrectNonce = (params.entropy << NONCE_HASH_BITS) | uint128(incorrectHashPortion);
 
         MagicSpend.WithdrawRequest memory withdrawRequest = MagicSpend.WithdrawRequest({
             asset: address(0),
@@ -332,7 +321,7 @@ contract SpendWithWithdrawTest is SpendPermissionManagerBase {
 
         vm.expectRevert(
             abi.encodeWithSelector(
-                SpendPermissionManager.InvalidWithdrawRequestHash.selector, incorrectHashPortion, correctHashPortion
+                SpendPermissionManager.InvalidWithdrawRequestNonce.selector, incorrectHashPortion, correctHashPortion
             )
         );
         mockSpendPermissionManager.spendWithWithdraw(spendPermission, spend, withdrawRequest);

@@ -104,9 +104,6 @@ contract SpendPermissionManager is EIP712 {
     /// @notice ERC-721 interface ID (https://eips.ethereum.org/EIPS/eip-721)
     bytes4 public constant ERC721_INTERFACE_ID = 0x80ac58cd;
 
-    /// @notice Number of upper bits from spend permission hash to use in withdraw request nonce
-    uint256 public constant NONCE_HASH_BITS = 128; // Use 128 bits, leaving 128 bits in nonce for entropy
-
     /// @notice A flag to indicate if the contract can receive native token transfers, and the expected amount.
     /// @dev Contract can only receive exactly the expected amount during the execution of `spend` for native tokens.
     uint256 transient private _expectedReceiveAmount;
@@ -203,10 +200,10 @@ contract SpendPermissionManager is EIP712 {
     /// @param withdrawAmount Amount of asset attempting to withdraw from MagicSpend.
     error SpendValueWithdrawAmountMismatch(uint256 spendValue, uint256 withdrawAmount);
 
-    /// @notice Withdraw request nonce does not encode the correct spend permission hash
-    /// @param encoded The portion of the nonce that should match the spend permission hash
-    /// @param expected Expected partial hash of the spend permission
-    error InvalidWithdrawRequestHash(uint256 encoded, uint256 expected);
+    /// @notice Withdraw request nonce is not postfixed with the lower 128 bits of the spend permission hash.
+    /// @param noncePostfix The lower 128 bits of the `WithdrawRequests.nonce`
+    /// @param permissionHashPostfix The lower 128 bits of the spend permission hash
+    error InvalidWithdrawRequestNonce(uint128 noncePostfix, uint128 permissionHashPostfix);
 
     /// @notice Contract cannot receive native token outside of `spend` execution, and must
     /// receive exactly the expected amount.
@@ -452,15 +449,9 @@ contract SpendPermissionManager is EIP712 {
         // Get the hash of the spend permission
         bytes32 permissionHash = getHash(spendPermission);
         
-        // Take first NONCE_HASH_BITS bits of the hash
-        uint256 expectedHashPortion = uint256(permissionHash) >> (256 - NONCE_HASH_BITS);
-        
-        // Extract hash portion from nonce (leftmost NONCE_HASH_BITS bits)
-        uint256 encodedHashPortion = withdrawRequest.nonce >> (256 - NONCE_HASH_BITS);
-        
         // Verify encoded hash portion matches expected
-        if (encodedHashPortion != expectedHashPortion) {
-            revert InvalidWithdrawRequestHash(encodedHashPortion, expectedHashPortion);
+        if (uint128(withdrawRequest.nonce) != uint128(uint256(permissionHash))) {
+            revert InvalidWithdrawRequestNonce(uint128(withdrawRequest.nonce), uint128(uint256(permissionHash)));
         }
 
         _useSpendPermission(spendPermission, value);
