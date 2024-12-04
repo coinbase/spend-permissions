@@ -5,6 +5,7 @@ import {CoinbaseSmartWallet} from "smart-wallet/CoinbaseSmartWallet.sol";
 import {EIP712} from "solady/utils/EIP712.sol";
 import {IERC1271} from "openzeppelin-contracts/contracts/interfaces/IERC1271.sol";
 import {IERC20} from "openzeppelin-contracts/contracts/token/ERC20/IERC20.sol";
+import {IERC721} from "openzeppelin-contracts/contracts/token/ERC721/IERC721.sol";
 import {MagicSpend} from "magic-spend/MagicSpend.sol";
 import {SafeERC20} from "openzeppelin-contracts/contracts/token/ERC20/utils/SafeERC20.sol";
 import {SafeTransferLib} from "solady/utils/SafeTransferLib.sol";
@@ -102,7 +103,7 @@ contract SpendPermissionManager is EIP712 {
     address public constant NATIVE_TOKEN = 0xEeeeeEeeeEeEeeEeEeEeeEEEeeeeEeeeeeeeEEeE;
 
     /// @notice ERC-721 interface ID (https://eips.ethereum.org/EIPS/eip-721)
-    bytes4 public constant ERC721_INTERFACE_ID = 0x80ac58cd;
+    bytes4 public constant IERC721_INTERFACE_ID = type(IERC721).interfaceId;
 
     /// @notice A flag to indicate if the contract can receive native token transfers, and the expected amount.
     /// @dev Contract can only receive exactly the expected amount during the execution of `spend` for native tokens.
@@ -629,7 +630,7 @@ contract SpendPermissionManager is EIP712 {
         // check token is not an ERC-721
         if (spendPermission.token != NATIVE_TOKEN) {
             (bool success, bytes memory data) = spendPermission.token.staticcall(
-                abi.encodeWithSelector(IERC165.supportsInterface.selector, ERC721_INTERFACE_ID)
+                abi.encodeWithSelector(IERC165.supportsInterface.selector, IERC721_INTERFACE_ID)
             );
             if (success && data.length >= 32) {
                 bool isERC721 = abi.decode(data, (bool));
