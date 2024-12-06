@@ -304,10 +304,13 @@ contract SpendPermissionManager is EIP712 {
     }
 
     /// @notice Approve a spend permission batch via a signature from the account.
+    ///
     /// @dev Compatible with ERC-6492 signatures. Does not enforce uniqueness of permissions 
     ///      within a batch, allowing duplicate idempotent approvals.
+    ///
     /// @param spendPermissionBatch Details of the spend permission batch
     /// @param signature Signed approval from the user
+    ///
     /// @return allApproved True if all spend permissions in the batch are approved and not revoked
     function approveBatchWithSignature(SpendPermissionBatch memory spendPermissionBatch, bytes calldata signature)
         external
@@ -503,9 +506,12 @@ contract SpendPermissionManager is EIP712 {
     }
 
     /// @notice Get start, end, and spend of the current period.
+    /// 
     /// @dev Reverts if spend permission has not started or has already ended.
     /// @dev Period boundaries are at fixed intervals of [start + n * period, min(end, start + (n + 1) * period) - 1]
+    ///
     /// @param spendPermission Details of the spend permission
+    ///
     /// @return currentPeriod Currently active period with cumulative spend (struct)
     function getCurrentPeriod(SpendPermission memory spendPermission) public view returns (PeriodSpend memory) {
         // check current timestamp is within spend permission time range
@@ -745,6 +751,7 @@ contract SpendPermissionManager is EIP712 {
     }
 
     /// @notice Execute a single call on an account.
+    ///
     /// @param account Address of the user account
     /// @param target Address of contract to call
     /// @param value Amount of native token to send
