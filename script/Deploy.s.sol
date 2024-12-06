@@ -13,8 +13,13 @@ import {SpendPermission, SpendPermissionManager} from "../src/SpendPermissionMan
  * @dev Before deploying contracts, make sure dependencies have been installed at the latest or otherwise specific
  * versions using `forge install [OPTIONS] [DEPENDENCIES]`.
  *
+ * Command to deploy with Etherscan verification:
  * forge script Deploy --account dev --sender $SENDER --rpc-url $BASE_SEPOLIA_RPC --verify --verifier-url
  * $SEPOLIA_BASESCAN_API --etherscan-api-key $BASESCAN_API_KEY --broadcast -vvvv
+ *
+ * Command to deploy with Blockscout verification:
+ * forge script Deploy --account dev --sender $SENDER --rpc-url $BASE_SEPOLIA_RPC --verify --verifier blockscout
+ * --verifier-url $BASE_SEPOLIA_BLOCKSCOUT_API --broadcast -vvvv
  */
 contract Deploy is Script {
     // https://github.com/coinbase/MagicSpend/releases/tag/v1.0.0
@@ -29,8 +34,8 @@ contract Deploy is Script {
     }
 
     function deploy() internal {
-        PublicERC6492Validator publicERC6492Validator = new PublicERC6492Validator{salt: 0}();
-        new SpendPermissionManager{salt: 0}(publicERC6492Validator, MAGIC_SPEND);
+        PublicERC6492Validator publicERC6492Validator = new PublicERC6492Validator{salt: bytes32(uint256(1))}();
+        new SpendPermissionManager{salt: bytes32(uint256(1))}(publicERC6492Validator, MAGIC_SPEND);
     }
 
     function logAddress(string memory name, address addr) internal pure {
