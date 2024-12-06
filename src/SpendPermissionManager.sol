@@ -715,7 +715,7 @@ contract SpendPermissionManager is EIP712 {
     /// @dev Enforces successful transfer of native token, reverts on failure.
     /// @dev Uses `safeTransferFrom` for ERC-20 token transfers to enforce revert on failure.
     ///
-    /// @param token Address of token (use NATIVE_TOKEN for ETH)
+    /// @param token Address of token (ERC-20 contract or ERC-7528 native token address)
     /// @param account Address to transfer from
     /// @param recipient Address to transfer to  
     /// @param value Amount to transfer
