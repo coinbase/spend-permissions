@@ -10,6 +10,7 @@ import {MagicSpend} from "magic-spend/MagicSpend.sol";
 import {SafeERC20} from "openzeppelin-contracts/contracts/token/ERC20/utils/SafeERC20.sol";
 import {SafeTransferLib} from "solady/utils/SafeTransferLib.sol";
 import {IERC165} from "openzeppelin-contracts/contracts/interfaces/IERC165.sol";
+import {ERC165Checker} from "openzeppelin-contracts/contracts/utils/introspection/ERC165Checker.sol";
 
 import {PublicERC6492Validator} from "./PublicERC6492Validator.sol";
 
@@ -629,12 +630,8 @@ contract SpendPermissionManager is EIP712 {
 
         // check token is not an ERC-721
         if (spendPermission.token != NATIVE_TOKEN) {
-            (bool success, bytes memory data) = spendPermission.token.staticcall(
-                abi.encodeWithSelector(IERC165.supportsInterface.selector, IERC721_INTERFACE_ID)
-            );
-            if (success && data.length >= 32) {
-                bool isERC721 = abi.decode(data, (bool));
-                if (isERC721) revert ERC721TokenNotSupported(spendPermission.token);
+            if (ERC165Checker.supportsInterface(spendPermission.token, IERC721_INTERFACE_ID)) {
+                revert ERC721TokenNotSupported(spendPermission.token);
             }
         }
 
