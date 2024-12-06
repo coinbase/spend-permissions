@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.23;
 
-import {SpendPermissionManager} from "../../../src/SpendPermissionManager.sol";
+import {SpendPermission, SpendPermissionManager} from "../../../src/SpendPermissionManager.sol";
 import {SpendPermissionManagerBase} from "../../base/SpendPermissionManagerBase.sol";
 
 import {CoinbaseSmartWallet} from "smart-wallet/CoinbaseSmartWallet.sol";
@@ -38,7 +38,7 @@ contract DrainWalletTest is SpendPermissionManagerBase {
         assertEq(address(account).balance, allowance * 2, "account balance should be allowance * 2 before exploit");
         assertEq(spender.balance, 0, "spender balance should be 0 before exploit");
 
-        SpendPermissionManager.SpendPermission memory spendPermission = SpendPermissionManager.SpendPermission({
+        SpendPermission memory spendPermission = SpendPermission({
             account: address(account),
             spender: spender,
             token: token,
@@ -125,7 +125,7 @@ contract DrainWalletTest is SpendPermissionManagerBase {
         }
 
         // Setup a permission for the counterfactual account
-        SpendPermissionManager.SpendPermission memory spendPermission = SpendPermissionManager.SpendPermission({
+        SpendPermission memory spendPermission = SpendPermission({
             account: counterfactualAccount,
             spender: attacker,
             token: NATIVE_TOKEN,
