@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.23;
 
-import {SpendPermissionManager} from "../../../src/SpendPermissionManager.sol";
+import {SpendPermission, SpendPermissionManager} from "../../../src/SpendPermissionManager.sol";
 
 import {SpendPermissionManagerBase} from "../../base/SpendPermissionManagerBase.sol";
 
@@ -25,7 +25,7 @@ contract IsApprovedTest is SpendPermissionManagerBase {
         vm.assume(period > 0);
         vm.assume(allowance > 0);
 
-        SpendPermissionManager.SpendPermission memory spendPermission = SpendPermissionManager.SpendPermission({
+        SpendPermission memory spendPermission = SpendPermission({
             account: account,
             spender: spender,
             token: NATIVE_TOKEN,
@@ -57,7 +57,7 @@ contract IsApprovedTest is SpendPermissionManagerBase {
         vm.assume(period > 0);
         vm.assume(allowance > 0);
 
-        SpendPermissionManager.SpendPermission memory spendPermission = SpendPermissionManager.SpendPermission({
+        SpendPermission memory spendPermission = SpendPermission({
             account: account,
             spender: spender,
             token: NATIVE_TOKEN,

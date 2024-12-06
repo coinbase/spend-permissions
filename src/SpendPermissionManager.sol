@@ -14,73 +14,75 @@ import {ERC165Checker} from "openzeppelin-contracts/contracts/utils/introspectio
 
 import {PublicERC6492Validator} from "./PublicERC6492Validator.sol";
 
+
+/// @notice A spend permission for an external entity to be able to spend an account's tokens.
+struct SpendPermission {
+    /// @dev Smart account this spend permission is valid for.
+    address account;
+    /// @dev Entity that can spend `account`'s tokens.
+    address spender;
+    /// @dev Token address (ERC-7528 native token address or ERC-20 contract).
+    address token;
+    /// @dev Maximum allowed value to spend within each `period`.
+    uint160 allowance;
+    /// @dev Time duration for resetting used `allowance` on a recurring basis (seconds).
+    uint48 period;
+    /// @dev Timestamp this spend permission is valid after (inclusive, unix seconds).
+    uint48 start;
+    /// @dev Timestamp this spend permission is valid until (exclusive, unix seconds).
+    uint48 end;
+    /// @dev An arbitrary salt to differentiate unique spend permissions with otherwise identical data.
+    uint256 salt;
+    /// @dev Arbitrary data to include in the signature.
+    bytes extraData;
+}
+
+/// @notice A batch of spend permissions for an external entity to be able to spend an account's tokens.
+/// @dev A batch of permissions all share the same `account`, `period`, `start`, and `end` fields.
+///      A batch can be approved with a single signature.
+struct SpendPermissionBatch {
+    /// @dev Smart account this spend permission is valid for.
+    address account;
+    /// @dev Time duration for resetting used allowance on a recurring basis (seconds).
+    uint48 period;
+    /// @dev Timestamp this spend permission is valid after (inclusive, unix seconds).
+    uint48 start;
+    /// @dev Timestamp this spend permission is valid until (exclusive, unix seconds).
+    uint48 end;
+    /// @dev Array of `PermissionDetails` structs defining properties that apply per-permission.
+    PermissionDetails[] permissions;
+}
+
+/// @notice Properties that apply per-permission within a batch.
+struct PermissionDetails {
+    /// @dev Entity that can spend user funds.
+    address spender;
+    /// @dev Token address (ERC-7528 ether address or ERC-20 contract).
+    address token;
+    /// @dev Maximum allowed value to spend within a recurring period.
+    uint160 allowance;
+    /// @dev An arbitrary salt to differentiate unique spend permissions with otherwise identical data.
+    uint256 salt;
+    /// @dev Arbitrary data to include in the signature.
+    bytes extraData;
+}
+
+/// @notice Period parameters and spend usage.
+struct PeriodSpend {
+    /// @dev Start time of the period (unix seconds).
+    uint48 start;
+    /// @dev End time of the period (unix seconds).
+    uint48 end;
+    /// @dev Accumulated spend amount for period.
+    uint160 spend;
+}
+
 /// @title SpendPermissionManager
-///
-/// @notice Allow spending native and ERC-20 tokens from a `CoinbaseSmartWalletV1` with a spend permission.
-///
-/// @dev Allowance and spend values capped at uint160 ~ 1e48.
-///
+/// @notice Allow spending native and ERC-20 tokens from a `CoinbaseSmartWallet` with a spend permission.
+/// @dev Allowance and spend values capped at uint160 (~1e48). Supports ERC-6492 signatures.
 /// @author Coinbase (https://github.com/coinbase/spend-permissions)
 contract SpendPermissionManager is EIP712 {
     using SafeERC20 for IERC20;
-
-    /// @notice A spend permission for an external entity to be able to spend an account's tokens.
-    struct SpendPermission {
-        /// @dev Smart account this spend permission is valid for.
-        address account;
-        /// @dev Entity that can spend `account`'s tokens.
-        address spender;
-        /// @dev Token address (ERC-7528 native token address or ERC-20 contract).
-        address token;
-        /// @dev Maximum allowed value to spend within each `period`.
-        uint160 allowance;
-        /// @dev Time duration for resetting used `allowance` on a recurring basis (seconds).
-        uint48 period;
-        /// @dev Timestamp this spend permission is valid after (inclusive, unix seconds).
-        uint48 start;
-        /// @dev Timestamp this spend permission is valid until (exclusive, unix seconds).
-        uint48 end;
-        /// @dev An arbitrary salt to differentiate unique spend permissions with otherwise identical data.
-        uint256 salt;
-        /// @dev Arbitrary data to include in the signature.
-        bytes extraData;
-    }
-
-    struct SpendPermissionBatch {
-        /// @dev Smart account this spend permission is valid for.
-        address account;
-        /// @dev Time duration for resetting used allowance on a recurring basis (seconds).
-        uint48 period;
-        /// @dev Timestamp this spend permission is valid after (inclusive, unix seconds).
-        uint48 start;
-        /// @dev Timestamp this spend permission is valid until (exclusive, unix seconds).
-        uint48 end;
-        /// @dev Array of `PermissionDetails` structs defining properties that apply per-permission.
-        PermissionDetails[] permissions;
-    }
-
-    struct PermissionDetails {
-        /// @dev Entity that can spend user funds.
-        address spender;
-        /// @dev Token address (ERC-7528 ether address or ERC-20 contract).
-        address token;
-        /// @dev Maximum allowed value to spend within a recurring period.
-        uint160 allowance;
-        /// @dev An arbitrary salt to differentiate unique spend permissions with otherwise identical data.
-        uint256 salt;
-        /// @dev Arbitrary data to include in the signature.
-        bytes extraData;
-    }
-
-    /// @notice Period parameters and spend usage.
-    struct PeriodSpend {
-        /// @dev Start time of the period (unix seconds).
-        uint48 start;
-        /// @dev End time of the period (unix seconds).
-        uint48 end;
-        /// @dev Accumulated spend amount for period.
-        uint160 spend;
-    }
 
     /// @notice Separated contract for validating signatures and executing ERC-6492 side effects
     ///         (https://eips.ethereum.org/EIPS/eip-6492).
@@ -303,13 +305,13 @@ contract SpendPermissionManager is EIP712 {
 
     /// @notice Approve a spend permission batch via a signature from the account.
     ///
-    /// @dev Compatible with ERC-6492 signatures including side effects (https://eips.ethereum.org/EIPS/eip-6492).
-    /// @dev Does not enforce uniqueness of permissions within a batch, allowing duplicate idempotent approvals.
+    /// @dev Compatible with ERC-6492 signatures. Does not enforce uniqueness of permissions 
+    ///      within a batch, allowing duplicate idempotent approvals.
     ///
-    /// @param spendPermissionBatch Details of the spend permission batch.
-    /// @param signature Signed approval from the user.
+    /// @param spendPermissionBatch Details of the spend permission batch
+    /// @param signature Signed approval from the user
     ///
-    /// @return allApproved True if all spend permissions in the batch are approved and not revoked.
+    /// @return allApproved True if all spend permissions in the batch are approved and not revoked
     function approveBatchWithSignature(SpendPermissionBatch memory spendPermissionBatch, bytes calldata signature)
         external
         returns (bool)
@@ -504,13 +506,13 @@ contract SpendPermissionManager is EIP712 {
     }
 
     /// @notice Get start, end, and spend of the current period.
-    ///
+    /// 
     /// @dev Reverts if spend permission has not started or has already ended.
-    /// @dev Period boundaries are at fixed intervals of [start + n * period, min(end, start + (n + 1) * period) - 1].
+    /// @dev Period boundaries are at fixed intervals of [start + n * period, min(end, start + (n + 1) * period) - 1]
     ///
-    /// @param spendPermission Details of the spend permission.
+    /// @param spendPermission Details of the spend permission
     ///
-    /// @return currentPeriod Currently active period with cumulative spend (struct).
+    /// @return currentPeriod Currently active period with cumulative spend (struct)
     function getCurrentPeriod(SpendPermission memory spendPermission) public view returns (PeriodSpend memory) {
         // check current timestamp is within spend permission time range
         uint48 currentTimestamp = uint48(block.timestamp);
@@ -719,10 +721,10 @@ contract SpendPermissionManager is EIP712 {
     /// @dev Enforces successful transfer of native token, reverts on failure.
     /// @dev Uses `safeTransferFrom` for ERC-20 token transfers to enforce revert on failure.
     ///
-    /// @param token Address of the token contract.
-    /// @param account Address of the user account.
-    /// @param recipient Address of the token recipient.
-    /// @param value Amount of tokens to transfer.
+    /// @param token Address of token (ERC-20 contract or ERC-7528 native token address)
+    /// @param account Address to transfer from
+    /// @param recipient Address to transfer to  
+    /// @param value Amount to transfer
     function _transferFrom(address token, address account, address recipient, uint256 value) internal {
         // transfer tokens from account to recipient
         if (token == NATIVE_TOKEN) {
@@ -750,10 +752,10 @@ contract SpendPermissionManager is EIP712 {
 
     /// @notice Execute a single call on an account.
     ///
-    /// @param account Address of the user account.
-    /// @param target Address of the target contract.
-    /// @param value Amount of native token to send in call.
-    /// @param data Bytes data to send in call.
+    /// @param account Address of the user account
+    /// @param target Address of contract to call
+    /// @param value Amount of native token to send
+    /// @param data Calldata for the transaction
     function _execute(address account, address target, uint256 value, bytes memory data) internal virtual {
         CoinbaseSmartWallet(payable(account)).execute({target: target, value: value, data: data});
     }

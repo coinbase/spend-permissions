@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.23;
 
-import {SpendPermissionManager} from "../../../src/SpendPermissionManager.sol";
+import {PeriodSpend, SpendPermission, SpendPermissionManager} from "../../../src/SpendPermissionManager.sol";
 
 import {SpendPermissionManagerBase} from "../../base/SpendPermissionManagerBase.sol";
 
@@ -13,7 +13,7 @@ contract GetCurrentPeriodTest is SpendPermissionManagerBase {
     function test_getCurrentPeriod_revert_beforeSpendPermissionStart(uint48 start) public {
         vm.assume(start > 0);
 
-        SpendPermissionManager.SpendPermission memory spendPermission = _createSpendPermission();
+        SpendPermission memory spendPermission = _createSpendPermission();
         spendPermission.start = start;
         vm.warp(start - 1);
         vm.expectRevert(
@@ -26,7 +26,7 @@ contract GetCurrentPeriodTest is SpendPermissionManagerBase {
         vm.assume(end > 0);
         vm.assume(end < type(uint48).max);
 
-        SpendPermissionManager.SpendPermission memory spendPermission = _createSpendPermission();
+        SpendPermission memory spendPermission = _createSpendPermission();
         spendPermission.end = end;
         vm.warp(end);
         vm.expectRevert(abi.encodeWithSelector(SpendPermissionManager.AfterSpendPermissionEnd.selector, end, end));
@@ -37,7 +37,7 @@ contract GetCurrentPeriodTest is SpendPermissionManagerBase {
         vm.assume(end > 0);
         vm.assume(end < type(uint48).max);
 
-        SpendPermissionManager.SpendPermission memory spendPermission = _createSpendPermission();
+        SpendPermission memory spendPermission = _createSpendPermission();
         spendPermission.end = end;
         vm.warp(end + 1);
         vm.expectRevert(abi.encodeWithSelector(SpendPermissionManager.AfterSpendPermissionEnd.selector, end + 1, end));
@@ -59,7 +59,7 @@ contract GetCurrentPeriodTest is SpendPermissionManagerBase {
         vm.assume(period > 0);
         vm.assume(allowance > 0);
 
-        SpendPermissionManager.SpendPermission memory spendPermission = SpendPermissionManager.SpendPermission({
+        SpendPermission memory spendPermission = SpendPermission({
             account: address(account),
             spender: spender,
             token: NATIVE_TOKEN,
@@ -71,7 +71,7 @@ contract GetCurrentPeriodTest is SpendPermissionManagerBase {
             extraData: extraData
         });
         vm.warp(start);
-        SpendPermissionManager.PeriodSpend memory usage = mockSpendPermissionManager.getCurrentPeriod(spendPermission);
+        PeriodSpend memory usage = mockSpendPermissionManager.getCurrentPeriod(spendPermission);
 
         assertEq(usage.start, start);
         assertEq(usage.end, _safeAddUint48(start, period, end));
@@ -97,7 +97,7 @@ contract GetCurrentPeriodTest is SpendPermissionManagerBase {
         vm.assume(spend > 0);
         vm.assume(spend <= allowance);
 
-        SpendPermissionManager.SpendPermission memory spendPermission = SpendPermissionManager.SpendPermission({
+        SpendPermission memory spendPermission = SpendPermission({
             account: address(account),
             spender: spender,
             token: NATIVE_TOKEN,
@@ -114,7 +114,7 @@ contract GetCurrentPeriodTest is SpendPermissionManagerBase {
 
         vm.warp(start);
         mockSpendPermissionManager.useSpendPermission(spendPermission, spend);
-        SpendPermissionManager.PeriodSpend memory usage = mockSpendPermissionManager.getCurrentPeriod(spendPermission);
+        PeriodSpend memory usage = mockSpendPermissionManager.getCurrentPeriod(spendPermission);
         assertEq(usage.start, start);
         assertEq(usage.end, _safeAddUint48(start, period, end));
         assertEq(usage.spend, spend);
@@ -140,7 +140,7 @@ contract GetCurrentPeriodTest is SpendPermissionManagerBase {
         vm.assume(spend > 0);
         vm.assume(spend <= allowance);
 
-        SpendPermissionManager.SpendPermission memory spendPermission = SpendPermissionManager.SpendPermission({
+        SpendPermission memory spendPermission = SpendPermission({
             account: address(account),
             spender: spender,
             token: NATIVE_TOKEN,
@@ -159,7 +159,7 @@ contract GetCurrentPeriodTest is SpendPermissionManagerBase {
         mockSpendPermissionManager.useSpendPermission(spendPermission, spend);
 
         vm.warp(_safeAddUint48(start, period, end) - 1);
-        SpendPermissionManager.PeriodSpend memory usage = mockSpendPermissionManager.getCurrentPeriod(spendPermission);
+        PeriodSpend memory usage = mockSpendPermissionManager.getCurrentPeriod(spendPermission);
         assertEq(usage.start, start);
         assertEq(usage.end, _safeAddUint48(start, period, end));
         assertEq(usage.spend, spend);
@@ -185,7 +185,7 @@ contract GetCurrentPeriodTest is SpendPermissionManagerBase {
         vm.assume(spend > 0);
         vm.assume(spend <= allowance);
 
-        SpendPermissionManager.SpendPermission memory spendPermission = SpendPermissionManager.SpendPermission({
+        SpendPermission memory spendPermission = SpendPermission({
             account: address(account),
             spender: spender,
             token: NATIVE_TOKEN,
@@ -204,7 +204,7 @@ contract GetCurrentPeriodTest is SpendPermissionManagerBase {
         mockSpendPermissionManager.useSpendPermission(spendPermission, spend);
 
         vm.warp(_safeAddUint48(start, period, end));
-        SpendPermissionManager.PeriodSpend memory usage = mockSpendPermissionManager.getCurrentPeriod(spendPermission);
+        PeriodSpend memory usage = mockSpendPermissionManager.getCurrentPeriod(spendPermission);
         assertEq(usage.start, _safeAddUint48(start, period, end));
         assertEq(usage.end, _safeAddUint48(_safeAddUint48(start, period, end), period, end));
         assertEq(usage.spend, 0);
@@ -225,7 +225,7 @@ contract GetCurrentPeriodTest is SpendPermissionManagerBase {
         vm.assume(uint256(start) + uint256(period) > end);
         vm.assume(allowance > 0);
 
-        SpendPermissionManager.SpendPermission memory spendPermission = SpendPermissionManager.SpendPermission({
+        SpendPermission memory spendPermission = SpendPermission({
             account: address(account),
             spender: spender,
             token: NATIVE_TOKEN,
@@ -238,7 +238,7 @@ contract GetCurrentPeriodTest is SpendPermissionManagerBase {
         });
 
         vm.warp(start);
-        SpendPermissionManager.PeriodSpend memory usage = mockSpendPermissionManager.getCurrentPeriod(spendPermission);
+        PeriodSpend memory usage = mockSpendPermissionManager.getCurrentPeriod(spendPermission);
         assertEq(usage.start, start);
         assertEq(usage.end, end);
         assertEq(usage.spend, 0);
@@ -258,7 +258,7 @@ contract GetCurrentPeriodTest is SpendPermissionManagerBase {
         vm.assume(uint256(start) + uint256(period) > end); // force overflow
         vm.assume(allowance > 0);
 
-        SpendPermissionManager.SpendPermission memory spendPermission = SpendPermissionManager.SpendPermission({
+        SpendPermission memory spendPermission = SpendPermission({
             account: address(account),
             spender: spender,
             token: NATIVE_TOKEN,
@@ -271,7 +271,7 @@ contract GetCurrentPeriodTest is SpendPermissionManagerBase {
         });
 
         vm.warp(start);
-        SpendPermissionManager.PeriodSpend memory usage = mockSpendPermissionManager.getCurrentPeriod(spendPermission);
+        PeriodSpend memory usage = mockSpendPermissionManager.getCurrentPeriod(spendPermission);
         assertEq(usage.start, start);
         assertEq(usage.end, end);
         assertEq(usage.spend, 0);

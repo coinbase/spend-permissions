@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.23;
 
-import {SpendPermissionManager} from "../../../src/SpendPermissionManager.sol";
+import {PeriodSpend, SpendPermission, SpendPermissionManager} from "../../../src/SpendPermissionManager.sol";
 
 import {SpendPermissionManagerBase} from "../../base/SpendPermissionManagerBase.sol";
 
@@ -29,7 +29,7 @@ contract UseSpendPermissionTest is SpendPermissionManagerBase {
         vm.assume(spend > 0); // spend of 0 would be caught as unauthorized in permit version of `spend`, caller of
             // `useSpendPermission`
 
-        SpendPermissionManager.SpendPermission memory spendPermission = SpendPermissionManager.SpendPermission({
+        SpendPermission memory spendPermission = SpendPermission({
             account: account,
             spender: spender,
             token: NATIVE_TOKEN,
@@ -64,7 +64,7 @@ contract UseSpendPermissionTest is SpendPermissionManagerBase {
 
         uint256 spend = uint256(type(uint160).max) + 1; // spend as a fuzz param with assumption spend > type(160).max
             // rejects too many inputs
-        SpendPermissionManager.SpendPermission memory spendPermission = SpendPermissionManager.SpendPermission({
+        SpendPermission memory spendPermission = SpendPermission({
             account: account,
             spender: spender,
             token: NATIVE_TOKEN,
@@ -102,7 +102,7 @@ contract UseSpendPermissionTest is SpendPermissionManagerBase {
         vm.assume(allowance > 0);
         vm.assume(spend > allowance);
 
-        SpendPermissionManager.SpendPermission memory spendPermission = SpendPermissionManager.SpendPermission({
+        SpendPermission memory spendPermission = SpendPermission({
             account: account,
             spender: spender,
             token: NATIVE_TOKEN,
@@ -146,7 +146,7 @@ contract UseSpendPermissionTest is SpendPermissionManagerBase {
         vm.assume(secondSpend > allowance - firstSpend);
         vm.assume(secondSpend < type(uint160).max - firstSpend);
 
-        SpendPermissionManager.SpendPermission memory spendPermission = SpendPermissionManager.SpendPermission({
+        SpendPermission memory spendPermission = SpendPermission({
             account: account,
             spender: spender,
             token: NATIVE_TOKEN,
@@ -175,17 +175,14 @@ contract UseSpendPermissionTest is SpendPermissionManagerBase {
     }
 
     function test_useSpendPermission_revert_zeroValue() public {
-        SpendPermissionManager.SpendPermission memory spendPermission = _createSpendPermission();
+        SpendPermission memory spendPermission = _createSpendPermission();
         vm.prank(spendPermission.account);
         mockSpendPermissionManager.approve(spendPermission);
         vm.expectRevert(SpendPermissionManager.ZeroValue.selector);
         mockSpendPermissionManager.useSpendPermission(spendPermission, 0);
     }
 
-    function test_useSpendPermission_success_emitsEvent(
-        SpendPermissionManager.SpendPermission memory spendPermission,
-        uint160 spend
-    ) public {
+    function test_useSpendPermission_success_emitsEvent(SpendPermission memory spendPermission, uint160 spend) public {
         vm.assume(spendPermission.spender != address(0));
         vm.assume(spendPermission.start > 0);
         vm.assume(spendPermission.end > 0);
@@ -206,7 +203,7 @@ contract UseSpendPermissionTest is SpendPermissionManagerBase {
             account: spendPermission.account,
             spender: spendPermission.spender,
             token: NATIVE_TOKEN,
-            periodSpend: SpendPermissionManager.PeriodSpend({
+            periodSpend: PeriodSpend({
                 start: spendPermission.start,
                 end: _safeAddUint48(spendPermission.start, spendPermission.period, spendPermission.end),
                 spend: spend
@@ -235,7 +232,7 @@ contract UseSpendPermissionTest is SpendPermissionManagerBase {
         vm.assume(spend > 0);
         vm.assume(spend < allowance);
 
-        SpendPermissionManager.SpendPermission memory spendPermission = SpendPermissionManager.SpendPermission({
+        SpendPermission memory spendPermission = SpendPermission({
             account: account,
             spender: spender,
             token: NATIVE_TOKEN,
@@ -251,7 +248,7 @@ contract UseSpendPermissionTest is SpendPermissionManagerBase {
         mockSpendPermissionManager.approve(spendPermission);
         vm.warp(start);
         mockSpendPermissionManager.useSpendPermission(spendPermission, spend);
-        SpendPermissionManager.PeriodSpend memory usage = mockSpendPermissionManager.getCurrentPeriod(spendPermission);
+        PeriodSpend memory usage = mockSpendPermissionManager.getCurrentPeriod(spendPermission);
         assertEq(usage.start, start);
         assertEq(usage.end, _safeAddUint48(start, period, end));
         assertEq(usage.spend, spend);
@@ -274,7 +271,7 @@ contract UseSpendPermissionTest is SpendPermissionManagerBase {
         vm.assume(period > 0);
         vm.assume(allowance > 0);
 
-        SpendPermissionManager.SpendPermission memory spendPermission = SpendPermissionManager.SpendPermission({
+        SpendPermission memory spendPermission = SpendPermission({
             account: account,
             spender: spender,
             token: NATIVE_TOKEN,
@@ -290,7 +287,7 @@ contract UseSpendPermissionTest is SpendPermissionManagerBase {
         mockSpendPermissionManager.approve(spendPermission);
         vm.warp(start);
         mockSpendPermissionManager.useSpendPermission(spendPermission, allowance); // spend full allowance
-        SpendPermissionManager.PeriodSpend memory usage = mockSpendPermissionManager.getCurrentPeriod(spendPermission);
+        PeriodSpend memory usage = mockSpendPermissionManager.getCurrentPeriod(spendPermission);
         assertEq(usage.start, start);
         assertEq(usage.end, _safeAddUint48(start, period, end));
         assertEq(usage.spend, allowance);
@@ -317,7 +314,7 @@ contract UseSpendPermissionTest is SpendPermissionManagerBase {
 
         uint160 spend = allowance / numberOfSpends;
 
-        SpendPermissionManager.SpendPermission memory spendPermission = SpendPermissionManager.SpendPermission({
+        SpendPermission memory spendPermission = SpendPermission({
             account: account,
             spender: spender,
             token: NATIVE_TOKEN,
@@ -336,8 +333,7 @@ contract UseSpendPermissionTest is SpendPermissionManagerBase {
         for (uint256 i; i < numberOfSpends; i++) {
             mockSpendPermissionManager.useSpendPermission(spendPermission, spend);
             expectedTotalSpend += spend;
-            SpendPermissionManager.PeriodSpend memory usage =
-                mockSpendPermissionManager.getCurrentPeriod(spendPermission);
+            PeriodSpend memory usage = mockSpendPermissionManager.getCurrentPeriod(spendPermission);
             assertEq(usage.start, start);
             assertEq(usage.end, _safeAddUint48(start, period, end));
             assertEq(usage.spend, expectedTotalSpend);

@@ -8,7 +8,7 @@ import {MockERC20LikeUSDT} from "solady/../test/utils/mocks/MockERC20LikeUSDT.so
 import {ReturnsFalseToken} from "solady/../test/utils/weird-tokens/ReturnsFalseToken.sol";
 import {ERC20} from "solady/tokens/ERC20.sol";
 
-import {SpendPermissionManager} from "../../../src/SpendPermissionManager.sol";
+import {PeriodSpend, SpendPermission, SpendPermissionManager} from "../../../src/SpendPermissionManager.sol";
 
 import {SpendPermissionManagerBase} from "../../base/SpendPermissionManagerBase.sol";
 import {MockERC20MissingReturn} from "../../mocks/MockERC20MissingReturn.sol";
@@ -56,7 +56,7 @@ contract SpendWithWithdrawTest is SpendPermissionManagerBase {
         vm.assume(spend > 0);
         vm.assume(params.allowance >= spend);
 
-        SpendPermissionManager.SpendPermission memory spendPermission = SpendPermissionManager.SpendPermission({
+        SpendPermission memory spendPermission = SpendPermission({
             account: address(account),
             spender: params.spender,
             token: NATIVE_TOKEN,
@@ -88,7 +88,7 @@ contract SpendWithWithdrawTest is SpendPermissionManagerBase {
         vm.assume(withdrawAsset != address(0));
         uint160 spend = 0;
 
-        SpendPermissionManager.SpendPermission memory spendPermission = SpendPermissionManager.SpendPermission({
+        SpendPermission memory spendPermission = SpendPermission({
             account: address(account),
             spender: params.spender,
             token: NATIVE_TOKEN,
@@ -125,7 +125,7 @@ contract SpendWithWithdrawTest is SpendPermissionManagerBase {
         vm.assume(spendToken != withdrawAsset);
         uint160 spend = 0;
 
-        SpendPermissionManager.SpendPermission memory spendPermission = SpendPermissionManager.SpendPermission({
+        SpendPermission memory spendPermission = SpendPermission({
             account: address(account),
             spender: params.spender,
             token: spendToken,
@@ -162,7 +162,7 @@ contract SpendWithWithdrawTest is SpendPermissionManagerBase {
         vm.assume(params.allowance < type(uint160).max - existingBalance); // Prevent overflow
         uint160 totalSpend = params.allowance + existingBalance;
 
-        SpendPermissionManager.SpendPermission memory spendPermission = SpendPermissionManager.SpendPermission({
+        SpendPermission memory spendPermission = SpendPermission({
             account: address(account),
             spender: params.spender,
             token: address(mockERC20),
@@ -198,7 +198,7 @@ contract SpendWithWithdrawTest is SpendPermissionManagerBase {
         assertEq(mockERC20.balanceOf(params.spender), totalSpend);
 
         // Verify spend permission usage
-        SpendPermissionManager.PeriodSpend memory usage = mockSpendPermissionManager.getCurrentPeriod(spendPermission);
+        PeriodSpend memory usage = mockSpendPermissionManager.getCurrentPeriod(spendPermission);
         assertEq(usage.start, params.start);
         assertEq(usage.end, _safeAddUint48(params.start, params.period, params.end));
         assertEq(usage.spend, totalSpend);
@@ -211,7 +211,7 @@ contract SpendWithWithdrawTest is SpendPermissionManagerBase {
         _validateCommonAssumptions(params);
         vm.assume(spendValue < params.allowance); // spendValue must be less than withdrawAmount
 
-        SpendPermissionManager.SpendPermission memory spendPermission = SpendPermissionManager.SpendPermission({
+        SpendPermission memory spendPermission = SpendPermission({
             account: address(account),
             spender: params.spender,
             token: NATIVE_TOKEN,
@@ -250,7 +250,7 @@ contract SpendWithWithdrawTest is SpendPermissionManagerBase {
         vm.assume(spend > 0);
         vm.assume(params.allowance >= spend);
 
-        SpendPermissionManager.SpendPermission memory spendPermission = SpendPermissionManager.SpendPermission({
+        SpendPermission memory spendPermission = SpendPermission({
             account: address(account),
             spender: params.spender,
             token: NATIVE_TOKEN,
@@ -281,7 +281,7 @@ contract SpendWithWithdrawTest is SpendPermissionManagerBase {
         vm.assume(spend > 0);
         vm.assume(params.allowance >= spend);
 
-        SpendPermissionManager.SpendPermission memory spendPermission = SpendPermissionManager.SpendPermission({
+        SpendPermission memory spendPermission = SpendPermission({
             account: address(account),
             spender: params.spender,
             token: NATIVE_TOKEN,
@@ -335,7 +335,7 @@ contract SpendWithWithdrawTest is SpendPermissionManagerBase {
         vm.assume(spend > 0);
         vm.assume(params.allowance >= spend);
 
-        SpendPermissionManager.SpendPermission memory spendPermission = SpendPermissionManager.SpendPermission({
+        SpendPermission memory spendPermission = SpendPermission({
             account: address(account),
             spender: params.spender,
             token: NATIVE_TOKEN,
@@ -375,7 +375,7 @@ contract SpendWithWithdrawTest is SpendPermissionManagerBase {
         vm.assume(spend > 0);
         vm.assume(params.allowance >= spend);
 
-        SpendPermissionManager.SpendPermission memory spendPermission = SpendPermissionManager.SpendPermission({
+        SpendPermission memory spendPermission = SpendPermission({
             account: address(account),
             spender: params.spender,
             token: NATIVE_TOKEN,
@@ -407,7 +407,7 @@ contract SpendWithWithdrawTest is SpendPermissionManagerBase {
         assertEq(address(account).balance, 0);
         assertEq(params.spender.balance, spend);
 
-        SpendPermissionManager.PeriodSpend memory usage = mockSpendPermissionManager.getCurrentPeriod(spendPermission);
+        PeriodSpend memory usage = mockSpendPermissionManager.getCurrentPeriod(spendPermission);
         assertEq(usage.start, params.start);
         assertEq(usage.end, _safeAddUint48(params.start, params.period, params.end));
         assertEq(usage.spend, spend);
@@ -419,7 +419,7 @@ contract SpendWithWithdrawTest is SpendPermissionManagerBase {
         vm.assume(spend > 0);
         vm.assume(params.allowance >= spend);
 
-        SpendPermissionManager.SpendPermission memory spendPermission = SpendPermissionManager.SpendPermission({
+        SpendPermission memory spendPermission = SpendPermission({
             account: address(account),
             spender: params.spender,
             token: address(mockERC20),
@@ -450,7 +450,7 @@ contract SpendWithWithdrawTest is SpendPermissionManagerBase {
         assertEq(mockERC20.balanceOf(address(account)), 0);
         assertEq(mockERC20.balanceOf(params.spender), spend);
 
-        SpendPermissionManager.PeriodSpend memory usage = mockSpendPermissionManager.getCurrentPeriod(spendPermission);
+        PeriodSpend memory usage = mockSpendPermissionManager.getCurrentPeriod(spendPermission);
         assertEq(usage.start, params.start);
         assertEq(usage.end, _safeAddUint48(params.start, params.period, params.end));
         assertEq(usage.spend, spend);
@@ -467,7 +467,7 @@ contract SpendWithWithdrawTest is SpendPermissionManagerBase {
         vm.assume(params.allowance < type(uint160).max - existingBalance); // Prevent overflow
         uint160 totalSpend = params.allowance + existingBalance;
 
-        SpendPermissionManager.SpendPermission memory spendPermission = SpendPermissionManager.SpendPermission({
+        SpendPermission memory spendPermission = SpendPermission({
             account: address(account),
             spender: params.spender,
             token: NATIVE_TOKEN,
@@ -502,7 +502,7 @@ contract SpendWithWithdrawTest is SpendPermissionManagerBase {
         assertEq(params.spender.balance, totalSpend);
 
         // Verify spend permission usage
-        SpendPermissionManager.PeriodSpend memory usage = mockSpendPermissionManager.getCurrentPeriod(spendPermission);
+        PeriodSpend memory usage = mockSpendPermissionManager.getCurrentPeriod(spendPermission);
         assertEq(usage.start, params.start);
         assertEq(usage.end, _safeAddUint48(params.start, params.period, params.end));
         assertEq(usage.spend, totalSpend);

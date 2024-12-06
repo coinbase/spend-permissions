@@ -1,7 +1,12 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.23;
 
-import {SpendPermissionManager} from "../../../src/SpendPermissionManager.sol";
+import {
+    PermissionDetails,
+    SpendPermission,
+    SpendPermissionBatch,
+    SpendPermissionManager
+} from "../../../src/SpendPermissionManager.sol";
 
 import {SpendPermissionManagerBase} from "../../base/SpendPermissionManagerBase.sol";
 import {MockSpendPermissionManager} from "../../mocks/MockSpendPermissionManager.sol";
@@ -21,10 +26,8 @@ contract GetBatchHashTest is SpendPermissionManagerBase {
         vm.assume(start < end);
         vm.assume(period > 0);
         vm.assume(allowance > 0);
-        SpendPermissionManager.PermissionDetails[] memory permissions =
-            new SpendPermissionManager.PermissionDetails[](0);
-        SpendPermissionManager.SpendPermissionBatch memory spendPermissionBatch = SpendPermissionManager
-            .SpendPermissionBatch({
+        PermissionDetails[] memory permissions = new PermissionDetails[](0);
+        SpendPermissionBatch memory spendPermissionBatch = SpendPermissionBatch({
             account: address(account),
             start: start,
             end: end,
@@ -48,26 +51,24 @@ contract GetBatchHashTest is SpendPermissionManagerBase {
         vm.assume(start < end);
         vm.assume(period > 0);
         vm.assume(allowance > 0);
-        SpendPermissionManager.PermissionDetails memory permissionDetails1 = SpendPermissionManager.PermissionDetails({
+        PermissionDetails memory permissionDetails1 = PermissionDetails({
             token: token,
             allowance: allowance,
             spender: spender,
             salt: uint256(salt),
             extraData: "0x"
         });
-        SpendPermissionManager.PermissionDetails memory permissionDetails2 = SpendPermissionManager.PermissionDetails({
+        PermissionDetails memory permissionDetails2 = PermissionDetails({
             token: token,
             allowance: allowance,
             spender: spender,
             salt: uint256(salt) + 1,
             extraData: "0x"
         });
-        SpendPermissionManager.PermissionDetails[] memory permissions =
-            new SpendPermissionManager.PermissionDetails[](2);
+        PermissionDetails[] memory permissions = new PermissionDetails[](2);
         permissions[0] = permissionDetails1;
         permissions[1] = permissionDetails2;
-        SpendPermissionManager.SpendPermissionBatch memory spendPermissionBatch = SpendPermissionManager
-            .SpendPermissionBatch({
+        SpendPermissionBatch memory spendPermissionBatch = SpendPermissionBatch({
             account: address(account),
             start: start,
             end: end,
@@ -95,26 +96,24 @@ contract GetBatchHashTest is SpendPermissionManagerBase {
         vm.assume(chainId1 != chainId2);
         vm.assume(chainId1 > 0);
         vm.assume(chainId2 > 0);
-        SpendPermissionManager.PermissionDetails memory permissionDetails1 = SpendPermissionManager.PermissionDetails({
+        PermissionDetails memory permissionDetails1 = PermissionDetails({
             token: token,
             allowance: allowance,
             spender: spender,
             salt: uint256(salt),
             extraData: "0x"
         });
-        SpendPermissionManager.PermissionDetails memory permissionDetails2 = SpendPermissionManager.PermissionDetails({
+        PermissionDetails memory permissionDetails2 = PermissionDetails({
             token: token,
             allowance: allowance,
             spender: spender,
             salt: uint256(salt) + 1,
             extraData: "0x"
         });
-        SpendPermissionManager.PermissionDetails[] memory permissions =
-            new SpendPermissionManager.PermissionDetails[](2);
+        PermissionDetails[] memory permissions = new PermissionDetails[](2);
         permissions[0] = permissionDetails1;
         permissions[1] = permissionDetails2;
-        SpendPermissionManager.SpendPermissionBatch memory spendPermissionBatch = SpendPermissionManager
-            .SpendPermissionBatch({
+        SpendPermissionBatch memory spendPermissionBatch = SpendPermissionBatch({
             account: address(account),
             start: start,
             end: end,
@@ -142,26 +141,14 @@ contract GetBatchHashTest is SpendPermissionManagerBase {
         vm.assume(start < end);
         vm.assume(period > 0);
         vm.assume(allowance > 0);
-        SpendPermissionManager.PermissionDetails memory permissionDetails1 = SpendPermissionManager.PermissionDetails({
-            token: token,
-            allowance: allowance,
-            spender: spender,
-            salt: salt1,
-            extraData: "0x"
-        });
-        SpendPermissionManager.PermissionDetails memory permissionDetails2 = SpendPermissionManager.PermissionDetails({
-            token: token,
-            allowance: allowance,
-            spender: spender,
-            salt: salt2,
-            extraData: "0x"
-        });
-        SpendPermissionManager.PermissionDetails[] memory permissions =
-            new SpendPermissionManager.PermissionDetails[](2);
+        PermissionDetails memory permissionDetails1 =
+            PermissionDetails({token: token, allowance: allowance, spender: spender, salt: salt1, extraData: "0x"});
+        PermissionDetails memory permissionDetails2 =
+            PermissionDetails({token: token, allowance: allowance, spender: spender, salt: salt2, extraData: "0x"});
+        PermissionDetails[] memory permissions = new PermissionDetails[](2);
         permissions[0] = permissionDetails1;
         permissions[1] = permissionDetails2;
-        SpendPermissionManager.SpendPermissionBatch memory spendPermissionBatch = SpendPermissionManager
-            .SpendPermissionBatch({
+        SpendPermissionBatch memory spendPermissionBatch = SpendPermissionBatch({
             account: address(account),
             start: start,
             end: end,
