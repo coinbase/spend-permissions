@@ -126,7 +126,7 @@ contract SpendPermissionManager is EIP712 {
     /// @notice A flag to indicate if the contract can receive native token transfers, and the expected amount.
     ///
     /// @dev Contract can only receive exactly the expected amount during the execution of `spend` for native tokens.
-    uint256 private _expectedReceiveAmount;
+    uint256 transient private _expectedReceiveAmount;
 
     /// @notice Spend permission was approved.
     ///
