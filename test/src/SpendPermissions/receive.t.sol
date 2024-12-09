@@ -3,7 +3,7 @@ pragma solidity ^0.8.23;
 
 import {MockERC20MissingReturn} from "../../mocks/MockERC20MissingReturn.sol";
 
-import {PeriodSpend, SpendPermission, SpendPermissionManager} from "../../../src/SpendPermissionManager.sol";
+import {SpendPermissionManager} from "../../../src/SpendPermissionManager.sol";
 import {SafeERC20} from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 import {Errors} from "@openzeppelin/contracts/utils/Errors.sol";
 import {ERC20} from "solady/../src/tokens/ERC20.sol";
@@ -97,7 +97,7 @@ contract ReceiveTest is SpendPermissionManagerBase {
         underspendingWallet.addOwnerAddress(address(mockSpendPermissionManager));
         vm.stopPrank();
 
-        SpendPermission memory spendPermission = SpendPermission({
+        SpendPermissionManager.SpendPermission memory spendPermission = SpendPermissionManager.SpendPermission({
             account: address(underspendingWallet),
             spender: spender,
             token: NATIVE_TOKEN,
@@ -131,7 +131,7 @@ contract ReceiveTest is SpendPermissionManagerBase {
         assertEq(address(underspendingWallet).balance, allowance);
         assertEq(spender.balance, 0);
 
-        PeriodSpend memory usage = mockSpendPermissionManager.getCurrentPeriod(spendPermission);
+        SpendPermissionManager.PeriodSpend memory usage = mockSpendPermissionManager.getCurrentPeriod(spendPermission);
         assertEq(usage.spend, 0);
     }
 
@@ -155,7 +155,7 @@ contract ReceiveTest is SpendPermissionManagerBase {
         vm.assume(spend > 0);
         vm.assume(allowance > 0);
         vm.assume(allowance >= spend);
-        SpendPermission memory spendPermission = SpendPermission({
+        SpendPermissionManager.SpendPermission memory spendPermission = SpendPermissionManager.SpendPermission({
             account: address(account),
             spender: spender,
             token: NATIVE_TOKEN,
@@ -181,7 +181,7 @@ contract ReceiveTest is SpendPermissionManagerBase {
 
         assertEq(address(account).balance, allowance - spend);
         assertEq(spender.balance, spend);
-        PeriodSpend memory usage = mockSpendPermissionManager.getCurrentPeriod(spendPermission);
+        SpendPermissionManager.PeriodSpend memory usage = mockSpendPermissionManager.getCurrentPeriod(spendPermission);
         assertEq(usage.start, start);
         assertEq(usage.end, _safeAddUint48(start, period, end));
         assertEq(usage.spend, spend);

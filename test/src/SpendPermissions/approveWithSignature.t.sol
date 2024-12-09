@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.23;
 
-import {SpendPermission, SpendPermissionManager} from "../../../src/SpendPermissionManager.sol";
+import {SpendPermissionManager} from "../../../src/SpendPermissionManager.sol";
 
 import {SpendPermissionManagerBase} from "../../base/SpendPermissionManagerBase.sol";
 
@@ -30,7 +30,7 @@ contract ApproveWithSignatureTest is SpendPermissionManagerBase {
         vm.assume(token != address(0));
         vm.assume(invalidPk != 0);
 
-        SpendPermission memory spendPermission = SpendPermission({
+        SpendPermissionManager.SpendPermission memory spendPermission = SpendPermissionManager.SpendPermission({
             account: address(account),
             spender: spender,
             token: token,
@@ -62,7 +62,7 @@ contract ApproveWithSignatureTest is SpendPermissionManagerBase {
 
         vm.assume(start >= end);
 
-        SpendPermission memory spendPermission = SpendPermission({
+        SpendPermissionManager.SpendPermission memory spendPermission = SpendPermissionManager.SpendPermission({
             account: address(account),
             spender: spender,
             token: NATIVE_TOKEN,
@@ -90,7 +90,7 @@ contract ApproveWithSignatureTest is SpendPermissionManagerBase {
         vm.assume(spender != address(0));
         vm.assume(start < end);
 
-        SpendPermission memory spendPermission = SpendPermission({
+        SpendPermissionManager.SpendPermission memory spendPermission = SpendPermissionManager.SpendPermission({
             account: address(account),
             spender: spender,
             token: NATIVE_TOKEN,
@@ -119,7 +119,7 @@ contract ApproveWithSignatureTest is SpendPermissionManagerBase {
         vm.assume(start < end);
         vm.assume(period > 0);
 
-        SpendPermission memory spendPermission = SpendPermission({
+        SpendPermissionManager.SpendPermission memory spendPermission = SpendPermissionManager.SpendPermission({
             account: address(account),
             spender: spender,
             token: NATIVE_TOKEN,
@@ -153,7 +153,7 @@ contract ApproveWithSignatureTest is SpendPermissionManagerBase {
         vm.assume(period > 0);
         vm.assume(allowance > 0);
 
-        SpendPermission memory spendPermission = SpendPermission({
+        SpendPermissionManager.SpendPermission memory spendPermission = SpendPermissionManager.SpendPermission({
             account: address(account),
             spender: spender,
             token: token,
@@ -187,7 +187,7 @@ contract ApproveWithSignatureTest is SpendPermissionManagerBase {
         vm.assume(period > 0);
         vm.assume(allowance > 0);
 
-        SpendPermission memory spendPermission = SpendPermission({
+        SpendPermissionManager.SpendPermission memory spendPermission = SpendPermissionManager.SpendPermission({
             account: address(account),
             spender: spender,
             token: token,
@@ -222,7 +222,7 @@ contract ApproveWithSignatureTest is SpendPermissionManagerBase {
         vm.assume(period > 0);
         vm.assume(allowance > 0);
 
-        SpendPermission memory spendPermission = SpendPermission({
+        SpendPermissionManager.SpendPermission memory spendPermission = SpendPermissionManager.SpendPermission({
             account: address(account),
             spender: spender,
             token: token,
@@ -271,7 +271,7 @@ contract ApproveWithSignatureTest is SpendPermissionManagerBase {
         address counterfactualAccount = mockCoinbaseSmartWalletFactory.getAddress(owners, 0);
 
         // create a 6492-compliant signature for the spend permission
-        SpendPermission memory spendPermission = SpendPermission({
+        SpendPermissionManager.SpendPermission memory spendPermission = SpendPermissionManager.SpendPermission({
             account: counterfactualAccount,
             spender: spender,
             token: token,
@@ -311,7 +311,7 @@ contract ApproveWithSignatureTest is SpendPermissionManagerBase {
         vm.assume(period > 0);
         vm.assume(allowance > 0);
 
-        SpendPermission memory spendPermission = SpendPermission({
+        SpendPermissionManager.SpendPermission memory spendPermission = SpendPermissionManager.SpendPermission({
             account: address(account),
             spender: spender,
             token: token,

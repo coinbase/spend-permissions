@@ -6,7 +6,7 @@ import {CoinbaseSmartWallet} from "smart-wallet/CoinbaseSmartWallet.sol";
 import {CoinbaseSmartWalletFactory} from "smart-wallet/CoinbaseSmartWalletFactory.sol";
 
 import {PublicERC6492Validator} from "../../src/PublicERC6492Validator.sol";
-import {SpendPermission, SpendPermissionBatch, SpendPermissionManager} from "../../src/SpendPermissionManager.sol";
+import {SpendPermissionManager} from "../../src/SpendPermissionManager.sol";
 
 import {MockSpendPermissionManager} from "../mocks/MockSpendPermissionManager.sol";
 import {Base} from "./Base.sol";
@@ -33,8 +33,8 @@ contract SpendPermissionManagerBase is Base {
     /**
      * @dev Helper function to create a SpendPermission struct with happy path defaults
      */
-    function _createSpendPermission() internal view returns (SpendPermission memory) {
-        return SpendPermission({
+    function _createSpendPermission() internal view returns (SpendPermissionManager.SpendPermission memory) {
+        return SpendPermissionManager.SpendPermission({
             account: address(account),
             spender: spender,
             token: NATIVE_TOKEN,
@@ -47,11 +47,11 @@ contract SpendPermissionManagerBase is Base {
         });
     }
 
-    function _signSpendPermission(SpendPermission memory spendPermission, uint256 ownerPk, uint256 ownerIndex)
-        internal
-        view
-        returns (bytes memory)
-    {
+    function _signSpendPermission(
+        SpendPermissionManager.SpendPermission memory spendPermission,
+        uint256 ownerPk,
+        uint256 ownerIndex
+    ) internal view returns (bytes memory) {
         bytes32 spendPermissionHash = mockSpendPermissionManager.getHash(spendPermission);
         bytes32 replaySafeHash =
             CoinbaseSmartWallet(payable(spendPermission.account)).replaySafeHash(spendPermissionHash);
@@ -61,7 +61,7 @@ contract SpendPermissionManagerBase is Base {
     }
 
     function _signSpendPermissionBatch(
-        SpendPermissionBatch memory spendPermissionBatch,
+        SpendPermissionManager.SpendPermissionBatch memory spendPermissionBatch,
         uint256 ownerPk,
         uint256 ownerIndex
     ) internal view returns (bytes memory) {
@@ -74,7 +74,7 @@ contract SpendPermissionManagerBase is Base {
     }
 
     function _signSpendPermission6492(
-        SpendPermission memory spendPermission,
+        SpendPermissionManager.SpendPermission memory spendPermission,
         uint256 ownerPk,
         uint256 ownerIndex,
         bytes[] memory allInitialOwners
@@ -107,7 +107,7 @@ contract SpendPermissionManagerBase is Base {
     }
 
     function _signSpendPermissionBatch6492(
-        SpendPermissionBatch memory spendPermissionBatch,
+        SpendPermissionManager.SpendPermissionBatch memory spendPermissionBatch,
         uint256 ownerPk,
         uint256 ownerIndex,
         bytes[] memory allInitialOwners
@@ -139,7 +139,7 @@ contract SpendPermissionManagerBase is Base {
         return eip6492Signature;
     }
 
-    function _createWithdrawRequest(SpendPermission memory spendPermission, uint128 nonceEntropy)
+    function _createWithdrawRequest(SpendPermissionManager.SpendPermission memory spendPermission, uint128 nonceEntropy)
         internal
         view
         returns (MagicSpend.WithdrawRequest memory withdrawRequest)

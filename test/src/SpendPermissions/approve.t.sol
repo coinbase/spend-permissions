@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.23;
 
-import {SpendPermission, SpendPermissionManager} from "../../../src/SpendPermissionManager.sol";
+import {SpendPermissionManager} from "../../../src/SpendPermissionManager.sol";
 
 import {SpendPermissionManagerBase} from "../../base/SpendPermissionManagerBase.sol";
 
@@ -33,7 +33,7 @@ contract ApproveTest is SpendPermissionManagerBase {
     ) public {
         vm.assume(sender != address(0));
         vm.assume(sender != account);
-        SpendPermission memory spendPermission = SpendPermission({
+        SpendPermissionManager.SpendPermission memory spendPermission = SpendPermissionManager.SpendPermission({
             account: account,
             spender: spender,
             token: NATIVE_TOKEN,
@@ -66,7 +66,7 @@ contract ApproveTest is SpendPermissionManagerBase {
 
         vm.assume(start >= end);
 
-        SpendPermission memory spendPermission = SpendPermission({
+        SpendPermissionManager.SpendPermission memory spendPermission = SpendPermissionManager.SpendPermission({
             account: account,
             spender: spender,
             token: NATIVE_TOKEN,
@@ -96,7 +96,7 @@ contract ApproveTest is SpendPermissionManagerBase {
         vm.assume(spender != address(0));
         vm.assume(start < end);
 
-        SpendPermission memory spendPermission = SpendPermission({
+        SpendPermissionManager.SpendPermission memory spendPermission = SpendPermissionManager.SpendPermission({
             account: account,
             spender: spender,
             token: address(0),
@@ -128,7 +128,7 @@ contract ApproveTest is SpendPermissionManagerBase {
         vm.assume(start < end);
         vm.assume(allowance > 0);
 
-        SpendPermission memory spendPermission = SpendPermission({
+        SpendPermissionManager.SpendPermission memory spendPermission = SpendPermissionManager.SpendPermission({
             account: account,
             spender: address(0),
             token: token,
@@ -157,7 +157,7 @@ contract ApproveTest is SpendPermissionManagerBase {
         vm.assume(spender != address(0));
         vm.assume(start < end);
 
-        SpendPermission memory spendPermission = SpendPermission({
+        SpendPermissionManager.SpendPermission memory spendPermission = SpendPermissionManager.SpendPermission({
             account: account,
             spender: spender,
             token: NATIVE_TOKEN,
@@ -187,7 +187,7 @@ contract ApproveTest is SpendPermissionManagerBase {
         vm.assume(start < end);
         vm.assume(period > 0);
 
-        SpendPermission memory spendPermission = SpendPermission({
+        SpendPermissionManager.SpendPermission memory spendPermission = SpendPermissionManager.SpendPermission({
             account: account,
             spender: spender,
             token: NATIVE_TOKEN,
@@ -219,7 +219,7 @@ contract ApproveTest is SpendPermissionManagerBase {
         vm.assume(period > 0);
         vm.assume(allowance > 0);
 
-        SpendPermission memory spendPermission = SpendPermission({
+        SpendPermissionManager.SpendPermission memory spendPermission = SpendPermissionManager.SpendPermission({
             account: account,
             spender: spender,
             token: NATIVE_TOKEN,
@@ -250,7 +250,7 @@ contract ApproveTest is SpendPermissionManagerBase {
         vm.assume(period > 0);
         vm.assume(allowance > 0);
 
-        SpendPermission memory spendPermission = SpendPermission({
+        SpendPermissionManager.SpendPermission memory spendPermission = SpendPermissionManager.SpendPermission({
             account: account,
             spender: spender,
             token: NATIVE_TOKEN,
@@ -285,7 +285,7 @@ contract ApproveTest is SpendPermissionManagerBase {
         vm.assume(period > 0);
         vm.assume(allowance > 0);
 
-        SpendPermission memory spendPermission = SpendPermission({
+        SpendPermissionManager.SpendPermission memory spendPermission = SpendPermissionManager.SpendPermission({
             account: account,
             spender: spender,
             token: NATIVE_TOKEN,
@@ -317,7 +317,7 @@ contract ApproveTest is SpendPermissionManagerBase {
         vm.assume(period > 0);
         vm.assume(allowance > 0);
 
-        SpendPermission memory spendPermission = SpendPermission({
+        SpendPermissionManager.SpendPermission memory spendPermission = SpendPermissionManager.SpendPermission({
             account: account,
             spender: spender,
             token: NATIVE_TOKEN,
@@ -353,7 +353,7 @@ contract ApproveTest is SpendPermissionManagerBase {
         vm.assume(period > 0);
         vm.assume(allowance > 0);
 
-        SpendPermission memory spendPermission = SpendPermission({
+        SpendPermissionManager.SpendPermission memory spendPermission = SpendPermissionManager.SpendPermission({
             account: account,
             spender: spender,
             token: NATIVE_TOKEN,
@@ -393,7 +393,7 @@ contract ApproveTest is SpendPermissionManagerBase {
         bool supported = IERC165(address(mockERC721)).supportsInterface(ERC721_INTERFACE_ID);
         vm.assertTrue(supported);
 
-        SpendPermission memory spendPermission = SpendPermission({
+        SpendPermissionManager.SpendPermission memory spendPermission = SpendPermissionManager.SpendPermission({
             account: account,
             spender: spender,
             token: address(mockERC721),
