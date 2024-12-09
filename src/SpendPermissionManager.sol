@@ -88,12 +88,6 @@ contract SpendPermissionManager is EIP712 {
         uint160 spend;
     }
 
-    /// @notice Separated contract for validating signatures and executing ERC-6492 side effects.
-    PublicERC6492Validator public immutable PUBLIC_ERC6492_VALIDATOR;
-
-    /// @notice MagicSpend singleton (https://github.com/coinbase/magic-spend).
-    address public immutable MAGIC_SPEND;
-
     /// @notice EIP-712 hash of SpendPermission type.
     bytes32 public constant SPEND_PERMISSION_TYPEHASH = keccak256(
         "SpendPermission(address account,address spender,address token,uint160 allowance,uint48 period,uint48 start,uint48 end,uint256 salt,bytes extraData)"
@@ -113,6 +107,12 @@ contract SpendPermissionManager is EIP712 {
 
     /// @notice ERC-721 interface ID (https://eips.ethereum.org/EIPS/eip-721).
     bytes4 public constant IERC721_INTERFACE_ID = type(IERC721).interfaceId;
+
+    /// @notice Separated contract for validating signatures and executing ERC-6492 side effects.
+    PublicERC6492Validator public immutable PUBLIC_ERC6492_VALIDATOR;
+
+    /// @notice MagicSpend singleton (https://github.com/coinbase/magic-spend).
+    address public immutable MAGIC_SPEND;
 
     /// @notice Spend permission is approved.
     mapping(bytes32 hash => bool approved) internal _isApproved;
