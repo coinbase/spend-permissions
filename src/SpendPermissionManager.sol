@@ -126,10 +126,10 @@ contract SpendPermissionManager is EIP712 {
     /// @param sender Expected sender to be valid.
     error InvalidSender(address sender, address expected);
 
-    /// @notice Attempting to approve with null account, but account is non-null.
+    /// @notice Attempting to approve with sender as account, but account argument is non-zero.
     ///
-    /// @param account Expected account to be zero addresss.
-    error NonNullAccount(address account);
+    /// @param account Invalid account expected to be zero addresss.
+    error NonZeroAccount(address account);
 
     /// @notice Token is an ERC-721, which is not supported to prevent NFT transfers
     /// @param token Address of the ERC-721 token contract
@@ -285,15 +285,16 @@ contract SpendPermissionManager is EIP712 {
         return _approve(spendPermission);
     }
 
-    /// @notice Approve a spend permission with null account field to be set at sender.
+    /// @notice Approve a spend permission with null account field to be set as call sender.
     ///
-    /// @dev Allows apps to request approvals via transaction without knowing account address.
+    /// @dev Convenience for apps to request approvals via transaction without knowing a user's account address.
+    /// @dev Replacing the spend permission's account as call sender will change its computed hash.
     ///
     /// @param spendPermission Details of the spend permission.
     ///
     /// @return approved True if spend permission is approved and not revoked.
-    function approveWithNullAccount(SpendPermission memory spendPermission) external returns (bool) {
-        if (spendPermission.account != address(0)) revert NonNullAccount(spendPermission.account);
+    function approveWithSenderAsAccount(SpendPermission memory spendPermission) external returns (bool) {
+        if (spendPermission.account != address(0)) revert NonZeroAccount(spendPermission.account);
         spendPermission.account = msg.sender;
         return _approve(spendPermission);
     }

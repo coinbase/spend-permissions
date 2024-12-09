@@ -20,7 +20,7 @@ contract ApproveWithNullAccountTest is SpendPermissionManagerBase {
         mockERC721 = new MockERC721();
     }
 
-    function test_approveWithNullAccount_revert_nonNullAccount(
+    function test_approveWithSenderAsAccount_revert_nonZeroAccount(
         address sender,
         address account,
         address spender,
@@ -48,12 +48,12 @@ contract ApproveWithNullAccountTest is SpendPermissionManagerBase {
         });
 
         vm.startPrank(sender);
-        vm.expectRevert(abi.encodeWithSelector(SpendPermissionManager.NonNullAccount.selector, account));
-        mockSpendPermissionManager.approveWithNullAccount(spendPermission);
+        vm.expectRevert(abi.encodeWithSelector(SpendPermissionManager.NonZeroAccount.selector, account));
+        mockSpendPermissionManager.approveWithSenderAsAccount(spendPermission);
         vm.stopPrank();
     }
 
-    function test_approveWithNullAccount_revert_invalidStartEnd(
+    function test_approveWithSenderAsAccount_revert_invalidStartEnd(
         address account,
         address spender,
         uint48 start,
@@ -83,11 +83,11 @@ contract ApproveWithNullAccountTest is SpendPermissionManagerBase {
 
         vm.startPrank(account);
         vm.expectRevert(abi.encodeWithSelector(SpendPermissionManager.InvalidStartEnd.selector, start, end));
-        mockSpendPermissionManager.approveWithNullAccount(spendPermission);
+        mockSpendPermissionManager.approveWithSenderAsAccount(spendPermission);
         vm.stopPrank();
     }
 
-    function test_approveWithNullAccount_revert_invalidTokenZeroAddress(
+    function test_approveWithSenderAsAccount_revert_invalidTokenZeroAddress(
         address account,
         address spender,
         uint48 start,
@@ -115,11 +115,11 @@ contract ApproveWithNullAccountTest is SpendPermissionManagerBase {
 
         vm.startPrank(account);
         vm.expectRevert(abi.encodeWithSelector(SpendPermissionManager.ZeroToken.selector));
-        mockSpendPermissionManager.approveWithNullAccount(spendPermission);
+        mockSpendPermissionManager.approveWithSenderAsAccount(spendPermission);
         vm.stopPrank();
     }
 
-    function test_approveWithNullAccount_revert_invalidSpenderZeroAddress(
+    function test_approveWithSenderAsAccount_revert_invalidSpenderZeroAddress(
         address account,
         address token,
         uint48 start,
@@ -149,11 +149,11 @@ contract ApproveWithNullAccountTest is SpendPermissionManagerBase {
 
         vm.startPrank(account);
         vm.expectRevert(abi.encodeWithSelector(SpendPermissionManager.ZeroSpender.selector));
-        mockSpendPermissionManager.approveWithNullAccount(spendPermission);
+        mockSpendPermissionManager.approveWithSenderAsAccount(spendPermission);
         vm.stopPrank();
     }
 
-    function test_approveWithNullAccount_revert_zeroPeriod(
+    function test_approveWithSenderAsAccount_revert_zeroPeriod(
         address account,
         address spender,
         uint48 start,
@@ -180,11 +180,11 @@ contract ApproveWithNullAccountTest is SpendPermissionManagerBase {
 
         vm.startPrank(account);
         vm.expectRevert(abi.encodeWithSelector(SpendPermissionManager.ZeroPeriod.selector));
-        mockSpendPermissionManager.approveWithNullAccount(spendPermission);
+        mockSpendPermissionManager.approveWithSenderAsAccount(spendPermission);
         vm.stopPrank();
     }
 
-    function test_approveWithNullAccount_revert_zeroAllowance(
+    function test_approveWithSenderAsAccount_revert_zeroAllowance(
         address account,
         address spender,
         uint48 start,
@@ -212,11 +212,11 @@ contract ApproveWithNullAccountTest is SpendPermissionManagerBase {
 
         vm.startPrank(account);
         vm.expectRevert(abi.encodeWithSelector(SpendPermissionManager.ZeroAllowance.selector));
-        mockSpendPermissionManager.approveWithNullAccount(spendPermission);
+        mockSpendPermissionManager.approveWithSenderAsAccount(spendPermission);
         vm.stopPrank();
     }
 
-    function test_approveWithNullAccount_success_isAuthorized(
+    function test_approveWithSenderAsAccount_success_isAuthorized(
         address account,
         address spender,
         uint48 start,
@@ -246,12 +246,12 @@ contract ApproveWithNullAccountTest is SpendPermissionManagerBase {
         spendPermission.account = address(0);
 
         vm.prank(account);
-        mockSpendPermissionManager.approveWithNullAccount(spendPermission);
+        mockSpendPermissionManager.approveWithSenderAsAccount(spendPermission);
         spendPermission.account = account;
         vm.assertTrue(mockSpendPermissionManager.isValid(spendPermission));
     }
 
-    function test_approveWithNullAccount_success_emitsEvent(
+    function test_approveWithSenderAsAccount_success_emitsEvent(
         address account,
         address spender,
         uint48 start,
@@ -286,10 +286,10 @@ contract ApproveWithNullAccountTest is SpendPermissionManagerBase {
             spendPermission: spendPermission
         });
         spendPermission.account = address(0);
-        mockSpendPermissionManager.approveWithNullAccount(spendPermission);
+        mockSpendPermissionManager.approveWithSenderAsAccount(spendPermission);
     }
 
-    function test_approveWithNullAccount_success_returnsTrue(
+    function test_approveWithSenderAsAccount_success_returnsTrue(
         address account,
         address spender,
         uint48 start,
@@ -319,14 +319,14 @@ contract ApproveWithNullAccountTest is SpendPermissionManagerBase {
         spendPermission.account = address(0);
 
         vm.prank(account);
-        bool approved = mockSpendPermissionManager.approveWithNullAccount(spendPermission);
+        bool approved = mockSpendPermissionManager.approveWithSenderAsAccount(spendPermission);
         vm.assertTrue(approved);
 
         spendPermission.account = account;
         vm.assertTrue(mockSpendPermissionManager.isValid(spendPermission));
     }
 
-    function test_approveWithNullAccount_success_returnsTrueNoEventEmittedIfAlreadyApproved(
+    function test_approveWithSenderAsAccount_success_returnsTrueNoEventEmittedIfAlreadyApproved(
         address account,
         address spender,
         uint48 start,
@@ -356,9 +356,10 @@ contract ApproveWithNullAccountTest is SpendPermissionManagerBase {
         spendPermission.account = address(0);
 
         vm.startPrank(account);
-        mockSpendPermissionManager.approveWithNullAccount(spendPermission); // approve permission before second approval
+        mockSpendPermissionManager.approveWithSenderAsAccount(spendPermission); // approve permission before second
+            // approval
         vm.recordLogs();
-        bool approved = mockSpendPermissionManager.approveWithNullAccount(spendPermission);
+        bool approved = mockSpendPermissionManager.approveWithSenderAsAccount(spendPermission);
         Vm.Log[] memory logs = vm.getRecordedLogs();
         vm.assertEq(logs.length, 0); // no event emitted
         vm.assertTrue(approved);
@@ -367,7 +368,7 @@ contract ApproveWithNullAccountTest is SpendPermissionManagerBase {
         vm.assertTrue(mockSpendPermissionManager.isValid(spendPermission));
     }
 
-    function test_approveWithNullAccount_success_returnsFalseIfPermissionRevoked(
+    function test_approveWithSenderAsAccount_success_returnsFalseIfPermissionRevoked(
         address account,
         address spender,
         uint48 start,
@@ -399,7 +400,7 @@ contract ApproveWithNullAccountTest is SpendPermissionManagerBase {
 
         spendPermission.account = address(0);
         vm.recordLogs();
-        bool approved = mockSpendPermissionManager.approveWithNullAccount(spendPermission);
+        bool approved = mockSpendPermissionManager.approveWithSenderAsAccount(spendPermission);
         Vm.Log[] memory logs = vm.getRecordedLogs();
         vm.assertEq(logs.length, 0); // no event emitted
         vm.assertFalse(approved); // returns false
@@ -408,7 +409,7 @@ contract ApproveWithNullAccountTest is SpendPermissionManagerBase {
         vm.assertFalse(mockSpendPermissionManager.isValid(spendPermission)); // permission is not approved
     }
 
-    function test_approveWithNullAccount_revert_erc721Token(
+    function test_approveWithSenderAsAccount_revert_erc721Token(
         address account,
         address spender,
         uint48 start,
@@ -444,7 +445,7 @@ contract ApproveWithNullAccountTest is SpendPermissionManagerBase {
         vm.expectRevert(
             abi.encodeWithSelector(SpendPermissionManager.ERC721TokenNotSupported.selector, address(mockERC721))
         );
-        mockSpendPermissionManager.approveWithNullAccount(spendPermission);
+        mockSpendPermissionManager.approveWithSenderAsAccount(spendPermission);
         vm.stopPrank();
     }
 }
