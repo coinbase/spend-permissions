@@ -84,15 +84,15 @@ contract IsValidSignatureNowAllowSideEffectsTest is SpendPermissionManagerBase {
     }
 
     function test_isValidSignatureNowAllowSideEffects_revert_invalidERC6492Signature(uint256 invalidPk) public {
-        vm.assume(invalidPk != ownerPk);
+        // Create a new owner for the counterfactual wallet
+        uint256 newOwnerPk = uint256(keccak256("different owner"));
+        address newOwner = vm.addr(newOwnerPk);
+
+        vm.assume(invalidPk != newOwnerPk);
         // Ensure private key is valid for secp256k1
         vm.assume(
             invalidPk > 0 && invalidPk < 115792089237316195423570985008687907852837564279074904382605163141518161494337
         );
-
-        // Create a new owner for the counterfactual wallet
-        uint256 newOwnerPk = uint256(keccak256("different owner"));
-        address newOwner = vm.addr(newOwnerPk);
 
         // Setup counterfactual wallet data with new owner
         bytes[] memory owners = new bytes[](1);

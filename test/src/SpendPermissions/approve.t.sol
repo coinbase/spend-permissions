@@ -391,6 +391,7 @@ contract ApproveTest is SpendPermissionManagerBase {
 
         // First verify our mock ERC721 actually supports the interface
         bool supported = IERC165(address(mockERC721)).supportsInterface(ERC721_INTERFACE_ID);
+        vm.assertTrue(supported);
 
         SpendPermissionManager.SpendPermission memory spendPermission = SpendPermissionManager.SpendPermission({
             account: account,

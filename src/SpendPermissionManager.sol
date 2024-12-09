@@ -105,9 +105,6 @@ contract SpendPermissionManager is EIP712 {
     /// @notice ERC-7528 native token address convention (https://eips.ethereum.org/EIPS/eip-7528).
     address public constant NATIVE_TOKEN = 0xEeeeeEeeeEeEeeEeEeEeeEEEeeeeEeeeeeeeEEeE;
 
-    /// @notice ERC-721 interface ID (https://eips.ethereum.org/EIPS/eip-721).
-    bytes4 public constant IERC721_INTERFACE_ID = type(IERC721).interfaceId;
-
     /// @notice Separated contract for validating signatures and executing ERC-6492 side effects.
     PublicERC6492Validator public immutable PUBLIC_ERC6492_VALIDATOR;
 
@@ -636,7 +633,7 @@ contract SpendPermissionManager is EIP712 {
 
         // check token is not an ERC-721
         if (spendPermission.token != NATIVE_TOKEN) {
-            if (ERC165Checker.supportsInterface(spendPermission.token, IERC721_INTERFACE_ID)) {
+            if (ERC165Checker.supportsInterface(spendPermission.token, type(IERC721).interfaceId)) {
                 revert ERC721TokenNotSupported(spendPermission.token);
             }
         }
@@ -741,19 +738,18 @@ contract SpendPermissionManager is EIP712 {
 
             // forward native token to recipient, which will revert if funds are not actually available
             SafeTransferLib.safeTransferETH(payable(recipient), value);
-            return;
+        } else {
+            // set allowance for this contract to spend exact value on behalf of account
+            _execute({
+                account: account,
+                target: token,
+                value: 0,
+                data: abi.encodeWithSelector(IERC20.approve.selector, address(this), value)
+            });
+
+            // use allowance to transfer from account to recipient, which will revert if transfer fails
+            IERC20(token).safeTransferFrom(account, recipient, value);
         }
-
-        // set allowance for this contract to spend exact value on behalf of account
-        _execute({
-            account: account,
-            target: token,
-            value: 0,
-            data: abi.encodeWithSelector(IERC20.approve.selector, address(this), value)
-        });
-
-        // use allowance to transfer from account to recipient, which will revert if transfer fails
-        IERC20(token).safeTransferFrom(account, recipient, value);
     }
 
     /// @notice Execute a single call on an account.
