@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.23;
 
-import {SpendPermission, SpendPermissionManager} from "../../../src/SpendPermissionManager.sol";
+import {SpendPermissionManager} from "../../../src/SpendPermissionManager.sol";
 
 import {SpendPermissionManagerBase} from "../../base/SpendPermissionManagerBase.sol";
 import {MockSpendPermissionManager} from "../../mocks/MockSpendPermissionManager.sol";
@@ -22,7 +22,7 @@ contract GetHashTest is SpendPermissionManagerBase {
         uint256 salt,
         bytes memory extraData
     ) public view {
-        SpendPermission memory spendPermission = SpendPermission({
+        SpendPermissionManager.SpendPermission memory spendPermission = SpendPermissionManager.SpendPermission({
             account: account,
             spender: spender,
             token: token,
@@ -52,7 +52,7 @@ contract GetHashTest is SpendPermissionManagerBase {
         vm.assume(chainId1 != chainId2);
         vm.assume(chainId1 > 0);
         vm.assume(chainId2 > 0);
-        SpendPermission memory spendPermission = SpendPermission({
+        SpendPermissionManager.SpendPermission memory spendPermission = SpendPermissionManager.SpendPermission({
             account: account,
             spender: spender,
             token: token,
@@ -81,7 +81,7 @@ contract GetHashTest is SpendPermissionManagerBase {
         uint256 salt,
         bytes memory extraData
     ) public {
-        SpendPermission memory spendPermission = SpendPermission({
+        SpendPermissionManager.SpendPermission memory spendPermission = SpendPermissionManager.SpendPermission({
             account: account,
             spender: spender,
             token: token,
