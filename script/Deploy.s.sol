@@ -5,7 +5,7 @@ import {Script, console2} from "forge-std/Script.sol";
 import {Strings} from "openzeppelin-contracts/contracts/utils/Strings.sol";
 
 import {PublicERC6492Validator} from "../src/PublicERC6492Validator.sol";
-import {SpendPermission, SpendPermissionManager} from "../src/SpendPermissionManager.sol";
+import {SpendPermissionManager} from "../src/SpendPermissionManager.sol";
 
 /**
  * @notice Deploy the SpendPermissionManager contract and its dependencies.

@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.23;
 
-import {PeriodSpend, SpendPermission, SpendPermissionManager} from "../../../src/SpendPermissionManager.sol";
+import {SpendPermissionManager} from "../../../src/SpendPermissionManager.sol";
 
 import {SpendPermissionManagerBase} from "../../base/SpendPermissionManagerBase.sol";
 
@@ -30,7 +30,7 @@ contract GetLastUpdatedPeriod is SpendPermissionManagerBase {
         vm.assume(period > 0);
         vm.assume(allowance > 0);
 
-        SpendPermission memory spendPermission = SpendPermission({
+        SpendPermissionManager.SpendPermission memory spendPermission = SpendPermissionManager.SpendPermission({
             account: address(account),
             spender: spender,
             token: NATIVE_TOKEN,
@@ -44,7 +44,8 @@ contract GetLastUpdatedPeriod is SpendPermissionManagerBase {
         vm.prank(address(account));
         mockSpendPermissionManager.approve(spendPermission);
 
-        PeriodSpend memory lastUpdatedPeriod = mockSpendPermissionManager.getLastUpdatedPeriod(spendPermission);
+        SpendPermissionManager.PeriodSpend memory lastUpdatedPeriod =
+            mockSpendPermissionManager.getLastUpdatedPeriod(spendPermission);
         vm.assertEq(lastUpdatedPeriod.start, 0);
         vm.assertEq(lastUpdatedPeriod.end, 0);
         vm.assertEq(lastUpdatedPeriod.spend, 0);
@@ -71,7 +72,7 @@ contract GetLastUpdatedPeriod is SpendPermissionManagerBase {
         vm.assume(allowance > 0);
         vm.assume(allowance >= spend);
 
-        SpendPermission memory spendPermission = SpendPermission({
+        SpendPermissionManager.SpendPermission memory spendPermission = SpendPermissionManager.SpendPermission({
             account: address(account),
             spender: spender,
             token: NATIVE_TOKEN,
@@ -89,7 +90,8 @@ contract GetLastUpdatedPeriod is SpendPermissionManagerBase {
         vm.prank(spender);
         mockSpendPermissionManager.spend(spendPermission, spend);
 
-        PeriodSpend memory lastUpdatedPeriod = mockSpendPermissionManager.getLastUpdatedPeriod(spendPermission);
+        SpendPermissionManager.PeriodSpend memory lastUpdatedPeriod =
+            mockSpendPermissionManager.getLastUpdatedPeriod(spendPermission);
         vm.assertEq(lastUpdatedPeriod.start, start);
         vm.assertEq(lastUpdatedPeriod.end, _safeAddUint48(start, period, end));
         vm.assertEq(lastUpdatedPeriod.spend, spend);
@@ -116,7 +118,7 @@ contract GetLastUpdatedPeriod is SpendPermissionManagerBase {
         vm.assume(allowance > 0);
         vm.assume(allowance >= spend);
 
-        SpendPermission memory spendPermission = SpendPermission({
+        SpendPermissionManager.SpendPermission memory spendPermission = SpendPermissionManager.SpendPermission({
             account: address(account),
             spender: spender,
             token: NATIVE_TOKEN,
@@ -135,7 +137,8 @@ contract GetLastUpdatedPeriod is SpendPermissionManagerBase {
         mockSpendPermissionManager.spend(spendPermission, spend);
 
         vm.warp(uint256(start) + uint256(period) * 4); // 4 periods have passed, regardless of end
-        PeriodSpend memory lastUpdatedPeriod = mockSpendPermissionManager.getLastUpdatedPeriod(spendPermission);
+        SpendPermissionManager.PeriodSpend memory lastUpdatedPeriod =
+            mockSpendPermissionManager.getLastUpdatedPeriod(spendPermission);
         vm.assertEq(lastUpdatedPeriod.start, start);
         vm.assertEq(lastUpdatedPeriod.end, _safeAddUint48(start, period, end));
         vm.assertEq(lastUpdatedPeriod.spend, spend);
@@ -163,7 +166,7 @@ contract GetLastUpdatedPeriod is SpendPermissionManagerBase {
         vm.assume(allowance > 0);
         vm.assume(allowance >= spend * 3); // allow for up to 3 spends
 
-        SpendPermission memory spendPermission = SpendPermission({
+        SpendPermissionManager.SpendPermission memory spendPermission = SpendPermissionManager.SpendPermission({
             account: address(account),
             spender: spender,
             token: NATIVE_TOKEN,
@@ -184,7 +187,8 @@ contract GetLastUpdatedPeriod is SpendPermissionManagerBase {
         mockSpendPermissionManager.spend(spendPermission, spend);
         vm.stopPrank();
 
-        PeriodSpend memory lastUpdatedPeriod = mockSpendPermissionManager.getLastUpdatedPeriod(spendPermission);
+        SpendPermissionManager.PeriodSpend memory lastUpdatedPeriod =
+            mockSpendPermissionManager.getLastUpdatedPeriod(spendPermission);
         vm.assertEq(lastUpdatedPeriod.start, start);
         vm.assertEq(lastUpdatedPeriod.end, _safeAddUint48(start, period, end));
         vm.assertEq(lastUpdatedPeriod.spend, spend * 3);
