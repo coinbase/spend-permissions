@@ -36,6 +36,9 @@ contract ReceiveTest is SpendPermissionManagerBase {
         vm.startPrank(owner);
         vm.expectRevert(abi.encodeWithSelector(SpendPermissionManager.UnexpectedReceiveAmount.selector, amount, 0));
         (bool success,) = address(mockSpendPermissionManager).call{value: amount}("");
+        assertTrue(success);
+        assertEq(owner.balance, amount);
+        assertEq(address(mockSpendPermissionManager).balance, 0);
         vm.stopPrank();
     }
 
@@ -48,9 +51,15 @@ contract ReceiveTest is SpendPermissionManagerBase {
         vm.startPrank(owner);
         vm.expectRevert(abi.encodeWithSelector(SpendPermissionManager.UnexpectedReceiveAmount.selector, amount, 0));
         (bool success,) = address(mockSpendPermissionManager).call{value: amount}("");
+        assertTrue(success);
+        assertEq(owner.balance, amount);
+        assertEq(address(mockSpendPermissionManager).balance, 0);
 
         vm.expectRevert(abi.encodeWithSelector(SpendPermissionManager.UnexpectedReceiveAmount.selector, amount, 0));
         (bool success2,) = address(mockSpendPermissionManager).call{value: amount}("");
+        assertTrue(success2);
+        assertEq(owner.balance, amount);
+        assertEq(address(mockSpendPermissionManager).balance, 0);
         vm.stopPrank();
     }
 

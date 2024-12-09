@@ -299,7 +299,7 @@ contract SpendWithWithdrawTest is SpendPermissionManagerBase {
 
         // Create withdraw request with incorrect hash portion
         uint256 incorrectHashPortion = correctHashPortion + 1; // Make it different
-        uint256 incorrectNonce = (params.entropy << NONCE_HASH_BITS) | uint128(incorrectHashPortion);
+        uint256 incorrectNonce = (uint256(params.entropy) << NONCE_HASH_BITS) | uint128(incorrectHashPortion);
 
         MagicSpend.WithdrawRequest memory withdrawRequest = MagicSpend.WithdrawRequest({
             asset: address(0),

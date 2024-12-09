@@ -51,7 +51,7 @@ contract IsApprovedTest is SpendPermissionManagerBase {
         uint160 allowance,
         uint256 salt,
         bytes memory extraData
-    ) public {
+    ) public view {
         vm.assume(spender != address(0));
         vm.assume(start < end);
         vm.assume(period > 0);

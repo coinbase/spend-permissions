@@ -149,7 +149,7 @@ contract SpendPermissionManagerBase is Base {
         uint128 hashPortion = uint128(uint256(permissionHash));
 
         // Combine hash portion and entropy portion
-        uint256 nonce = (nonceEntropy << NONCE_HASH_BITS) | hashPortion;
+        uint256 nonce = (uint256(nonceEntropy) << NONCE_HASH_BITS) | hashPortion;
 
         return MagicSpend.WithdrawRequest({
             asset: address(0),
