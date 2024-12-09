@@ -225,8 +225,8 @@ contract SpendPermissionManager is EIP712 {
 
     /// @notice `SpendPermission.token` and `WithdrawRequest.asset` are not equal.
     ///
-    /// @param spendToken Token belonging to the `SpendPermission`.
-    /// @param withdrawAsset Asset belonging to the `WithdrawRequest`.
+    /// @param spendToken Token belonging to the spend permission.
+    /// @param withdrawAsset Asset belonging to the withdraw request.
     error SpendTokenWithdrawAssetMismatch(address spendToken, address withdrawAsset);
 
     /// @notice Attempted spend value is less than the `WithdrawRequest.amount`.
@@ -237,7 +237,7 @@ contract SpendPermissionManager is EIP712 {
 
     /// @notice `WithdrawRequest.nonce` is not postfixed with the lower 128 bits of the spend permission hash.
     ///
-    /// @param noncePostfix The lower 128 bits of the `WithdrawRequests.nonce`.
+    /// @param noncePostfix The lower 128 bits of the withdraw request nonce.
     /// @param permissionHashPostfix The lower 128 bits of the spend permission hash.
     error InvalidWithdrawRequestNonce(uint128 noncePostfix, uint128 permissionHashPostfix);
 
@@ -455,7 +455,7 @@ contract SpendPermissionManager is EIP712 {
             revert SpendValueWithdrawAmountMismatch(value, withdrawRequest.amount);
         }
 
-        // check WithdrawRequest nonce suffix matches spend permission hash suffix.
+        // check withdraw request nonce postfix matches spend permission hash postfix.
         bytes32 permissionHash = getHash(spendPermission);
         if (uint128(withdrawRequest.nonce) != uint128(uint256(permissionHash))) {
             revert InvalidWithdrawRequestNonce(uint128(withdrawRequest.nonce), uint128(uint256(permissionHash)));
