@@ -6,11 +6,28 @@
 
 ## Deployments
 
-### Base Sepolia
+The following contracts are deployed on the following chains:
 
-`SpendPermissionManager`: `0xD5Ca2d1818a835B10f78b45Bc1cD5Db305c10fA8`
+`SpendPermissionManager`: 0xf85210B21cC50302F477BA56686d2019dC9b67Ad
 
-`PublicERC6492Validator`: `0xbaf2ebbE72Fa36C9C68447bDC2FF20E047c10b99`
+`PublicERC6492Validator`: 0xcfCE48B757601F3f351CB6f434CB0517aEEE293D
+
+Testnets:
+
+- Base Sepolia
+- Optimism Sepolia
+- Ethereum Sepolia
+
+Mainnets:
+
+- Base
+- Ethereum
+- Optimism
+- Arbitrum
+- Polygon
+- Zora
+- Binance Smart Chain
+- Avalanche
 
 ## Design Overview
 
