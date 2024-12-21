@@ -1,16 +1,14 @@
 # Spend Permissions
 
-> :information_source: These contracts are unaudited. Please use at your own risk.
-
 **Spend Permissions enable apps to spend native and ERC-20 tokens on behalf of users.**
 
 ## Deployments
 
 The following contracts are deployed on the following chains:
 
-`SpendPermissionManager`: 0xf85210B21cC50302F477BA56686d2019dC9b67Ad
+`SpendPermissionManager`: `0xf85210B21cC50302F477BA56686d2019dC9b67Ad`
 
-`PublicERC6492Validator`: 0xcfCE48B757601F3f351CB6f434CB0517aEEE293D
+`PublicERC6492Validator`: `0xcfCE48B757601F3f351CB6f434CB0517aEEE293D`
 
 Testnets:
 
