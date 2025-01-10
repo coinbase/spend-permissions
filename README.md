@@ -135,3 +135,13 @@ sequenceDiagram
         Note over A,PM: SpendPermission data
     end
 ```
+
+## Security
+
+Audited by [Spearbit](https://spearbit.com/).
+
+| Audit | Date | Report |
+|--------|---------|---------|
+| First private audit | 10/29/2024 | [Report](audits/Cantina-October-2024.pdf) |
+| Public competition || [Report](audits/Cantina-November-2024.pdf) |
+| Private audit | 12/10/2024 | [Report](audits/Cantina-December-2024.pdf) |
