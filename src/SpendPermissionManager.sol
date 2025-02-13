@@ -727,7 +727,7 @@ contract SpendPermissionManager is EIP712 {
     /// @param account Address to transfer from.
     /// @param recipient Address to transfer to.
     /// @param value Amount to transfer.
-    function _transferFrom(address token, address account, address recipient, uint256 value) internal {
+    function _transferFrom(address token, address account, address recipient, uint256 value) internal virtual {
         if (token == NATIVE_TOKEN) {
             // set flag to allow contract to receive expected amount of native token
             _expectedReceiveAmount = value;
