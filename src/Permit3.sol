@@ -4,8 +4,6 @@ pragma solidity ^0.8.28;
 import {MagicSpend} from "magic-spend/MagicSpend.sol";
 import {IERC1271} from "openzeppelin-contracts/contracts/interfaces/IERC1271.sol";
 import {IERC165} from "openzeppelin-contracts/contracts/interfaces/IERC165.sol";
-import {IERC20} from "openzeppelin-contracts/contracts/token/ERC20/IERC20.sol";
-import {SafeERC20} from "openzeppelin-contracts/contracts/token/ERC20/utils/SafeERC20.sol";
 import {IERC721} from "openzeppelin-contracts/contracts/token/ERC721/IERC721.sol";
 import {Address} from "openzeppelin-contracts/contracts/utils/Address.sol";
 import {ERC165Checker} from "openzeppelin-contracts/contracts/utils/introspection/ERC165Checker.sol";
@@ -14,7 +12,7 @@ import {EIP712} from "solady/utils/EIP712.sol";
 import {SafeTransferLib} from "solady/utils/SafeTransferLib.sol";
 import {SignatureCheckerLib} from "solady/utils/SignatureCheckerLib.sol";
 
-import {HooksForwarder} from "./HooksForwarder.sol";
+import {ERC20Mode, HooksForwarder} from "./HooksForwarder.sol";
 import {PublicERC6492Validator} from "./PublicERC6492Validator.sol";
 import {SpendPermission, SpendPermissionBatch} from "./SpendPermission.sol";
 
@@ -27,8 +25,6 @@ import {SpendPermission, SpendPermissionBatch} from "./SpendPermission.sol";
 ///
 /// @author Coinbase (https://github.com/coinbase/spend-permissions)
 contract Permit3 is EIP712 {
-    using SafeERC20 for IERC20;
-
     /// @notice Period parameters and spend usage.
     struct PeriodSpend {
         /// @dev Timstamp this period starts at (inclusive, unix seconds).
@@ -165,24 +161,6 @@ contract Permit3 is EIP712 {
     /// @param value Spend value that exceeded allowance.
     /// @param allowance Allowance value that was exceeded.
     error ExceededSpendPermission(uint256 value, uint256 allowance);
-
-    // /// @notice `SpendPermission.token` and `WithdrawRequest.asset` are not equal.
-    // ///
-    // /// @param spendToken Token belonging to the spend permission.
-    // /// @param withdrawAsset Asset belonging to the withdraw request.
-    // error SpendTokenWithdrawAssetMismatch(address spendToken, address withdrawAsset);
-
-    // /// @notice Attempted spend value is less than the `WithdrawRequest.amount`.
-    // ///
-    // /// @param spendValue Value attempting to spend, must not be less than withdraw amount.
-    // /// @param withdrawAmount Amount of asset attempting to withdraw from MagicSpend.
-    // error SpendValueWithdrawAmountMismatch(uint256 spendValue, uint256 withdrawAmount);
-
-    // /// @notice `WithdrawRequest.nonce` is not postfixed with the lower 128 bits of the spend permission hash.
-    // ///
-    // /// @param noncePostfix The lower 128 bits of the withdraw request nonce.
-    // /// @param permissionHashPostfix The lower 128 bits of the spend permission hash.
-    // error InvalidWithdrawRequestNonce(uint128 noncePostfix, uint128 permissionHashPostfix);
 
     /// @notice Contract received an unexpected amount of native token.
     error UnexpectedReceiveAmount(uint256 received, uint256 expected);
@@ -359,18 +337,25 @@ contract Permit3 is EIP712 {
         external
         requireSender(spendPermission.spender)
     {
+        // default ERC20 mode uses ERC20.transferFrom for default compatibility without hooks
+        ERC20Mode erc20Mode = ERC20Mode.TRANSFER_FROM;
         if (hooks != address(0)) {
-            HOOKS_FORWARDER.preSpend(spendPermission, value, hooks, hookData);
+            erc20Mode = HOOKS_FORWARDER.preSpend(spendPermission, value, hooks, hookData);
         }
 
         _useSpendPermission(spendPermission, value);
 
         if (spendPermission.token == NATIVE_TOKEN) {
-            // forward native token to recipient, which will revert if funds are not actually available
+            // transfer native token to spender using balance, which will revert if funds are not actually available
             SafeTransferLib.safeTransferETH(payable(spendPermission.spender), value);
+        } else if (erc20Mode == ERC20Mode.TRANSFER) {
+            // transfer erc20 tokens to spender using balance, which will revert if funds are not actually available
+            SafeTransferLib.safeTransfer(spendPermission.token, spendPermission.spender, value);
         } else {
-            // use allowance to transfer from account to recipient, which will revert if transfer fails
-            IERC20(spendPermission.token).safeTransferFrom(spendPermission.account, spendPermission.spender, value);
+            // transfer erc20 tokens to spender using allowance, which will revert if transfer fails
+            SafeTransferLib.safeTransferFrom(
+                spendPermission.token, spendPermission.account, spendPermission.spender, value
+            );
         }
 
         if (hooks != address(0)) {

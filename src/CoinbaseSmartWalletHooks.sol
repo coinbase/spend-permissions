@@ -5,7 +5,7 @@ import {MagicSpend} from "magic-spend/MagicSpend.sol";
 import {IERC20} from "openzeppelin-contracts/contracts/token/ERC20/IERC20.sol";
 import {CoinbaseSmartWallet} from "smart-wallet/CoinbaseSmartWallet.sol";
 
-import {IHooks} from "./HooksForwarder.sol";
+import {ERC20Mode, IHooks} from "./HooksForwarder.sol";
 import {Permit3} from "./Permit3.sol";
 import {SpendPermission} from "./SpendPermission.sol";
 
@@ -22,7 +22,10 @@ contract CoinbaseSmartWalletHooks is IHooks {
         MAGIC_SPEND = magicSpend;
     }
 
-    function preSpend(SpendPermission calldata spendPermission, uint256 value, bytes calldata hookData) external {
+    function preSpend(SpendPermission calldata spendPermission, uint256 value, bytes calldata hookData)
+        external
+        returns (ERC20Mode erc20Mode)
+    {
         if (msg.sender != address(PERMIT3.HOOKS_FORWARDER())) revert();
 
         // optionally withdraw from magic spend
@@ -60,6 +63,7 @@ contract CoinbaseSmartWalletHooks is IHooks {
             // call account to send native token to this contract
             _execute({account: spendPermission.account, target: address(PERMIT3), value: value, data: hex""});
         } else {
+            erc20Mode = ERC20Mode.TRANSFER_FROM;
             // set allowance for this contract to spend exact value on behalf of account
             _execute({
                 account: spendPermission.account,

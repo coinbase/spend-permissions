@@ -5,8 +5,15 @@ import {Address} from "openzeppelin-contracts/contracts/utils/Address.sol";
 
 import {SpendPermission} from "./SpendPermission.sol";
 
+enum ERC20Mode {
+    TRANSFER_FROM,
+    TRANSFER
+}
+
 interface IHooks {
-    function preSpend(SpendPermission calldata spendPermission, uint256 value, bytes calldata hookData) external;
+    function preSpend(SpendPermission calldata spendPermission, uint256 value, bytes calldata hookData)
+        external
+        returns (ERC20Mode);
     function postSpend(SpendPermission calldata spendPermission, uint256 value, bytes calldata hookData) external;
 }
 
@@ -19,9 +26,10 @@ contract HooksForwarder {
 
     function preSpend(SpendPermission calldata spendPermission, uint256 value, address hooks, bytes calldata hookData)
         external
+        returns (ERC20Mode)
     {
         if (msg.sender != PERMIT3) revert();
-        IHooks(hooks).preSpend(spendPermission, value, hookData);
+        return IHooks(hooks).preSpend(spendPermission, value, hookData);
     }
 
     function postSpend(SpendPermission calldata spendPermission, uint256 value, address hooks, bytes calldata hookData)
