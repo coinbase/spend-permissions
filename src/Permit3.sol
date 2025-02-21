@@ -1,18 +1,12 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.28;
 
-import {MagicSpend} from "magic-spend/MagicSpend.sol";
-import {IERC1271} from "openzeppelin-contracts/contracts/interfaces/IERC1271.sol";
-import {IERC165} from "openzeppelin-contracts/contracts/interfaces/IERC165.sol";
 import {IERC721} from "openzeppelin-contracts/contracts/token/ERC721/IERC721.sol";
-import {Address} from "openzeppelin-contracts/contracts/utils/Address.sol";
 import {ERC165Checker} from "openzeppelin-contracts/contracts/utils/introspection/ERC165Checker.sol";
-import {CoinbaseSmartWallet} from "smart-wallet/CoinbaseSmartWallet.sol";
 import {EIP712} from "solady/utils/EIP712.sol";
 import {SafeTransferLib} from "solady/utils/SafeTransferLib.sol";
-import {SignatureCheckerLib} from "solady/utils/SignatureCheckerLib.sol";
 
-import {ERC20Mode, HooksForwarder} from "./HooksForwarder.sol";
+import {HooksForwarder} from "./HooksForwarder.sol";
 import {PublicERC6492Validator} from "./PublicERC6492Validator.sol";
 import {SpendPermission, SpendPermissionBatch} from "./SpendPermission.sol";
 
@@ -337,10 +331,8 @@ contract Permit3 is EIP712 {
         external
         requireSender(spendPermission.spender)
     {
-        // default ERC20 mode uses ERC20.transferFrom for default compatibility without hooks
-        ERC20Mode erc20Mode = ERC20Mode.TRANSFER_FROM;
         if (hooks != address(0)) {
-            erc20Mode = HOOKS_FORWARDER.preSpend(spendPermission, value, hooks, hookData);
+            HOOKS_FORWARDER.preSpend(spendPermission, value, hooks, hookData);
         }
 
         _useSpendPermission(spendPermission, value);
@@ -348,11 +340,9 @@ contract Permit3 is EIP712 {
         if (spendPermission.token == NATIVE_TOKEN) {
             // transfer native token to spender using balance, which will revert if funds are not actually available
             SafeTransferLib.safeTransferETH(payable(spendPermission.spender), value);
-        } else if (erc20Mode == ERC20Mode.TRANSFER) {
-            // transfer erc20 tokens to spender using balance, which will revert if funds are not actually available
-            SafeTransferLib.safeTransfer(spendPermission.token, spendPermission.spender, value);
         } else {
             // transfer erc20 tokens to spender using allowance, which will revert if transfer fails
+            // if allowance does not exist, the preSpend hook will need to set it
             SafeTransferLib.safeTransferFrom(
                 spendPermission.token, spendPermission.account, spendPermission.spender, value
             );
