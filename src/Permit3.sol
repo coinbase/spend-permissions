@@ -159,6 +159,18 @@ contract Permit3 is EIP712 {
     /// @notice Contract received an unexpected amount of native token.
     error UnexpectedReceiveAmount(uint256 received, uint256 expected);
 
+    /// @notice Mapping from account address to their registered utility contract
+    mapping(address => address) public accountToUtility;
+
+    /// @notice Transient storage slot for tracking current relevant account
+    address transient private _currentAccount;
+
+    /// @notice Event emitted when a utility contract is registered for an account
+    event UtilityRegistered(address indexed account, address indexed utility);
+
+    /// @notice Error thrown when trying to register a utility without proper authorization
+    error UnauthorizedRegistration();
+
     /// @notice Require a specific sender for an external call.
     /// @param sender Expected sender for call to be valid.
     modifier requireSender(address sender) {
@@ -502,6 +514,22 @@ contract Permit3 is EIP712 {
                 )
             )
         );
+    }
+
+    /// @notice Registers a utility contract for an account
+    /// @dev The account must have called setTransientAccount first
+    /// @param account The account to register the utility for
+    /// @param utility The utility contract to register
+    function registerPermit3Utility(address account, address utility) external {
+        // Verify authorization
+        if (account != _currentAccount) {
+            revert UnauthorizedRegistration();
+        }
+
+        // Register the utility
+        accountToUtility[account] = utility;
+        emit UtilityRegistered(account, utility);
+        _currentAccount = address(0);
     }
 
     /// @notice Approve a spend permission.
