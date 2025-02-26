@@ -21,29 +21,60 @@ contract Permit3E2ETest is Permit3Base {
         console2.log("Expected utility address:", address(permit3Utility));
     }
 
-    /*
-    Steps for a native token transfer with CBSW:
-    - create a spend permission
-    - sign the spend permission but include prepareData in a 6492 wrapper
-    - The prepareData should include the calldata for the registerPermit3Utility function 
-    - call approveWithSignature on Permit3 with the 6492 wrapped-signature
-    - attempt to spend the native tokens by calling spend on Permit3 with the permission and amount
-    - Spend will execute on the CBSW and will notice that the account has a registered utility, which means that
-    before attempting to transfer the ETH to the spender, the CBSW will call the utility contract's spendNativeToken
-    function
-    - spend should succeed*/
-    function test_permit3_e2e_nativeTokenTransfer() public {
-        // Create a spend permission
-        SpendPermission memory permission = _createSpendPermission();
+    function test_permit3_e2e_nativeTokenTransfer(
+        address spender,
+        uint48 start,
+        uint48 end,
+        uint48 period,
+        uint160 allowance,
+        uint256 salt,
+        bytes memory extraData,
+        uint256 spendAmount
+    ) public {
+        vm.assume(spender != address(0));
+        // Prevent spender from being any of our core contracts
+        vm.assume(spender != address(account));
+        vm.assume(spender != address(permit3Utility));
+        vm.assume(spender != address(permit3));
+        // Prevent spender from being a precompile
+        assumeNotPrecompile(spender);
 
-        // Sign the spend permission with ERC6492 wrapper that includes utility registration
+        vm.assume(start < end);
+        vm.assume(period > 0);
+        // Ensure allowance is reasonable and sufficient for our minimum spend
+        vm.assume(allowance >= 0.1 ether);
+        vm.assume(allowance <= 1000 ether); // reasonable upper bound
+
+        // Ensure spend amount is valid - between 0.1 ether and allowance
+        spendAmount = bound(spendAmount, 0.1 ether, uint256(allowance));
+
+        // Fund the account with enough ETH
+        vm.deal(address(account), spendAmount * 2);
+
+        SpendPermission memory permission = SpendPermission({
+            account: address(account),
+            spender: spender,
+            token: NATIVE_TOKEN,
+            allowance: allowance,
+            period: period,
+            start: start,
+            end: end,
+            salt: salt,
+            extraData: extraData
+        });
+
+        // Sign the spend permission with ERC6492 wrapper that includes utility registration calldata and
+        // includes the utility owner index as prefix to the signature
         bytes memory signature = _signSpendPermissionWithUtilityRegistration(
             permission,
             ownerPk,
             0, // owner index
             address(permit3Utility),
-            1 // utility owner index (since we added it as the second owner in setUp)
+            1 // utility owner index
         );
+
+        // Warp to start time before approval
+        vm.warp(start);
 
         // Approve the spend permission with the wrapped signature
         vm.prank(spender);
@@ -51,8 +82,6 @@ contract Permit3E2ETest is Permit3Base {
 
         // Verify utility registration
         address registeredUtility = permit3.accountToUtility(address(account));
-        console2.log("Registered utility: ", registeredUtility);
-        console2.log("Expected utility: ", address(permit3Utility));
         require(registeredUtility == address(permit3Utility), "Utility not registered");
 
         // Record balances before
@@ -61,10 +90,12 @@ contract Permit3E2ETest is Permit3Base {
 
         // Spend the native tokens
         vm.prank(spender);
-        permit3.spend(permission, 0.5 ether);
+        permit3.spend(permission, spendAmount);
 
         // Verify balances after
-        assertEq(address(account).balance, accountBalanceBefore - 0.5 ether, "Account balance not decreased correctly");
-        assertEq(spender.balance, spenderBalanceBefore + 0.5 ether, "Spender balance not increased correctly");
+        assertEq(
+            address(account).balance, accountBalanceBefore - spendAmount, "Account balance not decreased correctly"
+        );
+        assertEq(spender.balance, spenderBalanceBefore + spendAmount, "Spender balance not increased correctly");
     }
 }

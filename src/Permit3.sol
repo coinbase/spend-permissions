@@ -373,7 +373,8 @@ contract Permit3 is EIP712 {
             SafeTransferLib.safeTransferETH(payable(spendPermission.spender), value);
         } else {
             // transfer erc20 tokens to spender using allowance, which will revert if transfer fails
-            // if allowance does not exist, the preSpend hook will need to set it
+            // Allowance should be set already, by independent call in case of EOA, or by the 6492 signature flow in the
+            // case of a smart wallet.
             SafeTransferLib.safeTransferFrom(
                 spendPermission.token, spendPermission.account, spendPermission.spender, value
             );
