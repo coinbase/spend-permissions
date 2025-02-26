@@ -101,4 +101,59 @@ contract Permit3Base is Base {
         eip6492Signature = abi.encodePacked(eip6492Signature, EIP6492_MAGIC_VALUE);
         return eip6492Signature;
     }
+
+    /// @notice Helper to sign a spend permission with ERC6492 wrapper for ERC20 approval
+    /// @param spendPermission The spend permission to sign
+    /// @param ownerPk Private key of the signer
+    /// @param ownerIndex Index of the signer in the wallet's owner list
+    /// @param utility Address of the utility contract to register
+    /// @param utilityOwnerIndex Index of the utility contract in the wallet's owner list
+    /// @param token Address of the ERC20 token to approve
+    function _signSpendPermissionWithERC20Approval(
+        SpendPermission memory spendPermission,
+        uint256 ownerPk,
+        uint256 ownerIndex,
+        address utility,
+        uint256 utilityOwnerIndex,
+        address token
+    ) internal view returns (bytes memory) {
+        bytes32 spendPermissionHash = permit3.getHash(spendPermission);
+
+        // Construct replaySafeHash without relying on the account contract being deployed
+        bytes32 cbswDomainSeparator = keccak256(
+            abi.encode(
+                keccak256("EIP712Domain(string name,string version,uint256 chainId,address verifyingContract)"),
+                keccak256(bytes("Coinbase Smart Wallet")),
+                keccak256(bytes("1")),
+                block.chainid,
+                spendPermission.account
+            )
+        );
+        bytes32 replaySafeHash = keccak256(
+            abi.encodePacked(
+                "\x19\x01", cbswDomainSeparator, keccak256(abi.encode(CBSW_MESSAGE_TYPEHASH, spendPermissionHash))
+            )
+        );
+        bytes memory signature = _sign(ownerPk, replaySafeHash);
+        bytes memory wrappedSignature = _applySignatureWrapper(ownerIndex, signature);
+
+        // Add utility owner index to the front of the wrapped signature
+        wrappedSignature = abi.encode(CoinbaseSmartWallet.SignatureWrapper(utilityOwnerIndex, wrappedSignature));
+
+        // Create the prepare data for calling approveERC20 on the utility
+        bytes memory approveCalldata = abi.encodeWithSelector(
+            CoinbaseSmartWalletPermit3Utility.approveERC20.selector,
+            spendPermission.token, // the ERC20 token
+            spendPermission.account // the account to approve from
+        );
+
+        // Wrap inner sig in 6492 format with ERC20 approval as prepare data
+        bytes memory eip6492Signature = abi.encode(
+            utility, // factory (the utility contract that will execute prepare data)
+            approveCalldata, // prepare data (ERC20 approval)
+            wrappedSignature
+        );
+        eip6492Signature = abi.encodePacked(eip6492Signature, EIP6492_MAGIC_VALUE);
+        return eip6492Signature;
+    }
 }
