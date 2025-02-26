@@ -6,10 +6,10 @@ import {ERC165Checker} from "openzeppelin-contracts/contracts/utils/introspectio
 import {EIP712} from "solady/utils/EIP712.sol";
 import {SafeTransferLib} from "solady/utils/SafeTransferLib.sol";
 
+import {IWalletPermit3Utility} from "../interfaces/IWalletPermit3Utility.sol";
 import {HooksForwarder} from "./HooksForwarder.sol";
 import {PublicERC6492Validator} from "./PublicERC6492Validator.sol";
 import {SpendPermission, SpendPermissionBatch} from "./SpendPermission.sol";
-
 /// @title Permit3
 ///
 /// @notice Allow granting permission to external accounts to spend native and ERC-20 tokens.
@@ -18,6 +18,7 @@ import {SpendPermission, SpendPermissionBatch} from "./SpendPermission.sol";
 /// @dev Supports ERC-6492 signatures (https://eips.ethereum.org/EIPS/eip-6492).
 ///
 /// @author Coinbase (https://github.com/coinbase/spend-permissions)
+
 contract Permit3 is EIP712 {
     /// @notice Period parameters and spend usage.
     struct PeriodSpend {
@@ -162,8 +163,14 @@ contract Permit3 is EIP712 {
     /// @notice Mapping from account address to their registered utility contract
     mapping(address => address) public accountToUtility;
 
-    /// @notice Transient storage slot for tracking current relevant account
-    address transient private _currentAccount;
+    /// @notice The current permission hash being processed
+    bytes32 /*transient*/ private _currentPermissionHash;
+
+    /// @notice The current token being processed
+    address /*transient*/ private _currentToken;
+
+    /// @notice The current account being processed
+    address /*transient*/ private _currentAccount;
 
     /// @notice Event emitted when a utility contract is registered for an account
     event UtilityRegistered(address indexed account, address indexed utility);
@@ -216,14 +223,21 @@ contract Permit3 is EIP712 {
         external
         returns (bool)
     {
+        bytes32 hash = getHash(spendPermission);
+        _currentPermissionHash = hash;
+        _currentToken = spendPermission.token;
+        _currentAccount = spendPermission.account;
+
         // validate signature over spend permission data, deploying or preparing account if necessary
-        if (
-            !PUBLIC_ERC6492_VALIDATOR.isValidSignatureNowAllowSideEffects(
-                spendPermission.account, getHash(spendPermission), signature
-            )
-        ) {
+        if (!PUBLIC_ERC6492_VALIDATOR.isValidSignatureNowAllowSideEffects(spendPermission.account, hash, signature)) {
             revert InvalidSignature();
         }
+
+        // Clear transient storage
+        // _currentPermissionHash = bytes32(0);
+        // _currentToken = address(0);
+        // _currentAccount = address(0);
+
         return _approve(spendPermission);
     }
 
@@ -330,6 +344,40 @@ contract Permit3 is EIP712 {
         requireSender(spendPermission.spender)
     {
         _revoke(spendPermission);
+    }
+
+    /// NO HOOKS VERSION
+    /// @notice Spend tokens using a spend permission, transferring them from `account` to `spender`.
+    ///
+    /// @dev Reverts if not called by the spender of the spend permission.
+    /// @dev Reverts if using spend permission or completing token transfer fail.
+    ///
+    /// @param spendPermission Details of the spend permission.
+    /// @param value Amount of token attempting to spend.
+    function spend(SpendPermission memory spendPermission, uint256 value)
+        external
+        requireSender(spendPermission.spender)
+    {
+        _useSpendPermission(spendPermission, value);
+
+        if (spendPermission.token == NATIVE_TOKEN) {
+            if (accountToUtility[spendPermission.account] != address(0)) {
+                // If the account has a registered utility, call the utility's spendNativeToken function
+                _currentAccount = spendPermission.account;
+                IWalletPermit3Utility(accountToUtility[spendPermission.account]).spendNativeToken(
+                    spendPermission.account, value
+                );
+                _currentAccount = address(0);
+            }
+            // transfer native token to spender using balance, which will revert if funds are not actually available
+            SafeTransferLib.safeTransferETH(payable(spendPermission.spender), value);
+        } else {
+            // transfer erc20 tokens to spender using allowance, which will revert if transfer fails
+            // if allowance does not exist, the preSpend hook will need to set it
+            SafeTransferLib.safeTransferFrom(
+                spendPermission.token, spendPermission.account, spendPermission.spender, value
+            );
+        }
     }
 
     /// @notice Spend tokens using a spend permission, transferring them from `account` to `spender`.
@@ -529,7 +577,8 @@ contract Permit3 is EIP712 {
         // Register the utility
         accountToUtility[account] = utility;
         emit UtilityRegistered(account, utility);
-        _currentAccount = address(0);
+        // Don't clear _currentAccount here - it's needed for subsequent operations
+        // _currentAccount = address(0);
     }
 
     /// @notice Approve a spend permission.
@@ -639,5 +688,23 @@ contract Permit3 is EIP712 {
     function _domainNameAndVersion() internal pure override returns (string memory name, string memory version) {
         name = "Permit3";
         version = "1";
+    }
+
+    /// @notice Get the current account being processed
+    /// @return The address of the current account being processed
+    function getCurrentAccount() external view returns (address) {
+        return _currentAccount;
+    }
+
+    /// @notice Get the current permission hash being processed
+    /// @return The hash of the current permission being processed
+    function getCurrentPermissionHash() external view returns (bytes32) {
+        return _currentPermissionHash;
+    }
+
+    /// @notice Get the current token being processed
+    /// @return The address of the current token being processed
+    function getCurrentToken() external view returns (address) {
+        return _currentToken;
     }
 }
