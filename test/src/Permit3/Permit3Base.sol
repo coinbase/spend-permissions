@@ -141,11 +141,7 @@ contract Permit3Base is Base {
         wrappedSignature = abi.encode(CoinbaseSmartWallet.SignatureWrapper(utilityOwnerIndex, wrappedSignature));
 
         // Create the prepare data for calling approveERC20 on the utility
-        bytes memory approveCalldata = abi.encodeWithSelector(
-            CoinbaseSmartWalletPermit3Utility.approveERC20.selector,
-            spendPermission.token, // the ERC20 token
-            spendPermission.account // the account to approve from
-        );
+        bytes memory approveCalldata = abi.encodeWithSelector(CoinbaseSmartWalletPermit3Utility.approveERC20.selector);
 
         // Wrap inner sig in 6492 format with ERC20 approval as prepare data
         bytes memory eip6492Signature = abi.encode(

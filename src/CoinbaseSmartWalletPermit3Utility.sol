@@ -68,13 +68,6 @@ contract CoinbaseSmartWalletPermit3Utility is IWalletPermit3Utility {
 
         if (hash != expectedHash) revert InvalidHash();
 
-        // Forward the RAW permission hash to the wallet's signature validation
-        bytes4 magicValue =
-            CoinbaseSmartWallet(payable(permit3.getCurrentAccount())).isValidSignature(rawPermissionHash, signature);
-        if (magicValue != MAGICVALUE) {
-            revert InvalidSignature();
-        }
-
         if (currentToken == NATIVE_TOKEN) {
             console2.log("Native token case");
             // Native token case
@@ -93,24 +86,20 @@ contract CoinbaseSmartWalletPermit3Utility is IWalletPermit3Utility {
             }
         }
 
-        return MAGICVALUE;
+        return CoinbaseSmartWallet(payable(permit3.getCurrentAccount())).isValidSignature(rawPermissionHash, signature);
     }
 
     /// TODO: how do we secure this? the caller will be the PublicERC6492Validator, so we can't access control
     /// on sender since that contract isn't secure.
     /// @notice Approves an ERC20 token for infinite spending by Permit3
     /// @dev Calls execute on the CoinbaseSmartWallet to approve Permit3 for infinite spending
-    /// @param token The ERC20 token to approve
-    /// @param account The CoinbaseSmartWallet account granting the approval
-    function approveERC20(address token, address account) external {
-        if (account != permit3.getCurrentAccount()) revert InvalidAccount();
-        // Create the approval calldata for the ERC20 token
+    function approveERC20() external {
         bytes memory approvalCalldata =
             abi.encodeWithSelector(IERC20.approve.selector, address(permit3), type(uint256).max);
 
         // Call execute on the CoinbaseSmartWallet
-        CoinbaseSmartWallet(payable(account)).execute(
-            token, // target (the ERC20 token contract)
+        CoinbaseSmartWallet(payable(permit3.getCurrentAccount())).execute(
+            permit3.getCurrentToken(), // target (the ERC20 token contract)
             0, // value (no ETH needed for approve)
             approvalCalldata
         );
@@ -122,8 +111,7 @@ contract CoinbaseSmartWalletPermit3Utility is IWalletPermit3Utility {
     function registerPermit3Utility() external {
         console2.log("registerPermit3Utility from utility");
         console2.log("Current account:", permit3.getCurrentAccount());
-        bytes memory registerCalldata =
-            abi.encodeWithSelector(Permit3.registerPermit3Utility.selector, permit3.getCurrentAccount(), address(this));
+        bytes memory registerCalldata = abi.encodeWithSelector(Permit3.registerPermit3Utility.selector, address(this));
 
         CoinbaseSmartWallet(payable(permit3.getCurrentAccount())).execute(address(permit3), 0, registerCalldata);
     }
@@ -132,7 +120,7 @@ contract CoinbaseSmartWalletPermit3Utility is IWalletPermit3Utility {
     /// @dev Calls execute on the CoinbaseSmartWallet to send ETH to Permit3
     /// @inheritdoc IWalletPermit3Utility
     function spendNativeToken(address account, uint256 value) external override onlyPermit3 {
-        if (account != permit3.getCurrentAccount()) revert InvalidAccount();
+        // if (account != permit3.getCurrentAccount()) revert InvalidAccount();
         CoinbaseSmartWallet(payable(account)).execute(
             address(permit3), // target (the Permit3 contract)
             value, // value (amount of ETH to send)

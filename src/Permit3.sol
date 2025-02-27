@@ -223,6 +223,7 @@ contract Permit3 is EIP712 {
         external
         returns (bool)
     {
+        // TODO read transient storage and revert if nonzero to prevent reentrancy
         bytes32 hash = getHash(spendPermission);
         _currentPermissionHash = hash;
         _currentToken = spendPermission.token;
@@ -234,9 +235,9 @@ contract Permit3 is EIP712 {
         }
 
         // Clear transient storage
-        // _currentPermissionHash = bytes32(0);
-        // _currentToken = address(0);
-        // _currentAccount = address(0);
+        _currentPermissionHash = bytes32(0);
+        _currentToken = address(0);
+        _currentAccount = address(0);
 
         return _approve(spendPermission);
     }
@@ -363,11 +364,9 @@ contract Permit3 is EIP712 {
         if (spendPermission.token == NATIVE_TOKEN) {
             if (accountToUtility[spendPermission.account] != address(0)) {
                 // If the account has a registered utility, call the utility's spendNativeToken function
-                _currentAccount = spendPermission.account;
                 IWalletPermit3Utility(accountToUtility[spendPermission.account]).spendNativeToken(
                     spendPermission.account, value
                 );
-                _currentAccount = address(0);
             }
             // transfer native token to spender using balance, which will revert if funds are not actually available
             SafeTransferLib.safeTransferETH(payable(spendPermission.spender), value);
@@ -567,19 +566,11 @@ contract Permit3 is EIP712 {
 
     /// @notice Registers a utility contract for an account
     /// @dev The account must have called setTransientAccount first
-    /// @param account The account to register the utility for
     /// @param utility The utility contract to register
-    function registerPermit3Utility(address account, address utility) external {
-        // Verify authorization
-        if (account != _currentAccount) {
-            revert UnauthorizedRegistration();
-        }
-
+    function registerPermit3Utility(address utility) external {
         // Register the utility
-        accountToUtility[account] = utility;
-        emit UtilityRegistered(account, utility);
-        // Don't clear _currentAccount here - it's needed for subsequent operations
-        // _currentAccount = address(0);
+        accountToUtility[msg.sender] = utility;
+        emit UtilityRegistered(msg.sender, utility);
     }
 
     /// @notice Approve a spend permission.
