@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.23;
 
-import {MagicSpend} from "magic-spend/MagicSpend.sol";
+import {MagicSpend} from "magicspend/MagicSpend.sol";
 import {SafeERC20} from "openzeppelin-contracts/contracts/token/ERC20/utils/SafeERC20.sol";
 import {MockERC20} from "solady/../test/utils/mocks/MockERC20.sol";
 import {MockERC20LikeUSDT} from "solady/../test/utils/mocks/MockERC20LikeUSDT.sol";
