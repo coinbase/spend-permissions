@@ -111,6 +111,8 @@ contract SpendPermissionManager is EIP712 {
     /// @notice MagicSpend singleton (https://github.com/coinbase/magicspend).
     address public immutable MAGIC_SPEND;
 
+    uint256 public immutable POST_OP_GAS = 0;
+
     /// @notice Spend permission is approved.
     mapping(bytes32 hash => bool approved) internal _isApproved;
 
@@ -466,6 +468,85 @@ contract SpendPermissionManager is EIP712 {
             data: abi.encodeWithSelector(MagicSpend.withdraw.selector, withdrawRequest)
         });
         _transferFrom(spendPermission.token, spendPermission.account, spendPermission.spender, value);
+    }
+
+    function validatePaymasterUserOp(bytes calldata userOp, bytes32 userOpHash, uint256 maxCost) external returns (bytes memory context, uint256 validationData) {
+        (address sender, uint256 maxFeePerGas, uint256 maxPriorityFeePerGas) = (address(0), 0, 0);
+        (SpendPermission memory spendPermission, uint48 start, uint48 end, uint160 value) = abi.decode(userOp[20:], (SpendPermission, uint48, uint48, uint160));
+
+        // check userOp sender is spender
+        if (sender != spendPermission.spender) revert();
+
+        // check spend permission token is native
+        if (spendPermission.token != NATIVE_TOKEN) revert();
+
+        // check start and end are valid period range
+        if (start < spendPermission.start) revert();
+        if (start - spendPermission.start % spendPermission.period != 0) revert();
+        if (start + spendPermission.period > spendPermission.end) {
+            if (end != spendPermission.end) revert();
+        } else if (start + spendPermission.period != end) revert();
+
+        // check value is gte max gas cost
+        if (value < maxCost) revert();
+
+        // check value is non-zero
+        if (value == 0) revert ZeroValue();
+
+        // check spend permission is approved and not revoked
+        if (!isValid(spendPermission)) revert UnauthorizedSpendPermission();
+
+        // check start and end are gte last updated period
+        bytes32 permissionHash = getHash(spendPermission);
+        PeriodSpend memory currentPeriod = _lastUpdatedPeriod[permissionHash];
+        if (currentPeriod.start < start) {
+            currentPeriod = PeriodSpend(start, end, 0);
+        } else if (currentPeriod.start != start) revert();
+
+        uint256 totalSpend = value + uint256(currentPeriod.spend);
+
+        // check total spend value does not overflow max value
+        if (totalSpend > type(uint160).max) revert SpendValueOverflow(totalSpend);
+
+        // check total spend value does not exceed spend permission
+        if (totalSpend > spendPermission.allowance) {
+            revert ExceededSpendPermission(totalSpend, spendPermission.allowance);
+        }
+
+        // update total spend for current period and emit event for incremental spend
+        currentPeriod.spend = uint160(totalSpend);
+        _lastUpdatedPeriod[permissionHash] = currentPeriod;
+        emit SpendPermissionUsed(
+            permissionHash,
+            spendPermission.account,
+            spendPermission.spender,
+            spendPermission.token,
+            PeriodSpend(currentPeriod.start, currentPeriod.end, uint160(value))
+        );
+
+        // pull tokens from account
+        _expectedReceiveAmount = value;
+        _execute({account: spendPermission.account, target: address(this), value: value, data: hex""});
+        _expectedReceiveAmount = 0;
+
+        // forward remainder value to spender if nonzero
+        SafeTransferLib.safeTransferETH(payable(spendPermission.spender), value - maxCost);
+
+        // return postOp context and valid time range
+        context = abi.encode(maxCost, maxFeePerGas, maxPriorityFeePerGas, spendPermission.spender);
+        validationData = uint256(start) << 48 | end;
+        return (context, validationData);
+    }
+
+    function postOp(uint8, bytes calldata context, uint256 actualCost) external {
+        (uint256 maxCost, uint256 maxFeePerGas, uint256 maxPriorityFeePerGas, address spender) = abi.decode(context, (uint256, uint256, uint256, address));
+        uint256 gasPrice = maxFeePerGas < maxPriorityFeePerGas + block.basefee ? maxFeePerGas : maxPriorityFeePerGas + block.basefee;
+        uint256 totalCost = actualCost + POST_OP_GAS * gasPrice;
+        
+        // send context.maxCost - gasUsed to context.spender
+        if (maxCost - totalCost > 0) {
+            SafeTransferLib.safeTransferETH(payable(spender), maxCost - totalCost);
+        }
     }
 
     /// @notice Get if a spend permission is approved.
