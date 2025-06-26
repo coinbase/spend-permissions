@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.28;
 
-import {MagicSpend} from "magic-spend/MagicSpend.sol";
+import {MagicSpend} from "magicspend/MagicSpend.sol";
 import {IERC1271} from "openzeppelin-contracts/contracts/interfaces/IERC1271.sol";
 import {IERC165} from "openzeppelin-contracts/contracts/interfaces/IERC165.sol";
 import {IERC20} from "openzeppelin-contracts/contracts/token/ERC20/IERC20.sol";
@@ -108,7 +108,7 @@ contract SpendPermissionManager is EIP712 {
     /// @notice Separated contract for validating signatures and executing ERC-6492 side effects.
     PublicERC6492Validator public immutable PUBLIC_ERC6492_VALIDATOR;
 
-    /// @notice MagicSpend singleton (https://github.com/coinbase/magic-spend).
+    /// @notice MagicSpend singleton (https://github.com/coinbase/magicspend).
     address public immutable MAGIC_SPEND;
 
     /// @notice Spend permission is approved.
