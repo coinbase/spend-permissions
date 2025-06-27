@@ -51,6 +51,7 @@ contract SignatureHooks {
         bytes32 message = keccak256(abi.encode(verifyingContract, calls, hash));
 
         // validate signature
+        // TODO don't we need to check the return value here?
         SignatureCheckerLib.isValidSignatureNow(account, message, signature);
 
         // set hash as signed (prevent replay)

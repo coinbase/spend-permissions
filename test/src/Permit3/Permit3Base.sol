@@ -5,9 +5,9 @@ import {Test} from "forge-std/Test.sol";
 import {CoinbaseSmartWallet} from "smart-wallet/CoinbaseSmartWallet.sol";
 import {CoinbaseSmartWalletFactory} from "smart-wallet/CoinbaseSmartWalletFactory.sol";
 
+import {CoinbaseSmartWalletSignatureHooks} from "../../../src/CoinbaseSmartWalletSignatureHooks.sol";
 import {Permit3, SpendPermission} from "../../../src/Permit3.sol";
 import {PublicERC6492Validator} from "../../../src/PublicERC6492Validator.sol";
-import {SignatureHooks} from "../../../src/SignatureHooks.sol";
 
 import {IERC20} from "openzeppelin-contracts/contracts/token/ERC20/IERC20.sol";
 import {MockERC20} from "solady/../test/utils/mocks/MockERC20.sol";
@@ -23,7 +23,7 @@ contract Permit3Base is Base {
     // Contract instances
     PublicERC6492Validator public publicERC6492Validator;
     Permit3 public permit3;
-    SignatureHooks public signatureHook;
+    CoinbaseSmartWalletSignatureHooks public signatureHook;
     CoinbaseSmartWalletFactory public mockCoinbaseSmartWalletFactory;
     MockERC20 public mockERC20;
 
@@ -33,7 +33,7 @@ contract Permit3Base is Base {
         // Deploy core contracts
         publicERC6492Validator = new PublicERC6492Validator();
         permit3 = new Permit3(publicERC6492Validator); // Pass zero address for MAGIC_SPEND for now
-        signatureHook = new SignatureHooks(address(publicERC6492Validator));
+        signatureHook = new CoinbaseSmartWalletSignatureHooks(address(publicERC6492Validator));
         mockCoinbaseSmartWalletFactory = new CoinbaseSmartWalletFactory(address(account));
         mockERC20 = new MockERC20("Test Token", "TEST", 18);
 
@@ -140,7 +140,8 @@ contract Permit3Base is Base {
     /// call to executeSignedCallsWithMessage.
     /// very last is the standard 6492 magic value
 
-    /// @notice Helper to sign a spend permission with ERC6492 wrapper for ERC20 approval using SignatureHooks
+    /// @notice Helper to sign a spend permission with ERC6492 wrapper for ERC20 approval using
+    /// CoinbaseSmartWalletSignatureHooks
     /// @param spendPermission The spend permission to sign
     /// @param ownerPk Private key of the signer
     /// @param ownerIndex Index of the signer in the wallet's owner list
@@ -184,9 +185,9 @@ contract Permit3Base is Base {
         bytes memory actualSignature = _sign(ownerPk, replaySafeHash);
         bytes memory wrappedSignature = _applySignatureWrapper(ownerIndex, actualSignature);
 
-        // Create the prepare data for SignatureHooks.executeSignedCallsWithMessage
+        // Create the prepare data for CoinbaseSmartWalletSignatureHooks.executeSignedCallsWithMessage
         bytes memory prepareData = abi.encodeWithSelector(
-            SignatureHooks.executeSignedCallsWithMessage.selector,
+            CoinbaseSmartWalletSignatureHooks.executeSignedCallsWithMessage.selector,
             spendPermission.account,
             calls,
             wrappedSignature,
