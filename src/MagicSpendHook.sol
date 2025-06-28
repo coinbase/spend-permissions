@@ -60,7 +60,8 @@ contract MagicSpendHook {
         }
 
         // Check withdraw request nonce postfix matches spend permission hash postfix
-        bytes32 permissionHash = permit3.getHash(spendPermission);
+        // Note: In delegatecall context, address(this) is the Permit3 contract
+        bytes32 permissionHash = Permit3(payable(address(this))).getHash(spendPermission);
         if (uint128(withdrawRequest.nonce) != uint128(uint256(permissionHash))) {
             revert InvalidWithdrawRequestNonce(uint128(withdrawRequest.nonce), uint128(uint256(permissionHash)));
         }

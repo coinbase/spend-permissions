@@ -29,8 +29,6 @@ struct SpendPermission {
     uint48 start;
     /// @dev Timestamp this spend permission is valid until (exclusive, unix seconds).
     uint48 end;
-    /// @dev Hook contract to execute before token transfer (address(0) for no hook).
-    address hook;
     /// @dev Arbitrary data to differentiate unique spend permissions with otherwise identical fields.
     uint256 salt;
     /// @dev Arbitrary data to attach to a spend permission which may be consumed by the `spender`.
@@ -82,8 +80,6 @@ contract Permit3 is EIP712 {
         address token;
         /// @dev Maximum allowed value to spend within each `period`.
         uint160 allowance;
-        /// @dev Hook contract to execute before token transfer (address(0) for no hook).
-        address hook;
         /// @dev Arbitrary data to differentiate unique spend permissions with otherwise identical fields.
         uint256 salt;
         /// @dev Arbitrary data to attach to a spend permission which may be consumed by the `spender`.
@@ -102,17 +98,17 @@ contract Permit3 is EIP712 {
 
     /// @notice EIP-712 hash of SpendPermission type.
     bytes32 public constant SPEND_PERMISSION_TYPEHASH = keccak256(
-        "SpendPermission(address account,address spender,address token,uint160 allowance,uint48 period,uint48 start,uint48 end,address hook,uint256 salt,bytes extraData)"
+        "SpendPermission(address account,address spender,address token,uint160 allowance,uint48 period,uint48 start,uint48 end,uint256 salt,bytes extraData)"
     );
 
     /// @notice EIP-712 hash of SpendPermissionBatch type.
     bytes32 public constant SPEND_PERMISSION_BATCH_TYPEHASH = keccak256(
-        "SpendPermissionBatch(address account,uint48 period,uint48 start,uint48 end,PermissionDetails[] permissions)PermissionDetails(address spender,address token,uint160 allowance,address hook,uint256 salt,bytes extraData)"
+        "SpendPermissionBatch(address account,uint48 period,uint48 start,uint48 end,PermissionDetails[] permissions)PermissionDetails(address spender,address token,uint160 allowance,uint256 salt,bytes extraData)"
     );
 
     /// @notice EIP-712 hash of PermissionDetails type.
     bytes32 public constant PERMISSION_DETAILS_TYPEHASH =
-        keccak256("PermissionDetails(address spender,address token,uint160 allowance,address hook,uint256 salt,bytes extraData)");
+        keccak256("PermissionDetails(address spender,address token,uint160 allowance,uint256 salt,bytes extraData)");
 
     /// @notice ERC-7528 native token address convention (https://eips.ethereum.org/EIPS/eip-7528).
     address public constant NATIVE_TOKEN = 0xEeeeeEeeeEeEeeEeEeEeeEEEeeeeEeeeeeeeEEeE;
@@ -128,6 +124,9 @@ contract Permit3 is EIP712 {
 
     /// @notice Last updated period for a spend permission.
     mapping(bytes32 hash => PeriodSpend) internal _lastUpdatedPeriod;
+
+    /// @notice Hook delegate contract for a spend permission.
+    mapping(bytes32 hash => address delegate) internal _delegate;
 
     /// @notice A flag to indicate if the contract can receive native token transfers, and the expected amount.
     ///
@@ -336,7 +335,6 @@ contract Permit3 is EIP712 {
                         period: spendPermissionBatch.period,
                         start: spendPermissionBatch.start,
                         end: spendPermissionBatch.end,
-                        hook: spendPermissionBatch.permissions[i].hook,
                         salt: spendPermissionBatch.permissions[i].salt,
                         extraData: spendPermissionBatch.permissions[i].extraData
                     })
@@ -405,6 +403,21 @@ contract Permit3 is EIP712 {
         _revoke(spendPermission);
     }
 
+    /// @notice Register a hook delegate for a spend permission.
+    ///
+    /// @dev Can only be called by the account of the spend permission.
+    /// @dev The delegate will be used to execute hook logic via delegatecall during spend.
+    ///
+    /// @param spendPermission Details of the spend permission.
+    /// @param hookDelegate Address of the hook delegate contract.
+    function registerHookForPermission(SpendPermission calldata spendPermission, address hookDelegate)
+        external
+        requireSender(spendPermission.account)
+    {
+        bytes32 hash = getHash(spendPermission);
+        _delegate[hash] = hookDelegate;
+    }
+
 
     /// @notice Spend tokens using a spend permission, transferring them from `account` to `spender`.
     ///
@@ -421,9 +434,11 @@ contract Permit3 is EIP712 {
     {
         _useSpendPermission(spendPermission, value);
         
-        // execute hook logic if hook is specified in the permission
-        if (spendPermission.hook != address(0)) {
-            (bool success,) = spendPermission.hook.delegatecall(
+        // execute hook logic if a delegate is registered for this permission
+        bytes32 hash = getHash(spendPermission);
+        address hookDelegate = _delegate[hash];
+        if (hookDelegate != address(0)) {
+            (bool success,) = hookDelegate.delegatecall(
                 abi.encodeWithSelector(ISpendHook.applyHookData.selector, spendPermission, value, hookData)
             );
             // TODO: we might not care if this actually succeed or not... hooks could be considered optional
@@ -552,7 +567,6 @@ contract Permit3 is EIP712 {
                     spendPermission.period,
                     spendPermission.start,
                     spendPermission.end,
-                    spendPermission.hook,
                     spendPermission.salt,
                     keccak256(spendPermission.extraData)
                 )
@@ -582,7 +596,6 @@ contract Permit3 is EIP712 {
                     spendPermissionBatch.permissions[i].spender,
                     spendPermissionBatch.permissions[i].token,
                     spendPermissionBatch.permissions[i].allowance,
-                    spendPermissionBatch.permissions[i].hook,
                     spendPermissionBatch.permissions[i].salt,
                     keccak256(spendPermissionBatch.permissions[i].extraData)
                 )

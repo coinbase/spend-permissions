@@ -2,10 +2,14 @@
 pragma solidity ^0.8.23;
 
 import {Test} from "forge-std/Test.sol";
+
+import {MagicSpend} from "magicspend/MagicSpend.sol";
 import {CoinbaseSmartWallet} from "smart-wallet/CoinbaseSmartWallet.sol";
 import {CoinbaseSmartWalletFactory} from "smart-wallet/CoinbaseSmartWalletFactory.sol";
 
 import {CoinbaseSmartWalletSignatureHooks} from "../../../src/CoinbaseSmartWalletSignatureHooks.sol";
+
+import {MagicSpendHook} from "../../../src/MagicSpendHook.sol";
 import {Permit3, SpendPermission} from "../../../src/Permit3.sol";
 import {PublicERC6492Validator} from "../../../src/PublicERC6492Validator.sol";
 
@@ -19,12 +23,15 @@ contract Permit3Base is Base {
     address constant NATIVE_TOKEN = 0xEeeeeEeeeEeEeeEeEeEeeEEEeeeeEeeeeeeeEEeE;
     bytes32 constant EIP6492_MAGIC_VALUE = 0x6492649264926492649264926492649264926492649264926492649264926492;
     bytes32 constant CBSW_MESSAGE_TYPEHASH = keccak256("CoinbaseSmartWalletMessage(bytes32 hash)");
+    uint256 constant NONCE_HASH_BITS = 128;
 
     // Contract instances
     PublicERC6492Validator public publicERC6492Validator;
     Permit3 public permit3;
     CoinbaseSmartWalletSignatureHooks public signatureHook;
     CoinbaseSmartWalletFactory public mockCoinbaseSmartWalletFactory;
+    MagicSpend public magicSpend;
+    MagicSpendHook public magicSpendHook;
     MockERC20 public mockERC20;
 
     function _initializePermit3Base() internal {
@@ -36,10 +43,16 @@ contract Permit3Base is Base {
         signatureHook = new CoinbaseSmartWalletSignatureHooks(address(publicERC6492Validator));
         mockCoinbaseSmartWalletFactory = new CoinbaseSmartWalletFactory(address(account));
         mockERC20 = new MockERC20("Test Token", "TEST", 18);
+        magicSpend = new MagicSpend(owner, 1);
+        magicSpendHook = new MagicSpendHook(permit3);
 
         // Add the signatureHook as an owner of the smart wallet
         vm.prank(address(account));
         account.addOwnerAddress(address(signatureHook));
+
+        // Add Permit3 as an owner of the smart wallet (needed for hook delegatecalls)
+        vm.prank(address(account));
+        account.addOwnerAddress(address(permit3));
 
         // Verify signatureHook is properly registered as owner at index 1
         require(account.isOwnerAddress(address(signatureHook)), "SignatureHook not registered as owner");
@@ -47,6 +60,9 @@ contract Permit3Base is Base {
         require(
             address(uint160(uint256(bytes32(ownerAtIndex1)))) == address(signatureHook), "SignatureHook not at index 1"
         );
+
+        // Verify Permit3 is properly registered as owner
+        require(account.isOwnerAddress(address(permit3)), "Permit3 not registered as owner");
 
         // Fund the test account with some ETH
         vm.deal(address(account), 100 ether);
@@ -62,7 +78,6 @@ contract Permit3Base is Base {
             period: 604800, // 1 week
             start: uint48(block.timestamp),
             end: type(uint48).max,
-            hook: address(0), // No hook by default
             salt: 0,
             extraData: ""
         });
@@ -140,27 +155,59 @@ contract Permit3Base is Base {
     /// call to executeSignedCallsWithMessage.
     /// very last is the standard 6492 magic value
 
-    /// @notice Helper to sign a spend permission with ERC6492 wrapper for ERC20 approval using
-    /// CoinbaseSmartWalletSignatureHooks
-    /// @param spendPermission The spend permission to sign
-    /// @param ownerPk Private key of the signer
-    /// @param ownerIndex Index of the signer in the wallet's owner list
-    /// @param token Address of the ERC20 token to approve
+    function _encodeERC20ApprovalCall(address token) internal view returns (CoinbaseSmartWallet.Call memory) {
+        return CoinbaseSmartWallet.Call({
+            target: token,
+            value: 0,
+            data: abi.encodeWithSelector(IERC20.approve.selector, address(permit3), type(uint256).max)
+        });
+    }
+
+    function _encodeRegisterHookCall(SpendPermission memory spendPermission, address hook)
+        internal
+        view
+        returns (CoinbaseSmartWallet.Call memory)
+    {
+        return CoinbaseSmartWallet.Call({
+            target: address(permit3),
+            value: 0,
+            data: abi.encodeWithSelector(Permit3.registerHookForPermission.selector, spendPermission, hook)
+        });
+    }
+
     function _signSpendPermissionWithERC20Approval(
         SpendPermission memory spendPermission,
         uint256 ownerPk,
         uint256 ownerIndex,
         address token
     ) internal view returns (bytes memory) {
-        bytes32 spendPermissionHash = permit3.getHash(spendPermission);
-
-        // Create the calls array with ERC20 approval for Permit3
         CoinbaseSmartWallet.Call[] memory calls = new CoinbaseSmartWallet.Call[](1);
-        calls[0] = CoinbaseSmartWallet.Call({
-            target: token,
-            value: 0,
-            data: abi.encodeWithSelector(IERC20.approve.selector, address(permit3), type(uint256).max)
-        });
+        calls[0] = _encodeERC20ApprovalCall(token);
+
+        // Sign the spend permission with ERC6492 wrapper that includes ERC20 approval
+        bytes memory signature = _signSpendPermissionWithSignedCalls(
+            spendPermission,
+            ownerPk,
+            0, // owner index
+            calls
+        );
+
+        return signature;
+    }
+
+    /// @notice Helper to sign a spend permission with ERC6492 wrapper for ERC20 approval using
+    /// CoinbaseSmartWalletSignatureHooks
+    /// @param spendPermission The spend permission to sign
+    /// @param ownerPk Private key of the signer
+    /// @param ownerIndex Index of the signer in the wallet's owner list
+    /// @param calls The calls to sign
+    function _signSpendPermissionWithSignedCalls(
+        SpendPermission memory spendPermission,
+        uint256 ownerPk,
+        uint256 ownerIndex,
+        CoinbaseSmartWallet.Call[] memory calls
+    ) internal view returns (bytes memory) {
+        bytes32 spendPermissionHash = permit3.getHash(spendPermission);
 
         // Create the message to sign: keccak256(abi.encode(verifyingContract, calls, hash))
         bytes32 messageToSign = keccak256(abi.encode(address(permit3), calls, spendPermissionHash));
@@ -209,5 +256,35 @@ contract Permit3Base is Base {
         eip6492Signature = abi.encodePacked(eip6492Signature, EIP6492_MAGIC_VALUE);
 
         return eip6492Signature;
+    }
+
+    function _createWithdrawRequest(SpendPermission memory spendPermission, uint128 nonceEntropy)
+        internal
+        view
+        returns (MagicSpend.WithdrawRequest memory withdrawRequest)
+    {
+        // Get the hash and extract the portion we want
+        bytes32 permissionHash = permit3.getHash(spendPermission);
+        uint128 hashPortion = uint128(uint256(permissionHash));
+
+        // Combine hash portion and entropy portion
+        uint256 nonce = (uint256(nonceEntropy) << NONCE_HASH_BITS) | hashPortion;
+
+        return MagicSpend.WithdrawRequest({
+            asset: address(0),
+            amount: 0,
+            nonce: nonce,
+            expiry: type(uint48).max,
+            signature: hex""
+        });
+    }
+
+    function _signWithdrawRequest(address account, MagicSpend.WithdrawRequest memory withdrawRequest)
+        internal
+        view
+        returns (bytes memory signature)
+    {
+        bytes32 hash = magicSpend.getHash(account, withdrawRequest);
+        return _sign(ownerPk, hash);
     }
 }
