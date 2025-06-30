@@ -12,6 +12,9 @@ import {SignatureCheckerLib} from "solady/utils/SignatureCheckerLib.sol";
 ///
 /// @author Coinbase (https://github.com/coinbase/spend-permissions)
 contract PublicERC6492Validator {
+    /// @notice Track the current hash for each verifying contract
+    mapping(address verifyingContract => bytes32 hash) public currentHash;
+
     /// @notice Validate contract signature and execute side effects if provided.
     ///
     /// @dev If the signature is postfixed with the ERC-6492 magic value, an external call to deploy/prepare the account
@@ -23,6 +26,10 @@ contract PublicERC6492Validator {
         external
         returns (bool)
     {
+        currentHash[msg.sender] = hash;
         return SignatureCheckerLib.isValidERC6492SignatureNowAllowSideEffects(account, hash, signature);
+        // TODO: is there any reason to clear the hash after the signature is validated?
+        // in theory, an honestly implemented verifyingAccount would not call this function again for the same hash.
+        // at least, that's true for Permit3. Would it always be true for other verifyingAccounts?
     }
 }
