@@ -1,10 +1,10 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.23;
 
+import {MockCoinbaseSmartWallet} from "../../test/mocks/MockCoinbaseSmartWallet.sol";
 import {SpendPermissionManager} from "../SpendPermissionManager.sol";
 import {SubAccountsHook} from "../hooks/SubAccountsHook.sol";
 import {SpendPermissionManagerBaseHookTest} from "./SpendPermissionManagerBaseHookTest.sol";
-import {MockCoinbaseSmartWallet} from "../../test/mocks/MockCoinbaseSmartWallet.sol";
 
 contract SubAccountsHook_HappyPath_Test is SpendPermissionManagerBaseHookTest {
     SubAccountsHook subAccountsHook;
@@ -48,7 +48,8 @@ contract SubAccountsHook_HappyPath_Test is SpendPermissionManagerBaseHookTest {
         spendPermission.period = period;
         spendPermission.allowance = allowance;
         spendPermission.salt = salt;
-        spendPermission.hook = address(subAccountsHook);
+        spendPermission.hookConfig.hook = address(subAccountsHook);
+        spendPermission.hookConfig.hookData = abi.encode(address(subAccount));
 
         bytes memory signature = _signSpendPermission(spendPermission, ownerPk, 0);
 
@@ -74,5 +75,4 @@ contract SubAccountsHook_HappyPath_Test is SpendPermissionManagerBaseHookTest {
         assertEq(usage.spend, spend);
     }
 }
-
 

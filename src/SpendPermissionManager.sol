@@ -26,6 +26,14 @@ import {PublicERC6492Validator} from "./PublicERC6492Validator.sol";
 contract SpendPermissionManager is EIP712 {
     using SafeERC20 for IERC20;
 
+    /// @notice Configuration for a hook to call when the spend permission is used.
+    struct HookConfig {
+        /// @dev Hook to call when the spend permission is used.
+        address hook;
+        /// @dev Extra data to attach to the hook call.
+        bytes hookData;
+    }
+
     /// @notice A spend permission for an external entity to be able to spend an account's tokens.
     struct SpendPermission {
         /// @dev Smart account this spend permission is valid for.
@@ -46,8 +54,8 @@ contract SpendPermissionManager is EIP712 {
         uint256 salt;
         /// @dev Arbitrary data to attach to a spend permission which may be consumed by the `spender`.
         bytes extraData;
-        /// @dev Hook to call when the spend permission is used.
-        address hook;
+        /// @dev Hook configuration to call when the spend permission is used.
+        HookConfig hookConfig;
     }
 
     /// @notice A batch of spend permissions for an external entity to be able to spend an account's tokens.
@@ -313,7 +321,9 @@ contract SpendPermissionManager is EIP712 {
                         end: spendPermissionBatch.end,
                         salt: spendPermissionBatch.permissions[i].salt,
                         extraData: spendPermissionBatch.permissions[i].extraData,
-                        hook: spendPermissionBatch.hook
+                        hookConfig: SpendPermissionManager.HookConfig({
+                            hook: spendPermissionBatch.hook, hookData: hex""
+                        })
                     })
                 )) {
                 allApproved = false;
@@ -390,8 +400,10 @@ contract SpendPermissionManager is EIP712 {
         _useSpendPermission(spendPermission, value);
 
         // call hook if set
-        if (spendPermission.hook != address(0)) {
-            bytes memory prepareData = SpendHook(spendPermission.hook).onSpend(spendPermission, value, hookData);
+        if (spendPermission.hookConfig.hook != address(0)) {
+            // Only pass per-call hookData; hooks can access signed hook data via the SpendPermission itself
+            bytes memory prepareData =
+                SpendHook(spendPermission.hookConfig.hook).onSpend(spendPermission, value, hookData);
             (bool success, bytes memory returnData) = spendPermission.account.call(prepareData);
             if (!success) {
                 revert PrepareCallFailed(spendPermission.account, returnData);
@@ -506,7 +518,8 @@ contract SpendPermissionManager is EIP712 {
                     spendPermission.end,
                     spendPermission.salt,
                     keccak256(spendPermission.extraData),
-                    spendPermission.hook
+                    spendPermission.hookConfig.hook,
+                    keccak256(spendPermission.hookConfig.hookData)
                 )
             )
         );

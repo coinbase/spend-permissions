@@ -8,6 +8,7 @@ import {ERC20} from "openzeppelin-contracts/contracts/token/ERC20/ERC20.sol";
 
 contract TestERC20 is ERC20 {
     constructor() ERC20("Mock", "MCK") {}
+
     function mint(address to, uint256 amount) external {
         _mint(to, amount);
     }
@@ -50,7 +51,8 @@ contract ERC20TokenHook_HappyPath_Test is SpendPermissionManagerBaseHookTest {
         spendPermission.period = period;
         spendPermission.allowance = allowance;
         spendPermission.salt = salt;
-        spendPermission.hook = address(erc20TokenHook);
+        spendPermission.hookConfig.hook = address(erc20TokenHook);
+        spendPermission.hookConfig.hookData = hex"";
 
         // fund account with ERC20
         mockERC20.mint(address(account), allowance);
@@ -74,5 +76,4 @@ contract ERC20TokenHook_HappyPath_Test is SpendPermissionManagerBaseHookTest {
         assertEq(usage.spend, spend);
     }
 }
-
 

@@ -55,7 +55,8 @@ contract MagicSpendHook_HappyPath_Test is SpendPermissionManagerBaseHookTest {
         spendPermission.period = period;
         spendPermission.allowance = allowance;
         spendPermission.salt = salt;
-        spendPermission.hook = address(magicSpendHook);
+        spendPermission.hookConfig.hook = address(magicSpendHook);
+        spendPermission.hookConfig.hookData = hex"";
 
         // craft withdraw request with matching nonce postfix and amount
         MagicSpend.WithdrawRequest memory withdrawRequest = _createWithdrawRequest(spendPermission, nonceEntropy);
@@ -109,7 +110,8 @@ contract MagicSpendHook_HappyPath_Test is SpendPermissionManagerBaseHookTest {
         spendPermission.period = period;
         spendPermission.allowance = allowance;
         spendPermission.salt = salt;
-        spendPermission.hook = address(magicSpendHook);
+        spendPermission.hookConfig.hook = address(magicSpendHook);
+        spendPermission.hookConfig.hookData = hex"";
 
         // craft withdraw request with matching nonce postfix and amount
         MagicSpend.WithdrawRequest memory withdrawRequest = _createWithdrawRequest(spendPermission, nonceEntropy);
