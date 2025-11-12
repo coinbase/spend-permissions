@@ -15,12 +15,11 @@ contract ERC20TokenHook is SpendHook {
         uint160 value,
         bytes memory hookData
     ) external view override returns (bytes memory callData) {
-        CoinbaseSmartWallet.Call memory call = CoinbaseSmartWallet.Call({
-            target: spendPermission.token,
-            value: 0,
-            data: abi.encodeWithSelector(IERC20.approve.selector, address(PERMIT3), value)
-        });
-
-        return abi.encodeWithSelector(CoinbaseSmartWallet.execute.selector, call);
+        return abi.encodeWithSelector(
+            CoinbaseSmartWallet.execute.selector,
+            spendPermission.token,
+            0,
+            abi.encodeWithSelector(IERC20.approve.selector, address(PERMIT3), value)
+        );
     }
 }

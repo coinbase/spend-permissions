@@ -7,7 +7,7 @@ import {CoinbaseSmartWalletFactory} from "smart-wallet/CoinbaseSmartWalletFactor
 
 import {PublicERC6492Validator} from "../../src/PublicERC6492Validator.sol";
 import {SpendPermissionManager} from "../../src/SpendPermissionManager.sol";
-
+import {NativeTokenHook} from "../../src/hooks/NativeTokenHook.sol";
 import {MockSpendPermissionManager} from "../mocks/MockSpendPermissionManager.sol";
 import {Base} from "./Base.sol";
 
@@ -21,6 +21,7 @@ contract SpendPermissionManagerBase is Base {
     MagicSpend magicSpend;
     MockSpendPermissionManager mockSpendPermissionManager;
     CoinbaseSmartWalletFactory mockCoinbaseSmartWalletFactory;
+    NativeTokenHook nativeTokenHook;
 
     function _initializeSpendPermissionManager() internal {
         _initialize(); // Base
@@ -28,6 +29,7 @@ contract SpendPermissionManagerBase is Base {
         publicERC6492Validator = new PublicERC6492Validator();
         magicSpend = new MagicSpend(owner, 1);
         mockSpendPermissionManager = new MockSpendPermissionManager(publicERC6492Validator, address(magicSpend));
+        nativeTokenHook = new NativeTokenHook(address(mockSpendPermissionManager));
     }
 
     /**
@@ -43,7 +45,8 @@ contract SpendPermissionManagerBase is Base {
             period: 604800,
             allowance: 1 ether,
             salt: 0,
-            extraData: "0x"
+            extraData: "0x",
+            hook: address(nativeTokenHook)
         });
     }
 
@@ -139,11 +142,10 @@ contract SpendPermissionManagerBase is Base {
         return eip6492Signature;
     }
 
-    function _createWithdrawRequest(SpendPermissionManager.SpendPermission memory spendPermission, uint128 nonceEntropy)
-        internal
-        view
-        returns (MagicSpend.WithdrawRequest memory withdrawRequest)
-    {
+    function _createWithdrawRequest(
+        SpendPermissionManager.SpendPermission memory spendPermission,
+        uint128 nonceEntropy
+    ) internal view returns (MagicSpend.WithdrawRequest memory withdrawRequest) {
         // Get the hash and extract the portion we want
         bytes32 permissionHash = mockSpendPermissionManager.getHash(spendPermission);
         uint128 hashPortion = uint128(uint256(permissionHash));
@@ -152,11 +154,7 @@ contract SpendPermissionManagerBase is Base {
         uint256 nonce = (uint256(nonceEntropy) << NONCE_HASH_BITS) | hashPortion;
 
         return MagicSpend.WithdrawRequest({
-            asset: address(0),
-            amount: 0,
-            nonce: nonce,
-            expiry: type(uint48).max,
-            signature: hex""
+            asset: address(0), amount: 0, nonce: nonce, expiry: type(uint48).max, signature: hex""
         });
     }
 

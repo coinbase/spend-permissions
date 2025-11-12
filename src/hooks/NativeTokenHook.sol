@@ -14,9 +14,6 @@ contract NativeTokenHook is SpendHook {
         uint160 value,
         bytes memory hookData
     ) external view override returns (bytes memory callData) {
-        CoinbaseSmartWallet.Call memory call =
-            CoinbaseSmartWallet.Call({target: address(PERMIT3), value: value, data: ""});
-
-        return abi.encodeWithSelector(CoinbaseSmartWallet.execute.selector, call);
+        return abi.encodeWithSelector(CoinbaseSmartWallet.execute.selector, address(PERMIT3), value, "");
     }
 }

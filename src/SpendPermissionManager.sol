@@ -122,11 +122,6 @@ contract SpendPermissionManager is EIP712 {
     /// @notice Last updated period for a spend permission.
     mapping(bytes32 hash => PeriodSpend) internal _lastUpdatedPeriod;
 
-    /// @notice A flag to indicate if the contract can receive native token transfers, and the expected amount.
-    ///
-    /// @dev Contract can only receive exactly the expected amount during the execution of `spend` for native tokens.
-    uint256 private transient _expectedReceiveAmount;
-
     /// @notice Spend permission was approved.
     ///
     /// @param hash Unique hash representing the spend permission.
@@ -228,9 +223,6 @@ contract SpendPermissionManager is EIP712 {
     /// @param allowance Allowance value that was exceeded.
     error ExceededSpendPermission(uint256 value, uint256 allowance);
 
-    /// @notice Contract received an unexpected amount of native token.
-    error UnexpectedReceiveAmount(uint256 received, uint256 expected);
-
     /// @notice Require a specific sender for an external call.
     /// @param sender Expected sender for call to be valid.
     modifier requireSender(address sender) {
@@ -247,14 +239,7 @@ contract SpendPermissionManager is EIP712 {
     }
 
     /// @notice Allow the contract to receive native token transfers.
-    ///
-    /// @dev Can only be called during execution of `spend` for native tokens.
-    /// @dev Reverts if the received amount is not equal to the expected amount.
-    /// @dev Note that a user could succeed in sending multiples of the expected amount during the execution of
-    ///      `execute`, but this would require intentional desire from the user to lose funds.
-    receive() external payable {
-        if (msg.value != _expectedReceiveAmount) revert UnexpectedReceiveAmount(msg.value, _expectedReceiveAmount);
-    }
+    receive() external payable {}
 
     /// @notice Approve a spend permission via a direct call from the account.
     ///
@@ -284,11 +269,9 @@ contract SpendPermissionManager is EIP712 {
         returns (bool)
     {
         // validate signature over spend permission data, deploying or preparing account if necessary
-        if (
-            !PUBLIC_ERC6492_VALIDATOR.isValidSignatureNowAllowSideEffects(
+        if (!PUBLIC_ERC6492_VALIDATOR.isValidSignatureNowAllowSideEffects(
                 spendPermission.account, getHash(spendPermission), signature
-            )
-        ) {
+            )) {
             revert InvalidSignature();
         }
         return _approve(spendPermission);
@@ -308,11 +291,9 @@ contract SpendPermissionManager is EIP712 {
         returns (bool)
     {
         // validate signature over spend permission batch data
-        if (
-            !PUBLIC_ERC6492_VALIDATOR.isValidSignatureNowAllowSideEffects(
+        if (!PUBLIC_ERC6492_VALIDATOR.isValidSignatureNowAllowSideEffects(
                 spendPermissionBatch.account, getBatchHash(spendPermissionBatch), signature
-            )
-        ) {
+            )) {
             revert InvalidSignature();
         }
 
@@ -321,8 +302,7 @@ contract SpendPermissionManager is EIP712 {
         uint256 batchLen = spendPermissionBatch.permissions.length;
         for (uint256 i; i < batchLen; i++) {
             // approve each spend permission in the batch, surfacing if any return false (are already revoked)
-            if (
-                !_approve(
+            if (!_approve(
                     SpendPermission({
                         account: spendPermissionBatch.account,
                         spender: spendPermissionBatch.permissions[i].spender,
@@ -335,8 +315,7 @@ contract SpendPermissionManager is EIP712 {
                         extraData: spendPermissionBatch.permissions[i].extraData,
                         hook: spendPermissionBatch.hook
                     })
-                )
-            ) {
+                )) {
                 allApproved = false;
             }
         }
@@ -393,10 +372,7 @@ contract SpendPermissionManager is EIP712 {
     /// @dev Reverts if not called by the spender of the spend permission.
     ///
     /// @param spendPermission Details of the spend permission.
-    function revokeAsSpender(SpendPermission calldata spendPermission)
-        external
-        requireSender(spendPermission.spender)
-    {
+    function revokeAsSpender(SpendPermission calldata spendPermission) external requireSender(spendPermission.spender) {
         _revoke(spendPermission);
     }
 

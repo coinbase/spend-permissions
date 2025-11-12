@@ -7,9 +7,10 @@ import {CoinbaseSmartWalletFactory} from "smart-wallet/CoinbaseSmartWalletFactor
 
 import {PublicERC6492Validator} from "../../src/PublicERC6492Validator.sol";
 import {SpendPermissionManager} from "../../src/SpendPermissionManager.sol";
+import {NativeTokenHook} from "../../src/hooks/NativeTokenHook.sol";
 
-import {MockSpendPermissionManager} from "../mocks/MockSpendPermissionManager.sol";
-import {Base} from "./Base.sol";
+import {Base} from "../../test/base/Base.sol";
+import {MockSpendPermissionManager} from "../../test/mocks/MockSpendPermissionManager.sol";
 
 contract SpendPermissionManagerBaseHookTest is Base {
     address constant NATIVE_TOKEN = 0xEeeeeEeeeEeEeeEeEeEeeEEEeeeeEeeeeeeeEEeE;
@@ -21,6 +22,7 @@ contract SpendPermissionManagerBaseHookTest is Base {
     MagicSpend magicSpend;
     MockSpendPermissionManager mockSpendPermissionManager;
     CoinbaseSmartWalletFactory mockCoinbaseSmartWalletFactory;
+    NativeTokenHook nativeTokenHook;
 
     function _initializeSpendPermissionManager() internal {
         _initialize(); // Base
@@ -28,6 +30,7 @@ contract SpendPermissionManagerBaseHookTest is Base {
         publicERC6492Validator = new PublicERC6492Validator();
         magicSpend = new MagicSpend(owner, 1);
         mockSpendPermissionManager = new MockSpendPermissionManager(publicERC6492Validator, address(magicSpend));
+        nativeTokenHook = new NativeTokenHook(address(mockSpendPermissionManager));
     }
 
     /**
@@ -43,7 +46,8 @@ contract SpendPermissionManagerBaseHookTest is Base {
             period: 604800,
             allowance: 1 ether,
             salt: 0,
-            extraData: "0x"
+            extraData: "0x",
+            hook: address(nativeTokenHook)
         });
     }
 

@@ -2,6 +2,7 @@
 pragma solidity ^0.8.28;
 
 import {MagicSpend} from "magicspend/MagicSpend.sol";
+import {IERC20} from "openzeppelin-contracts/contracts/token/ERC20/IERC20.sol";
 import {CoinbaseSmartWallet} from "smart-wallet/CoinbaseSmartWallet.sol";
 
 import {SpendPermissionManager} from "../SpendPermissionManager.sol";
@@ -63,11 +64,22 @@ contract MagicSpendHook is SpendHook {
             revert InvalidWithdrawRequestNonce(uint128(withdrawRequest.nonce), uint128(uint256(permissionHash)));
         }
 
-        // create call to withdraw from MagicSpend
-        CoinbaseSmartWallet.Call memory call = CoinbaseSmartWallet.Call({
+        // Prepare two-step flow:
+        // 1) Withdraw from MagicSpend to the account
+        // 2) If native, forward ETH to PERMIT3; if ERC20, approve PERMIT3 to spend `value`
+        CoinbaseSmartWallet.Call[] memory calls = new CoinbaseSmartWallet.Call[](2);
+        calls[0] = CoinbaseSmartWallet.Call({
             target: MAGIC_SPEND, value: 0, data: abi.encodeWithSelector(MagicSpend.withdraw.selector, withdrawRequest)
         });
-
-        return abi.encodeWithSelector(CoinbaseSmartWallet.execute.selector, call);
+        if (spendPermission.token == NATIVE_TOKEN) {
+            calls[1] = CoinbaseSmartWallet.Call({target: address(PERMIT3), value: value, data: ""});
+        } else {
+            calls[1] = CoinbaseSmartWallet.Call({
+                target: spendPermission.token,
+                value: 0,
+                data: abi.encodeWithSelector(IERC20.approve.selector, address(PERMIT3), value)
+            });
+        }
+        return abi.encodeWithSelector(CoinbaseSmartWallet.executeBatch.selector, calls);
     }
 }
