@@ -17,9 +17,6 @@ import {SpendPermissionManager} from "../src/SpendPermissionManager.sol";
  * $SEPOLIA_BASESCAN_API --etherscan-api-key $BASESCAN_API_KEY --broadcast -vvvv
  */
 contract Deploy is Script {
-    // https://github.com/coinbase/MagicSpend/releases/tag/v1.0.0
-    address constant MAGIC_SPEND = 0x011A61C07DbF256A68256B1cB51A5e246730aB92;
-
     function run() public {
         vm.startBroadcast();
 
@@ -29,8 +26,9 @@ contract Deploy is Script {
     }
 
     function deploy() internal {
-        PublicERC6492Validator publicERC6492Validator = new PublicERC6492Validator{salt: 0}();
-        new SpendPermissionManager{salt: 0}(publicERC6492Validator, MAGIC_SPEND);
+        PublicERC6492Validator publicERC6492Validator =
+            PublicERC6492Validator(0xcfCE48B757601F3f351CB6f434CB0517aEEE293D);
+        new SpendPermissionManager{salt: 0}(publicERC6492Validator);
     }
 
     function logAddress(string memory name, address addr) internal pure {

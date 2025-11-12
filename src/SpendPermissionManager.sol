@@ -241,8 +241,7 @@ contract SpendPermissionManager is EIP712 {
     /// @notice Deploy SpendPermissionManager and set immutable dependency contracts.
     ///
     /// @param publicERC6492Validator PublicERC6492Validator contract.
-    /// @param magicSpend Address of the MagicSpend contract.
-    constructor(PublicERC6492Validator publicERC6492Validator, address magicSpend) {
+    constructor(PublicERC6492Validator publicERC6492Validator) {
         PUBLIC_ERC6492_VALIDATOR = publicERC6492Validator;
     }
 

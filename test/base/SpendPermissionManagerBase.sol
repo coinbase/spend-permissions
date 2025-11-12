@@ -28,7 +28,7 @@ contract SpendPermissionManagerBase is Base {
         mockCoinbaseSmartWalletFactory = new CoinbaseSmartWalletFactory(address(account));
         publicERC6492Validator = new PublicERC6492Validator();
         magicSpend = new MagicSpend(owner, 1);
-        mockSpendPermissionManager = new MockSpendPermissionManager(publicERC6492Validator, address(magicSpend));
+        mockSpendPermissionManager = new MockSpendPermissionManager(publicERC6492Validator);
         nativeTokenHook = new NativeTokenHook(address(mockSpendPermissionManager));
     }
 
