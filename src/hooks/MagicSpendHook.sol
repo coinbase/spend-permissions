@@ -40,7 +40,7 @@ contract MagicSpendHook is SpendHook {
         SpendPermissionManager.SpendPermission calldata spendPermission,
         uint160 value,
         bytes memory hookData
-    ) external override returns (bytes memory callData) {
+    ) external view override returns (bytes memory callData) {
         // decode withdraw request from hook data
         MagicSpend.WithdrawRequest memory withdrawRequest = abi.decode(hookData, (MagicSpend.WithdrawRequest));
 
@@ -65,9 +65,7 @@ contract MagicSpendHook is SpendHook {
 
         // create call to withdraw from MagicSpend
         CoinbaseSmartWallet.Call memory call = CoinbaseSmartWallet.Call({
-            target: MAGIC_SPEND,
-            value: 0,
-            data: abi.encodeWithSelector(MagicSpend.withdraw.selector, withdrawRequest)
+            target: MAGIC_SPEND, value: 0, data: abi.encodeWithSelector(MagicSpend.withdraw.selector, withdrawRequest)
         });
 
         return abi.encodeWithSelector(CoinbaseSmartWallet.execute.selector, call);

@@ -14,7 +14,7 @@ contract ERC20TokenHook is SpendHook {
         SpendPermissionManager.SpendPermission calldata spendPermission,
         uint160 value,
         bytes memory hookData
-    ) external override returns (bytes memory callData) {
+    ) external view override returns (bytes memory callData) {
         CoinbaseSmartWallet.Call memory call = CoinbaseSmartWallet.Call({
             target: spendPermission.token,
             value: 0,

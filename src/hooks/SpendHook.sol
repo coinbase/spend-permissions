@@ -14,5 +14,5 @@ abstract contract SpendHook {
         SpendPermissionManager.SpendPermission calldata spendPermission,
         uint160 value,
         bytes memory hookData
-    ) external virtual returns (bytes memory callData);
+    ) external view virtual returns (bytes memory callData);
 }
