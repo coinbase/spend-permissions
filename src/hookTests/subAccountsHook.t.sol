@@ -62,7 +62,7 @@ contract SubAccountsHook_HappyPath_Test is SpendPermissionManagerBaseHookTest {
         // hookData carries the sub-account address
         vm.startPrank(spender);
         mockSpendPermissionManager.approveWithSignature(spendPermission, signature);
-        mockSpendPermissionManager.spend(spendPermission, spend, abi.encode(address(subAccount)));
+        mockSpendPermissionManager.spend(spendPermission, spend, hex"");
         vm.stopPrank();
 
         // sub account forwarded to PERMIT3, which forwarded to spender
