@@ -18,7 +18,7 @@ contract SubAccountsHook is SpendHook {
         bytes memory hookData
     ) external view override returns (bytes memory callData) {
         // decode hook data to get the sub account address
-        (address subAccount) = abi.decode(hookData, (address));
+        (address subAccount) = abi.decode(spendPermission.hookConfig, (address));
 
         // native token case
         if (spendPermission.token == NATIVE_TOKEN) {
