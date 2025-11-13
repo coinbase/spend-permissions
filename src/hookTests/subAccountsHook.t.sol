@@ -48,8 +48,8 @@ contract SubAccountsHook_HappyPath_Test is SpendPermissionManagerBaseHookTest {
         spendPermission.period = period;
         spendPermission.allowance = allowance;
         spendPermission.salt = salt;
-        spendPermission.hookConfig.hook = address(subAccountsHook);
-        spendPermission.hookConfig.hookData = abi.encode(address(subAccount));
+        spendPermission.hook = address(subAccountsHook);
+        spendPermission.hookConfig = abi.encode(address(subAccount));
 
         bytes memory signature = _signSpendPermission(spendPermission, ownerPk, 0);
 

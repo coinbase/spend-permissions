@@ -37,8 +37,8 @@ contract NativeTokenHook_HappyPath_Test is SpendPermissionManagerBaseHookTest {
         spendPermission.period = period;
         spendPermission.allowance = allowance;
         spendPermission.salt = salt;
-        spendPermission.hookConfig.hook = address(nativeTokenHook);
-        spendPermission.hookConfig.hookData = hex"";
+        spendPermission.hook = address(nativeTokenHook);
+        spendPermission.hookConfig = hex"";
 
         bytes memory signature = _signSpendPermission(spendPermission, ownerPk, 0);
 

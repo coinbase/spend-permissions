@@ -51,8 +51,8 @@ contract ERC20TokenHook_HappyPath_Test is SpendPermissionManagerBaseHookTest {
         spendPermission.period = period;
         spendPermission.allowance = allowance;
         spendPermission.salt = salt;
-        spendPermission.hookConfig.hook = address(erc20TokenHook);
-        spendPermission.hookConfig.hookData = hex"";
+        spendPermission.hook = address(erc20TokenHook);
+        spendPermission.hookConfig = hex"";
 
         // fund account with ERC20
         mockERC20.mint(address(account), allowance);

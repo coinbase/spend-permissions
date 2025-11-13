@@ -46,7 +46,8 @@ contract SpendPermissionManagerBase is Base {
             allowance: 1 ether,
             salt: 0,
             extraData: "0x",
-            hookConfig: SpendPermissionManager.HookConfig({hook: address(nativeTokenHook), hookData: hex""})
+            hook: address(nativeTokenHook),
+            hookConfig: hex""
         });
     }
 
