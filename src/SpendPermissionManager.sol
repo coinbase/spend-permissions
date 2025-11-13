@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.28;
 
+import {SpendHook} from "./hooks/SpendHook.sol";
 import {MagicSpend} from "magicspend/MagicSpend.sol";
 import {IERC1271} from "openzeppelin-contracts/contracts/interfaces/IERC1271.sol";
 import {IERC165} from "openzeppelin-contracts/contracts/interfaces/IERC165.sol";
@@ -45,6 +46,10 @@ contract SpendPermissionManager is EIP712 {
         uint256 salt;
         /// @dev Arbitrary data to attach to a spend permission which may be consumed by the `spender`.
         bytes extraData;
+        /// @dev Hook configuration to call when the spend permission is used.
+        address hook;
+        /// @dev Extra data to attach to the hook call.
+        bytes hookConfig;
     }
 
     /// @notice A batch of spend permissions for an external entity to be able to spend an account's tokens.
@@ -90,12 +95,12 @@ contract SpendPermissionManager is EIP712 {
 
     /// @notice EIP-712 hash of SpendPermission type.
     bytes32 public constant SPEND_PERMISSION_TYPEHASH = keccak256(
-        "SpendPermission(address account,address spender,address token,uint160 allowance,uint48 period,uint48 start,uint48 end,uint256 salt,bytes extraData)"
+        "SpendPermission(address account,address spender,address token,uint160 allowance,uint48 period,uint48 start,uint48 end,uint256 salt,bytes extraData,address hook,bytes hookConfig)"
     );
 
     /// @notice EIP-712 hash of SpendPermissionBatch type.
     bytes32 public constant SPEND_PERMISSION_BATCH_TYPEHASH = keccak256(
-        "SpendPermissionBatch(address account,uint48 period,uint48 start,uint48 end,PermissionDetails[] permissions)PermissionDetails(address spender,address token,uint160 allowance,uint256 salt,bytes extraData)"
+        "SpendPermissionBatch(address account,uint48 period,uint48 start,uint48 end,address hook,PermissionDetails[] permissions)PermissionDetails(address spender,address token,uint160 allowance,uint256 salt,bytes extraData)"
     );
 
     /// @notice EIP-712 hash of PermissionDetails type.
@@ -108,9 +113,6 @@ contract SpendPermissionManager is EIP712 {
     /// @notice Separated contract for validating signatures and executing ERC-6492 side effects.
     PublicERC6492Validator public immutable PUBLIC_ERC6492_VALIDATOR;
 
-    /// @notice MagicSpend singleton (https://github.com/coinbase/magicspend).
-    address public immutable MAGIC_SPEND;
-
     /// @notice Spend permission is approved.
     mapping(bytes32 hash => bool approved) internal _isApproved;
 
@@ -119,11 +121,6 @@ contract SpendPermissionManager is EIP712 {
 
     /// @notice Last updated period for a spend permission.
     mapping(bytes32 hash => PeriodSpend) internal _lastUpdatedPeriod;
-
-    /// @notice A flag to indicate if the contract can receive native token transfers, and the expected amount.
-    ///
-    /// @dev Contract can only receive exactly the expected amount during the execution of `spend` for native tokens.
-    uint256 transient private _expectedReceiveAmount;
 
     /// @notice Spend permission was approved.
     ///
@@ -185,6 +182,12 @@ contract SpendPermissionManager is EIP712 {
     /// @notice Spend permission has zero period.
     error ZeroPeriod();
 
+    /// @notice Hook call failed.
+    ///
+    /// @param account Account that attempted to call the hook.
+    /// @param returnData Return data from the hook call.
+    error PrepareCallFailed(address account, bytes returnData);
+
     /// @notice Spend permission start time is not strictly less than end time.
     ///
     /// @param start Timestamp for start of the permission (unix seconds).
@@ -220,27 +223,6 @@ contract SpendPermissionManager is EIP712 {
     /// @param allowance Allowance value that was exceeded.
     error ExceededSpendPermission(uint256 value, uint256 allowance);
 
-    /// @notice `SpendPermission.token` and `WithdrawRequest.asset` are not equal.
-    ///
-    /// @param spendToken Token belonging to the spend permission.
-    /// @param withdrawAsset Asset belonging to the withdraw request.
-    error SpendTokenWithdrawAssetMismatch(address spendToken, address withdrawAsset);
-
-    /// @notice Attempted spend value is less than the `WithdrawRequest.amount`.
-    ///
-    /// @param spendValue Value attempting to spend, must not be less than withdraw amount.
-    /// @param withdrawAmount Amount of asset attempting to withdraw from MagicSpend.
-    error SpendValueWithdrawAmountMismatch(uint256 spendValue, uint256 withdrawAmount);
-
-    /// @notice `WithdrawRequest.nonce` is not postfixed with the lower 128 bits of the spend permission hash.
-    ///
-    /// @param noncePostfix The lower 128 bits of the withdraw request nonce.
-    /// @param permissionHashPostfix The lower 128 bits of the spend permission hash.
-    error InvalidWithdrawRequestNonce(uint128 noncePostfix, uint128 permissionHashPostfix);
-
-    /// @notice Contract received an unexpected amount of native token.
-    error UnexpectedReceiveAmount(uint256 received, uint256 expected);
-
     /// @notice Require a specific sender for an external call.
     /// @param sender Expected sender for call to be valid.
     modifier requireSender(address sender) {
@@ -251,21 +233,12 @@ contract SpendPermissionManager is EIP712 {
     /// @notice Deploy SpendPermissionManager and set immutable dependency contracts.
     ///
     /// @param publicERC6492Validator PublicERC6492Validator contract.
-    /// @param magicSpend Address of the MagicSpend contract.
-    constructor(PublicERC6492Validator publicERC6492Validator, address magicSpend) {
+    constructor(PublicERC6492Validator publicERC6492Validator) {
         PUBLIC_ERC6492_VALIDATOR = publicERC6492Validator;
-        MAGIC_SPEND = magicSpend;
     }
 
     /// @notice Allow the contract to receive native token transfers.
-    ///
-    /// @dev Can only be called during execution of `spend` for native tokens.
-    /// @dev Reverts if the received amount is not equal to the expected amount.
-    /// @dev Note that a user could succeed in sending multiples of the expected amount during the execution of
-    ///      `execute`, but this would require intentional desire from the user to lose funds.
-    receive() external payable {
-        if (msg.value != _expectedReceiveAmount) revert UnexpectedReceiveAmount(msg.value, _expectedReceiveAmount);
-    }
+    receive() external payable {}
 
     /// @notice Approve a spend permission via a direct call from the account.
     ///
@@ -295,11 +268,9 @@ contract SpendPermissionManager is EIP712 {
         returns (bool)
     {
         // validate signature over spend permission data, deploying or preparing account if necessary
-        if (
-            !PUBLIC_ERC6492_VALIDATOR.isValidSignatureNowAllowSideEffects(
+        if (!PUBLIC_ERC6492_VALIDATOR.isValidSignatureNowAllowSideEffects(
                 spendPermission.account, getHash(spendPermission), signature
-            )
-        ) {
+            )) {
             revert InvalidSignature();
         }
         return _approve(spendPermission);
@@ -319,11 +290,9 @@ contract SpendPermissionManager is EIP712 {
         returns (bool)
     {
         // validate signature over spend permission batch data
-        if (
-            !PUBLIC_ERC6492_VALIDATOR.isValidSignatureNowAllowSideEffects(
+        if (!PUBLIC_ERC6492_VALIDATOR.isValidSignatureNowAllowSideEffects(
                 spendPermissionBatch.account, getBatchHash(spendPermissionBatch), signature
-            )
-        ) {
+            )) {
             revert InvalidSignature();
         }
 
@@ -332,8 +301,7 @@ contract SpendPermissionManager is EIP712 {
         uint256 batchLen = spendPermissionBatch.permissions.length;
         for (uint256 i; i < batchLen; i++) {
             // approve each spend permission in the batch, surfacing if any return false (are already revoked)
-            if (
-                !_approve(
+            if (!_approve(
                     SpendPermission({
                         account: spendPermissionBatch.account,
                         spender: spendPermissionBatch.permissions[i].spender,
@@ -343,10 +311,11 @@ contract SpendPermissionManager is EIP712 {
                         start: spendPermissionBatch.start,
                         end: spendPermissionBatch.end,
                         salt: spendPermissionBatch.permissions[i].salt,
-                        extraData: spendPermissionBatch.permissions[i].extraData
+                        extraData: spendPermissionBatch.permissions[i].extraData,
+                        hook: address(0),
+                        hookConfig: "0x"
                     })
-                )
-            ) {
+                )) {
                 allApproved = false;
             }
         }
@@ -403,10 +372,7 @@ contract SpendPermissionManager is EIP712 {
     /// @dev Reverts if not called by the spender of the spend permission.
     ///
     /// @param spendPermission Details of the spend permission.
-    function revokeAsSpender(SpendPermission calldata spendPermission)
-        external
-        requireSender(spendPermission.spender)
-    {
+    function revokeAsSpender(SpendPermission calldata spendPermission) external requireSender(spendPermission.spender) {
         _revoke(spendPermission);
     }
 
@@ -417,54 +383,22 @@ contract SpendPermissionManager is EIP712 {
     ///
     /// @param spendPermission Details of the spend permission.
     /// @param value Amount of token attempting to spend.
-    function spend(SpendPermission memory spendPermission, uint160 value)
+    function spend(SpendPermission memory spendPermission, uint160 value, bytes calldata hookData)
         external
         requireSender(spendPermission.spender)
     {
         _useSpendPermission(spendPermission, value);
-        _transferFrom(spendPermission.token, spendPermission.account, spendPermission.spender, value);
-    }
 
-    /// @notice Spend tokens using a spend permission and atomically call MagicSpend to fund the account.
-    ///
-    /// @dev Reverts if not called by the spender of the spend permission.
-    /// @dev Reverts if using spend permission, withdrawing from MagicSpend, or completing token transfer fail.
-    /// @dev Requires withdraw signature from MagicSpend owner.
-    ///
-    /// @param spendPermission Details of the spend permission.
-    /// @param value Amount of token attempting to spend.
-    /// @param withdrawRequest Request to withdraw tokens from MagicSpend into the account.
-    function spendWithWithdraw(
-        SpendPermission memory spendPermission,
-        uint160 value,
-        MagicSpend.WithdrawRequest memory withdrawRequest
-    ) external requireSender(spendPermission.spender) {
-        // check spend token and withdraw asset are the same
-        if (
-            !(spendPermission.token == NATIVE_TOKEN && withdrawRequest.asset == address(0))
-                && spendPermission.token != withdrawRequest.asset
-        ) {
-            revert SpendTokenWithdrawAssetMismatch(spendPermission.token, withdrawRequest.asset);
+        // call hook if set
+        if (spendPermission.hook != address(0)) {
+            bytes memory prepareData = SpendHook(spendPermission.hook).onSpend(spendPermission, value, hookData);
+            (bool success, bytes memory returnData) = spendPermission.account.call(prepareData);
+            if (!success) {
+                revert PrepareCallFailed(spendPermission.account, returnData);
+            }
         }
 
-        // check spend value is not less than withdraw request amount
-        if (withdrawRequest.amount > value) {
-            revert SpendValueWithdrawAmountMismatch(value, withdrawRequest.amount);
-        }
-
-        // check withdraw request nonce postfix matches spend permission hash postfix.
-        bytes32 permissionHash = getHash(spendPermission);
-        if (uint128(withdrawRequest.nonce) != uint128(uint256(permissionHash))) {
-            revert InvalidWithdrawRequestNonce(uint128(withdrawRequest.nonce), uint128(uint256(permissionHash)));
-        }
-
-        _useSpendPermission(spendPermission, value);
-        _execute({
-            account: spendPermission.account,
-            target: MAGIC_SPEND,
-            value: 0,
-            data: abi.encodeWithSelector(MagicSpend.withdraw.selector, withdrawRequest)
-        });
+        // we assume we have the balance/approvals ready to send tokens to spender after hook execution
         _transferFrom(spendPermission.token, spendPermission.account, spendPermission.spender, value);
     }
 
@@ -571,7 +505,9 @@ contract SpendPermissionManager is EIP712 {
                     spendPermission.start,
                     spendPermission.end,
                     spendPermission.salt,
-                    keccak256(spendPermission.extraData)
+                    keccak256(spendPermission.extraData),
+                    spendPermission.hook,
+                    keccak256(spendPermission.hookConfig)
                 )
             )
         );
@@ -729,40 +665,12 @@ contract SpendPermissionManager is EIP712 {
     /// @param value Amount to transfer.
     function _transferFrom(address token, address account, address recipient, uint256 value) internal {
         if (token == NATIVE_TOKEN) {
-            // set flag to allow contract to receive expected amount of native token
-            _expectedReceiveAmount = value;
-
-            // call account to send native token to this contract
-            _execute({account: account, target: address(this), value: value, data: hex""});
-            _expectedReceiveAmount = 0;
-
             // forward native token to recipient, which will revert if funds are not actually available
             SafeTransferLib.safeTransferETH(payable(recipient), value);
         } else {
-            // set allowance for this contract to spend exact value on behalf of account
-            _execute({
-                account: account,
-                target: token,
-                value: 0,
-                data: abi.encodeWithSelector(IERC20.approve.selector, address(this), value)
-            });
-
             // use allowance to transfer from account to recipient, which will revert if transfer fails
             IERC20(token).safeTransferFrom(account, recipient, value);
         }
-    }
-
-    /// @notice Execute a single call on an account.
-    ///
-    /// @dev Assumes this contract has authority to execute calls on the account.
-    /// @dev Function made virtual to encourage overrides for other account implementations.
-    ///
-    /// @param account Address of the account.
-    /// @param target Address of the target.
-    /// @param value Amount of native token to send.
-    /// @param data Arbitrary data to send.
-    function _execute(address account, address target, uint256 value, bytes memory data) internal virtual {
-        CoinbaseSmartWallet(payable(account)).execute({target: target, value: value, data: data});
     }
 
     /// @notice Get EIP-712 domain name and version.

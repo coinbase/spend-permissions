@@ -8,10 +8,11 @@ import {CoinbaseSmartWalletFactory} from "smart-wallet/CoinbaseSmartWalletFactor
 import {PublicERC6492Validator} from "../../src/PublicERC6492Validator.sol";
 import {SpendPermissionManager} from "../../src/SpendPermissionManager.sol";
 import {NativeTokenHook} from "../../src/hooks/NativeTokenHook.sol";
-import {MockSpendPermissionManager} from "../mocks/MockSpendPermissionManager.sol";
-import {Base} from "./Base.sol";
 
-contract SpendPermissionManagerBase is Base {
+import {Base} from "../../test/base/Base.sol";
+import {MockSpendPermissionManager} from "../../test/mocks/MockSpendPermissionManager.sol";
+
+contract SpendPermissionManagerBaseHookTest is Base {
     address constant NATIVE_TOKEN = 0xEeeeeEeeeEeEeeEeEeEeeEEEeeeeEeeeeeeeEEeE;
     bytes32 constant EIP6492_MAGIC_VALUE = 0x6492649264926492649264926492649264926492649264926492649264926492;
     bytes32 constant CBSW_MESSAGE_TYPEHASH = keccak256("CoinbaseSmartWalletMessage(bytes32 hash)");
@@ -47,7 +48,7 @@ contract SpendPermissionManagerBase is Base {
             salt: 0,
             extraData: "0x",
             hook: address(nativeTokenHook),
-            hookConfig: hex""
+            hookConfig: "0x"
         });
     }
 
