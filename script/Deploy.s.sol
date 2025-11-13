@@ -61,3 +61,10 @@ contract Deploy is Script {
         console2.logString(string.concat(name, ": ", Strings.toHexString(addr)));
     }
 }
+
+// PublicERC6492Validator: 0xaef21c90b90867aa8ca6a5d06ebfa38c521e0d27
+// SpendPermissionManager: 0x0de59ad970032a49ca4b88eb33304fc38b4713ea
+// NativeTokenHook: 0x1ee7c5cf2338a05d799d0cc1574ebc0634978009
+// ERC20TokenHook: 0xe69c70f1468c819116afe879211dbe9f7fefd7e2
+// MagicSpendHook: 0x820dce07d6a26f7dfac830f6581758d92deea9c8
+// SubAccountsHook: 0x5af1b6aef1205065b8b4f3e6eb90eeeab55d72b9
