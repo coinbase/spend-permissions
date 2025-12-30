@@ -6,7 +6,7 @@
 
 The following contracts are deployed on the following chains:
 
-`SpendPermissionManager`: `0xf85210B21cC50302F477BA56686d2019dC9b67Ad`
+`SessionManager`: (varies by deployment)
 
 `PublicERC6492Validator`: `0xcfCE48B757601F3f351CB6f434CB0517aEEE293D`
 
@@ -31,7 +31,7 @@ Mainnets:
 
 ### 1. Periphery addition to Coinbase Smart Wallet V1
 
-While implementing this feature as a new V2 wallet implementation was tempting, we decided to leverage the modular owner system from [Smart Wallet V1](https://github.com/coinbase/smart-wallet) and avoid a hard upgrade. The `SpendPermissionManager` singleton is added as an owner of the user's smart wallet, giving it the ability to move user funds on behalf of a sender within the tight constraints of the spend permission logic.
+While implementing this feature as a new V2 wallet implementation was tempting, we decided to leverage the modular owner system from [Smart Wallet V1](https://github.com/coinbase/smart-wallet) and avoid a hard upgrade. The `SessionManager` singleton is added as an owner of the user's smart wallet, giving it the ability to execute user-authorized `SessionPolicy` call plans.
 
 ### 2. Only Native and ERC-20 token support
 
@@ -41,7 +41,7 @@ This approach does **not** enable apps to make arbitrary external calls from use
 
 ### 3. Spender-originated calls
 
-Spend Permissions allow users to delegate token spending to a `spender` address, presumably controlled by the app. When an app wants to spend user tokens, it calls into `SpendPermissionManager` from this `spender` address. `SpendPermissionManager` will then validate the spend is within the approved permission's allowance and calls into the user's account to transfer tokens.
+Spend Permissions allow users to delegate token spending to a `sessionSigner` (the `spender` field in `SpendPermissionSessionPolicy.SpendPermission`). When an app wants to spend user tokens, it calls into `SessionManager.execute` for the installed `SpendPermissionSessionPolicy`. The policy validates the spend against its configured constraints and finalizes the token transfer.
 
 This approach does **not** use the ERC-4337 EntryPoint to prompt external calls from user accounts, improving security by avoiding the possibility of ERC-4337 Paymasters spending users' tokens on gas fees.
 
@@ -77,9 +77,9 @@ sequenceDiagram
 
 ### 2. App approves and spends (onchain)
 
-Spenders (apps) spend tokens by calling `SpendPermissionManager.spend` with their spend permission values, a recipient, and an amount of tokens to spend.
+Apps spend tokens by calling `SessionManager.execute` for the installed `SpendPermissionSessionPolicy` with per-execution `policyData` (amount + optional prep data).
 
-Spenders may want to batch this call with an additionally prepended call to [approve their permission via user signature](./approveWithSignature.md) unless the user has already approved the spend permission(s) directly via `SpendPermissionManager.approve`.
+Spend permissions are “approved” by installing the `SpendPermissionSessionPolicy` instance (policyConfig is the encoded spend permission). Install can be done via `SessionManager.installPolicyWithSignature` (recommended) or `SessionManager.installPolicy` (direct call).
 
 Read more details [here](./docs/diagrams/spend.md).
 
@@ -112,7 +112,7 @@ sequenceDiagram
 
 ### 3. User revokes permission (onchain)
 
-Users can revoke permissions at any time by calling `SpendPermissionManager.revoke`, which can also be batched via `CoinbaseSmartWallet.executeBatch`.
+Users can revoke permissions at any time by calling `SessionManager.revokePolicyWithSignature` or `SessionManager.revokePolicy` (direct call).
 
 Read more details [here](./docs/diagrams/revoke.md).
 

@@ -2,16 +2,17 @@
 pragma solidity ^0.8.20;
 
 import {PublicERC6492Validator} from "../src/PublicERC6492Validator.sol";
-import {SpendPermissionManager} from "../src/SpendPermissionManager.sol";
-import {ERC20TokenHook} from "../src/hooks/ERC20TokenHook.sol";
-import {MagicSpendHook} from "../src/hooks/MagicSpendHook.sol";
-import {NativeTokenHook} from "../src/hooks/NativeTokenHook.sol";
-import {SubAccountsHook} from "../src/hooks/SubAccountsHook.sol";
+import {SessionManager} from "../src/SessionManager.sol";
+import {SpendPermissionSessionPolicy} from "../src/policies/SpendPermissionSessionPolicy.sol";
+import {ERC20SpendHook} from "../src/SpendPermissionSpendHooks/ERC20SpendHook.sol";
+import {MagicSpendSpendHook} from "../src/SpendPermissionSpendHooks/MagicSpendSpendHook.sol";
+import {NativeTokenSpendHook} from "../src/SpendPermissionSpendHooks/NativeTokenSpendHook.sol";
+import {SubAccountSpendHook} from "../src/SpendPermissionSpendHooks/SubAccountSpendHook.sol";
 import {Script, console2} from "forge-std/Script.sol";
 import {Strings} from "openzeppelin-contracts/contracts/utils/Strings.sol";
 
 /**
- * @notice Deploy the SpendPermissionManager contract and its dependencies.
+ * @notice Deploy the SessionManager, SpendPermissionSessionPolicy, and spend prep session policies.
  *
  * @dev Before deploying contracts, make sure dependencies have been installed at the latest or otherwise specific
  * versions using `forge install [OPTIONS] [DEPENDENCIES]`.
@@ -43,18 +44,20 @@ contract Deploy is Script {
 
     function deploy() internal {
         PublicERC6492Validator publicERC6492Validator = new PublicERC6492Validator();
-        SpendPermissionManager spendPermissionManager = new SpendPermissionManager{salt: 0}(publicERC6492Validator);
-        NativeTokenHook nativeTokenHook = new NativeTokenHook(address(spendPermissionManager));
-        ERC20TokenHook erc20TokenHook = new ERC20TokenHook(address(spendPermissionManager));
-        MagicSpendHook magicSpendHook = new MagicSpendHook(address(spendPermissionManager), MAGIC_SPEND);
-        SubAccountsHook subAccountsHook = new SubAccountsHook(address(spendPermissionManager));
+        SessionManager sessionManager = new SessionManager{salt: 0}(publicERC6492Validator);
+        SpendPermissionSessionPolicy spendPermissionPolicy = new SpendPermissionSessionPolicy{salt: 0}(address(sessionManager));
+        NativeTokenSpendHook nativeTokenSpendHook = new NativeTokenSpendHook(address(spendPermissionPolicy));
+        ERC20SpendHook erc20SpendHook = new ERC20SpendHook(address(spendPermissionPolicy));
+        MagicSpendSpendHook magicSpendSpendHook = new MagicSpendSpendHook(address(spendPermissionPolicy), MAGIC_SPEND);
+        SubAccountSpendHook subAccountSpendHook = new SubAccountSpendHook(address(spendPermissionPolicy));
 
         logAddress("PublicERC6492Validator", address(publicERC6492Validator));
-        logAddress("SpendPermissionManager", address(spendPermissionManager));
-        logAddress("NativeTokenHook", address(nativeTokenHook));
-        logAddress("ERC20TokenHook", address(erc20TokenHook));
-        logAddress("MagicSpendHook", address(magicSpendHook));
-        logAddress("SubAccountsHook", address(subAccountsHook));
+        logAddress("SessionManager", address(sessionManager));
+        logAddress("SpendPermissionSessionPolicy", address(spendPermissionPolicy));
+        logAddress("NativeTokenSpendHook", address(nativeTokenSpendHook));
+        logAddress("ERC20SpendHook", address(erc20SpendHook));
+        logAddress("MagicSpendSpendHook", address(magicSpendSpendHook));
+        logAddress("SubAccountSpendHook", address(subAccountSpendHook));
     }
 
     function logAddress(string memory name, address addr) internal pure {
@@ -62,9 +65,4 @@ contract Deploy is Script {
     }
 }
 
-// PublicERC6492Validator: 0xaef21c90b90867aa8ca6a5d06ebfa38c521e0d27
-// SpendPermissionManager: 0x0de59ad970032a49ca4b88eb33304fc38b4713ea
-// NativeTokenHook: 0x1ee7c5cf2338a05d799d0cc1574ebc0634978009
-// ERC20TokenHook: 0xe69c70f1468c819116afe879211dbe9f7fefd7e2
-// MagicSpendHook: 0x820dce07d6a26f7dfac830f6581758d92deea9c8
-// SubAccountsHook: 0x5af1b6aef1205065b8b4f3e6eb90eeeab55d72b9
+// (addresses omitted; script output logs deployed addresses)
