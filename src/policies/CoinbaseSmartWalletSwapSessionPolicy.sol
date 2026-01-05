@@ -9,8 +9,8 @@ import {SessionTypes} from "../SessionTypes.sol";
 import {SessionPolicy} from "./SessionPolicy.sol";
 
 /// @notice Session policy that allows a session signer to execute a constrained ERC20->(something) swap
-///         on a fixed `swapTarget`, bounded by `maxAmountIn` and checked by `minAmountOut` (balance delta on `tokenOut`).
-///
+///         on a fixed `swapTarget`, bounded by `maxAmountIn` and checked by `minAmountOut` (balance delta on
+/// `tokenOut`).
 /// @dev This is the "session policy" equivalent of the legacy SpendPermissionSwap helper:
 ///      - wallet approves `swapTarget` for `amountIn`
 ///      - wallet calls `swapTarget` with `swapData`
@@ -105,9 +105,7 @@ contract CoinbaseSmartWalletSwapSessionPolicy is SessionPolicy {
         });
         calls[1] = CoinbaseSmartWallet.Call({target: cfg.swapTarget, value: 0, data: data.swapData});
         calls[2] = CoinbaseSmartWallet.Call({
-            target: cfg.tokenIn,
-            value: 0,
-            data: abi.encodeWithSelector(IERC20.approve.selector, cfg.swapTarget, 0)
+            target: cfg.tokenIn, value: 0, data: abi.encodeWithSelector(IERC20.approve.selector, cfg.swapTarget, 0)
         });
 
         accountCallData = abi.encodeWithSelector(CoinbaseSmartWallet.executeBatch.selector, calls);
@@ -126,5 +124,4 @@ contract CoinbaseSmartWalletSwapSessionPolicy is SessionPolicy {
         }
     }
 }
-
 

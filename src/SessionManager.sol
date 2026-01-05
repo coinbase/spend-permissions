@@ -20,6 +20,9 @@ contract SessionManager is EIP712, ReentrancyGuardTransient {
         "Install(address account,address policy,bytes32 policyConfigHash,uint48 validAfter,uint48 validUntil,uint256 salt)"
     );
 
+    /// @notice EIP-712 hash of Revoke type.
+    bytes32 public constant REVOKE_TYPEHASH = keccak256("Revoke(bytes32 policyId)");
+
     /// @notice EIP-712 hash of Execution type.
     bytes32 public constant EXECUTION_TYPEHASH = keccak256(
         "Execution(bytes32 policyId,address account,address policy,bytes32 policyConfigHash,bytes32 policyDataHash,uint256 nonce,uint48 deadline)"
@@ -126,7 +129,8 @@ contract SessionManager is EIP712, ReentrancyGuardTransient {
         if (!state.installed) revert PolicyNotInstalled(policyId);
         if (state.revoked) revert PolicyRevokedAlready(policyId); // @review could no-op here instead
 
-        bytes32 digest = _hashTypedData(structHash);
+        // IMPORTANT: revoke signatures must be distinct from install signatures to avoid signature replay/ambiguity.
+        bytes32 digest = _hashTypedData(getRevokeStructHash(policyId));
         if (!PUBLIC_ERC6492_VALIDATOR.isValidSignatureNowAllowSideEffects(install.account, digest, userSig)) {
             revert InvalidSignature();
         }
@@ -204,6 +208,10 @@ contract SessionManager is EIP712, ReentrancyGuardTransient {
                 install.salt
             )
         );
+    }
+
+    function getRevokeStructHash(bytes32 policyId) public pure returns (bytes32) {
+        return keccak256(abi.encode(REVOKE_TYPEHASH, policyId));
     }
 
     function _checkPolicyConfigHash(bytes32 expected, bytes calldata policyConfig) internal pure {

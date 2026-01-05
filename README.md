@@ -112,7 +112,7 @@ sequenceDiagram
 
 ### 3. User revokes permission (onchain)
 
-Users can revoke permissions at any time by calling `SessionManager.revokePolicyWithSignature` or `SessionManager.revokePolicy` (direct call).
+Users can revoke permissions at any time by calling `SessionManager.revokePolicyWithSignature` or `SessionManager.revokePolicy` (direct call). Note: `revokePolicyWithSignature` signs a distinct EIP-712 message `Revoke(bytes32 policyId)` where `policyId == SessionManager.getInstallStructHash(install)`.
 
 Read more details [here](./docs/diagrams/revoke.md).
 
