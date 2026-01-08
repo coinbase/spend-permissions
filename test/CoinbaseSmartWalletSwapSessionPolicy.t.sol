@@ -7,9 +7,9 @@ import {ERC20} from "openzeppelin-contracts/contracts/token/ERC20/ERC20.sol";
 import {IERC20} from "openzeppelin-contracts/contracts/token/ERC20/IERC20.sol";
 
 import {PublicERC6492Validator} from "../src/PublicERC6492Validator.sol";
-import {SessionManager} from "../src/SessionManager.sol";
-import {SessionTypes} from "../src/SessionTypes.sol";
-import {CoinbaseSmartWalletSwapSessionPolicy} from "../src/policies/CoinbaseSmartWalletSwapSessionPolicy.sol";
+import {PermissionManager} from "../src/PermissionManager.sol";
+import {PermissionTypes} from "../src/PermissionTypes.sol";
+import {CoinbaseSmartWalletSwapPolicy} from "../src/policies/CoinbaseSmartWalletSwapPolicy.sol";
 
 import {MockCoinbaseSmartWallet} from "./mocks/MockCoinbaseSmartWallet.sol";
 import {MockSwapTarget} from "./mocks/MockSwapTarget.sol";
@@ -32,7 +32,7 @@ contract TestToken is ERC20 {
     }
 }
 
-contract CoinbaseSmartWalletSwapSessionPolicyTest is Test {
+contract CoinbaseSmartWalletSwapPolicyTest is Test {
     // keccak256("EIP712Domain(string name,string version,uint256 chainId,address verifyingContract)")
     bytes32 internal constant DOMAIN_TYPEHASH = 0x8b73c3c69bb8fe3d512ecc4cf759cc79239f7b179b0ffacaa9a75d522b39400f;
 
@@ -43,8 +43,8 @@ contract CoinbaseSmartWalletSwapSessionPolicyTest is Test {
 
     MockCoinbaseSmartWallet internal account;
     PublicERC6492Validator internal validator;
-    SessionManager internal sm;
-    CoinbaseSmartWalletSwapSessionPolicy internal swapPolicy;
+    PermissionManager internal sm;
+    CoinbaseSmartWalletSwapPolicy internal swapPolicy;
     MockSwapTarget internal swapTarget;
 
     TestToken internal tokenIn;
@@ -57,8 +57,8 @@ contract CoinbaseSmartWalletSwapSessionPolicyTest is Test {
         account.initialize(owners);
 
         validator = new PublicERC6492Validator();
-        sm = new SessionManager(validator);
-        swapPolicy = new CoinbaseSmartWalletSwapSessionPolicy(address(sm));
+        sm = new PermissionManager(validator);
+        swapPolicy = new CoinbaseSmartWalletSwapPolicy(address(sm));
         swapTarget = new MockSwapTarget();
 
         vm.prank(owner);
@@ -76,9 +76,9 @@ contract CoinbaseSmartWalletSwapSessionPolicyTest is Test {
         tokenIn.mint(address(account), amountIn);
         tokenOut.mint(address(swapTarget), amountOut);
 
-        CoinbaseSmartWalletSwapSessionPolicy.Config memory cfg = CoinbaseSmartWalletSwapSessionPolicy.Config({
+        CoinbaseSmartWalletSwapPolicy.Config memory cfg = CoinbaseSmartWalletSwapPolicy.Config({
             account: address(account),
-            sessionSigner: spender,
+            authority: spender,
             tokenIn: address(tokenIn),
             tokenOut: address(tokenOut),
             swapTarget: address(swapTarget),
@@ -90,7 +90,7 @@ contract CoinbaseSmartWalletSwapSessionPolicyTest is Test {
         });
         bytes memory policyConfig = abi.encode(cfg);
 
-        SessionTypes.Install memory install = SessionTypes.Install({
+        PermissionTypes.Install memory install = PermissionTypes.Install({
             account: address(account),
             policy: address(swapPolicy),
             policyConfigHash: keccak256(policyConfig),
@@ -106,7 +106,7 @@ contract CoinbaseSmartWalletSwapSessionPolicyTest is Test {
             MockSwapTarget.swap.selector, address(tokenIn), address(tokenOut), address(account), amountIn, amountOut
         );
         bytes memory policyData =
-            abi.encode(CoinbaseSmartWalletSwapSessionPolicy.PolicyData({amountIn: amountIn, swapData: swapData}));
+            abi.encode(CoinbaseSmartWalletSwapPolicy.PolicyData({amountIn: amountIn, swapData: swapData}));
 
         uint256 beforeOut = tokenOut.balanceOf(address(account));
         vm.prank(spender);
@@ -135,8 +135,8 @@ contract CoinbaseSmartWalletSwapSessionPolicyTest is Test {
         forkAccount.initialize(owners);
 
         PublicERC6492Validator forkValidator = new PublicERC6492Validator();
-        SessionManager forkSm = new SessionManager(forkValidator);
-        CoinbaseSmartWalletSwapSessionPolicy forkSwapPolicy = new CoinbaseSmartWalletSwapSessionPolicy(address(forkSm));
+        PermissionManager forkSm = new PermissionManager(forkValidator);
+        CoinbaseSmartWalletSwapPolicy forkSwapPolicy = new CoinbaseSmartWalletSwapPolicy(address(forkSm));
 
         vm.prank(owner);
         forkAccount.addOwnerAddress(address(forkSm));
@@ -145,9 +145,9 @@ contract CoinbaseSmartWalletSwapSessionPolicyTest is Test {
         deal(usdc, address(forkAccount), amountIn, true);
         uint256 minAmountOut = 1;
 
-        CoinbaseSmartWalletSwapSessionPolicy.Config memory cfg = CoinbaseSmartWalletSwapSessionPolicy.Config({
+        CoinbaseSmartWalletSwapPolicy.Config memory cfg = CoinbaseSmartWalletSwapPolicy.Config({
             account: address(forkAccount),
-            sessionSigner: spender,
+            authority: spender,
             tokenIn: usdc,
             tokenOut: weth,
             swapTarget: router,
@@ -159,7 +159,7 @@ contract CoinbaseSmartWalletSwapSessionPolicyTest is Test {
         });
         bytes memory policyConfig = abi.encode(cfg);
 
-        SessionTypes.Install memory install = SessionTypes.Install({
+        PermissionTypes.Install memory install = PermissionTypes.Install({
             account: address(forkAccount),
             policy: address(forkSwapPolicy),
             policyConfigHash: keccak256(policyConfig),
@@ -178,7 +178,7 @@ contract CoinbaseSmartWalletSwapSessionPolicyTest is Test {
             IUniswapV2Router.swapExactTokensForTokens.selector, amountIn, 0, path, address(forkAccount), block.timestamp
         );
         bytes memory policyData =
-            abi.encode(CoinbaseSmartWalletSwapSessionPolicy.PolicyData({amountIn: amountIn, swapData: swapData}));
+            abi.encode(CoinbaseSmartWalletSwapPolicy.PolicyData({amountIn: amountIn, swapData: swapData}));
 
         uint256 beforeUsdc = IERC20(usdc).balanceOf(address(forkAccount));
         uint256 beforeWeth = IERC20(weth).balanceOf(address(forkAccount));
@@ -194,9 +194,9 @@ contract CoinbaseSmartWalletSwapSessionPolicyTest is Test {
         assertEq(IERC20(usdc).allowance(address(forkAccount), router), 0);
     }
 
-    function _signInstall(SessionTypes.Install memory install) internal view returns (bytes memory) {
+    function _signInstall(PermissionTypes.Install memory install) internal view returns (bytes memory) {
         bytes32 structHash = sm.getInstallStructHash(install);
-        bytes32 digest = _hashTypedData(address(sm), "Session Manager", "1", structHash);
+        bytes32 digest = _hashTypedData(address(sm), "Permission Manager", "1", structHash);
         bytes32 replaySafeDigest = account.replaySafeHash(digest);
 
         (uint8 v, bytes32 r, bytes32 s) = vm.sign(ownerPk, replaySafeDigest);

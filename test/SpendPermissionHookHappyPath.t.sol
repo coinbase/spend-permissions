@@ -6,13 +6,13 @@ import {Test} from "forge-std/Test.sol";
 import {ERC20} from "openzeppelin-contracts/contracts/token/ERC20/ERC20.sol";
 
 import {PublicERC6492Validator} from "../src/PublicERC6492Validator.sol";
-import {SessionManager} from "../src/SessionManager.sol";
-import {SessionTypes} from "../src/SessionTypes.sol";
+import {PermissionManager} from "../src/PermissionManager.sol";
+import {PermissionTypes} from "../src/PermissionTypes.sol";
 import {ERC20SpendHook} from "../src/SpendPermissionSpendHooks/ERC20SpendHook.sol";
 import {MagicSpendSpendHook} from "../src/SpendPermissionSpendHooks/MagicSpendSpendHook.sol";
 import {NativeTokenSpendHook} from "../src/SpendPermissionSpendHooks/NativeTokenSpendHook.sol";
 import {SubAccountSpendHook} from "../src/SpendPermissionSpendHooks/SubAccountSpendHook.sol";
-import {SpendPermissionSessionPolicy} from "../src/policies/SpendPermissionSessionPolicy.sol";
+import {SpendPolicy} from "../src/policies/SpendPolicy.sol";
 
 import {MockCoinbaseSmartWallet} from "./mocks/MockCoinbaseSmartWallet.sol";
 import {MagicSpend} from "magicspend/MagicSpend.sol";
@@ -41,8 +41,8 @@ contract SpendPermissionHookHappyPathTest is Test {
 
     MockCoinbaseSmartWallet internal account;
     PublicERC6492Validator internal validator;
-    SessionManager internal sm;
-    SpendPermissionSessionPolicy internal spendPermissionPolicy;
+    PermissionManager internal sm;
+    SpendPolicy internal spendPolicy;
     ERC20SpendHook internal erc20SpendHook;
     NativeTokenSpendHook internal nativeTokenSpendHook;
     SubAccountSpendHook internal subAccountSpendHook;
@@ -57,13 +57,13 @@ contract SpendPermissionHookHappyPathTest is Test {
         account.initialize(owners);
 
         validator = new PublicERC6492Validator();
-        sm = new SessionManager(validator);
-        spendPermissionPolicy = new SpendPermissionSessionPolicy(address(sm));
-        erc20SpendHook = new ERC20SpendHook(address(spendPermissionPolicy));
-        nativeTokenSpendHook = new NativeTokenSpendHook(address(spendPermissionPolicy));
-        subAccountSpendHook = new SubAccountSpendHook(address(spendPermissionPolicy));
+        sm = new PermissionManager(validator);
+        spendPolicy = new SpendPolicy(address(sm));
+        erc20SpendHook = new ERC20SpendHook(address(spendPolicy));
+        nativeTokenSpendHook = new NativeTokenSpendHook(address(spendPolicy));
+        subAccountSpendHook = new SubAccountSpendHook(address(spendPolicy));
         magicSpend = new MagicSpend(magicSpendOwner, 1);
-        magicSpendSpendHook = new MagicSpendSpendHook(address(spendPermissionPolicy), address(magicSpend));
+        magicSpendSpendHook = new MagicSpendSpendHook(address(spendPolicy), address(magicSpend));
 
         vm.prank(owner);
         account.addOwnerAddress(address(sm));
@@ -78,7 +78,7 @@ contract SpendPermissionHookHappyPathTest is Test {
         token.mint(address(account), allowance);
         assertEq(token.balanceOf(address(account)), allowance);
 
-        SpendPermissionSessionPolicy.SpendPermission memory sp = SpendPermissionSessionPolicy.SpendPermission({
+        SpendPolicy.SpendPermission memory sp = SpendPolicy.SpendPermission({
             account: address(account),
             spender: spender,
             token: address(token),
@@ -93,9 +93,9 @@ contract SpendPermissionHookHappyPathTest is Test {
         });
         bytes memory hookConfig = abi.encode(sp);
 
-        SessionTypes.Install memory install = SessionTypes.Install({
+        PermissionTypes.Install memory install = PermissionTypes.Install({
             account: address(account),
-            policy: address(spendPermissionPolicy),
+            policy: address(spendPolicy),
             policyConfigHash: keccak256(hookConfig),
             validAfter: 0,
             validUntil: 0,
@@ -121,9 +121,9 @@ contract SpendPermissionHookHappyPathTest is Test {
         vm.deal(address(account), allowance);
         assertEq(address(account).balance, allowance);
         assertEq(spender.balance, 0);
-        assertEq(address(spendPermissionPolicy).balance, 0);
+        assertEq(address(spendPolicy).balance, 0);
 
-        SpendPermissionSessionPolicy.SpendPermission memory sp = SpendPermissionSessionPolicy.SpendPermission({
+        SpendPolicy.SpendPermission memory sp = SpendPolicy.SpendPermission({
             account: address(account),
             spender: spender,
             token: NATIVE_TOKEN,
@@ -138,9 +138,9 @@ contract SpendPermissionHookHappyPathTest is Test {
         });
         bytes memory hookConfig = abi.encode(sp);
 
-        SessionTypes.Install memory install = SessionTypes.Install({
+        PermissionTypes.Install memory install = PermissionTypes.Install({
             account: address(account),
-            policy: address(spendPermissionPolicy),
+            policy: address(spendPolicy),
             policyConfigHash: keccak256(hookConfig),
             validAfter: 0,
             validUntil: 0,
@@ -157,7 +157,7 @@ contract SpendPermissionHookHappyPathTest is Test {
 
         assertEq(address(account).balance, allowance - spendValue);
         assertEq(spender.balance, spendValue);
-        assertEq(address(spendPermissionPolicy).balance, 0);
+        assertEq(address(spendPolicy).balance, 0);
     }
 
     function test_spendPermissionHook_happyPath_smartWallet_subAccount_erc20() public {
@@ -174,7 +174,7 @@ contract SpendPermissionHookHappyPathTest is Test {
         assertEq(token.balanceOf(address(subAccount)), allowance);
         assertEq(token.balanceOf(address(account)), 0);
 
-        SpendPermissionSessionPolicy.SpendPermission memory sp = SpendPermissionSessionPolicy.SpendPermission({
+        SpendPolicy.SpendPermission memory sp = SpendPolicy.SpendPermission({
             account: address(account),
             spender: spender,
             token: address(token),
@@ -189,9 +189,9 @@ contract SpendPermissionHookHappyPathTest is Test {
         });
         bytes memory hookConfig = abi.encode(sp);
 
-        SessionTypes.Install memory install = SessionTypes.Install({
+        PermissionTypes.Install memory install = PermissionTypes.Install({
             account: address(account),
-            policy: address(spendPermissionPolicy),
+            policy: address(spendPolicy),
             policyConfigHash: keccak256(hookConfig),
             validAfter: 0,
             validUntil: 0,
@@ -220,7 +220,7 @@ contract SpendPermissionHookHappyPathTest is Test {
         assertEq(token.balanceOf(address(magicSpend)), allowance);
         assertEq(token.balanceOf(address(account)), 0);
 
-        SpendPermissionSessionPolicy.SpendPermission memory sp = SpendPermissionSessionPolicy.SpendPermission({
+        SpendPolicy.SpendPermission memory sp = SpendPolicy.SpendPermission({
             account: address(account),
             spender: spender,
             token: address(token),
@@ -235,9 +235,9 @@ contract SpendPermissionHookHappyPathTest is Test {
         });
         bytes memory hookConfig = abi.encode(sp);
 
-        SessionTypes.Install memory install = SessionTypes.Install({
+        PermissionTypes.Install memory install = PermissionTypes.Install({
             account: address(account),
-            policy: address(spendPermissionPolicy),
+            policy: address(spendPolicy),
             policyConfigHash: keccak256(hookConfig),
             validAfter: 0,
             validUntil: 0,
@@ -248,7 +248,7 @@ contract SpendPermissionHookHappyPathTest is Test {
         sm.installPolicyWithSignature(install, hookConfig, userSig);
 
         // MagicSpendSpendHook binds the withdraw nonce to the low 128 bits of the spend-permission hash.
-        bytes32 permissionHash = spendPermissionPolicy.getHash(sp);
+        bytes32 permissionHash = spendPolicy.getHash(sp);
         uint256 withdrawNonce = uint256(uint128(uint256(permissionHash)));
 
         MagicSpend.WithdrawRequest memory withdrawRequest = MagicSpend.WithdrawRequest({
@@ -273,9 +273,9 @@ contract SpendPermissionHookHappyPathTest is Test {
         assertEq(token.balanceOf(spender), spendValue);
     }
 
-    function _signInstall(SessionTypes.Install memory install) internal view returns (bytes memory) {
+    function _signInstall(PermissionTypes.Install memory install) internal view returns (bytes memory) {
         bytes32 structHash = sm.getInstallStructHash(install);
-        bytes32 digest = _hashTypedData(address(sm), "Session Manager", "1", structHash);
+        bytes32 digest = _hashTypedData(address(sm), "Permission Manager", "1", structHash);
         bytes32 replaySafeDigest = account.replaySafeHash(digest);
 
         (uint8 v, bytes32 r, bytes32 s) = vm.sign(ownerPk, replaySafeDigest);

@@ -6,7 +6,7 @@
 
 The following contracts are deployed on the following chains:
 
-`SessionManager`: (varies by deployment)
+`PermissionManager`: (varies by deployment)
 
 `PublicERC6492Validator`: `0xcfCE48B757601F3f351CB6f434CB0517aEEE293D`
 
@@ -31,17 +31,17 @@ Mainnets:
 
 ### 1. Periphery addition to Coinbase Smart Wallet V1
 
-While implementing this feature as a new V2 wallet implementation was tempting, we decided to leverage the modular owner system from [Smart Wallet V1](https://github.com/coinbase/smart-wallet) and avoid a hard upgrade. The `SessionManager` singleton is added as an owner of the user's smart wallet, giving it the ability to execute user-authorized `SessionPolicy` call plans.
+While implementing this feature as a new V2 wallet implementation was tempting, we decided to leverage the modular owner system from [Smart Wallet V1](https://github.com/coinbase/smart-wallet) and avoid a hard upgrade. The `PermissionManager` singleton is added as an owner of the user's smart wallet, giving it the ability to execute user-authorized `Policy` call plans.
 
 ### 2. Only Native and ERC-20 token support
 
-Spend Permissions only supports spending Native (e.g. ETH) and ERC-20 (e.g. USDC) tokens on a recurring period. This enables use cases like subscriptions out of the box (e.g 10 USDC per month) and also can support apps that want to avoid asking users for spend permissions every session.
+Spend Permissions only supports spending Native (e.g. ETH) and ERC-20 (e.g. USDC) tokens on a recurring period. This enables use cases like subscriptions out of the box (e.g 10 USDC per month) and also can support apps that want to avoid asking users for spend permissions every time.
 
 This approach does **not** enable apps to make arbitrary external calls from user accounts, improving security by having a tighter and fully-known scope of account control.
 
 ### 3. Spender-originated calls
 
-Spend Permissions allow users to delegate token spending to a `sessionSigner` (the `spender` field in `SpendPermissionSessionPolicy.SpendPermission`). When an app wants to spend user tokens, it calls into `SessionManager.execute` for the installed `SpendPermissionSessionPolicy`. The policy validates the spend against its configured constraints and finalizes the token transfer.
+Spend Permissions allow users to delegate token spending to an `authority` (the `spender` field in `SpendPolicy.SpendPermission`). When an app wants to spend user tokens, it calls into `PermissionManager.execute` for the installed `SpendPolicy`. The policy validates the spend against its configured constraints and finalizes the token transfer.
 
 This approach does **not** use the ERC-4337 EntryPoint to prompt external calls from user accounts, improving security by avoiding the possibility of ERC-4337 Paymasters spending users' tokens on gas fees.
 
@@ -77,9 +77,9 @@ sequenceDiagram
 
 ### 2. App approves and spends (onchain)
 
-Apps spend tokens by calling `SessionManager.execute` for the installed `SpendPermissionSessionPolicy` with per-execution `policyData` (amount + optional prep data).
+Apps spend tokens by calling `PermissionManager.execute` for the installed `SpendPolicy` with per-execution `policyData` (amount + optional prep data).
 
-Spend permissions are “approved” by installing the `SpendPermissionSessionPolicy` instance (policyConfig is the encoded spend permission). Install can be done via `SessionManager.installPolicyWithSignature` (recommended) or `SessionManager.installPolicy` (direct call).
+Spend permissions are “approved” by installing the `SpendPolicy` instance (policyConfig is the encoded spend permission). Install can be done via `PermissionManager.installPolicyWithSignature` (recommended) or `PermissionManager.installPolicy` (direct call).
 
 Read more details [here](./docs/diagrams/spend.md).
 
@@ -112,7 +112,7 @@ sequenceDiagram
 
 ### 3. User revokes permission (onchain)
 
-Users can revoke permissions at any time by calling `SessionManager.revokePolicyWithSignature` or `SessionManager.revokePolicy` (direct call). Note: `revokePolicyWithSignature` signs a distinct EIP-712 message `Revoke(bytes32 policyId)` where `policyId == SessionManager.getInstallStructHash(install)`.
+Users can revoke permissions at any time by calling `PermissionManager.revokePolicyWithSignature` or `PermissionManager.revokePolicy` (direct call). Note: `revokePolicyWithSignature` signs a distinct EIP-712 message `Revoke(bytes32 policyId)` where `policyId == PermissionManager.getInstallStructHash(install)`.
 
 Read more details [here](./docs/diagrams/revoke.md).
 

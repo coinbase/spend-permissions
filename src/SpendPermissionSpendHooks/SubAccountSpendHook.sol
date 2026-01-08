@@ -4,7 +4,7 @@ pragma solidity ^0.8.28;
 import {IERC20} from "openzeppelin-contracts/contracts/token/ERC20/IERC20.sol";
 import {CoinbaseSmartWallet} from "smart-wallet/CoinbaseSmartWallet.sol";
 
-import {SpendPermissionSessionPolicy} from "../policies/SpendPermissionSessionPolicy.sol";
+import {SpendPolicy} from "../policies/SpendPolicy.sol";
 import {SpendHook} from "./SpendHook.sol";
 
 contract SubAccountSpendHook is SpendHook {
@@ -16,7 +16,7 @@ contract SubAccountSpendHook is SpendHook {
     }
 
     function prepare(
-        SpendPermissionSessionPolicy.SpendPermission calldata spendPermission,
+        SpendPolicy.SpendPermission calldata spendPermission,
         uint160 value,
         bytes calldata hookData
     ) external override returns (CoinbaseSmartWallet.Call[] memory calls) {
@@ -24,7 +24,7 @@ contract SubAccountSpendHook is SpendHook {
         (address subAccount) = abi.decode(spendPermission.spendHookConfig, (address));
 
         if (spendPermission.token == NATIVE_TOKEN) {
-            revert SpendPermissionSessionPolicy.SpendPermissionNotCallableForNativeToken();
+            revert SpendPolicy.SpendPermissionNotCallableForNativeToken();
         }
 
         calls = new CoinbaseSmartWallet.Call[](2);

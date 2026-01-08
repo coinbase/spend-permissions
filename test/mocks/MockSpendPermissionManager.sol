@@ -1,8 +1,8 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.23;
 
-import {SpendPermissionSessionPolicy} from "../../src/policies/SpendPermissionSessionPolicy.sol";
+import {SpendPolicy} from "../../src/policies/SpendPolicy.sol";
 
-contract MockSpendPermissionManager is SpendPermissionSessionPolicy {
-    constructor(address sessionManager) SpendPermissionSessionPolicy(sessionManager) {}
+contract MockSpendPermissionManager is SpendPolicy {
+    constructor(address permissionManager) SpendPolicy(permissionManager) {}
 }

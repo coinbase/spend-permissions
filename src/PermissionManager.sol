@@ -5,13 +5,13 @@ import {ReentrancyGuardTransient} from "openzeppelin-contracts/contracts/utils/R
 import {EIP712} from "solady/utils/EIP712.sol";
 
 import {PublicERC6492Validator} from "./PublicERC6492Validator.sol";
-import {SessionTypes} from "./SessionTypes.sol";
-import {SessionPolicy} from "./policies/SessionPolicy.sol";
+import {PermissionTypes} from "./PermissionTypes.sol";
+import {Policy} from "./policies/Policy.sol";
 
-/// @title SessionManager
-/// @notice Wallet-agnostic module that installs session policies authorized by the account and executes policy-prepared
-///         calldata on the account using a session signer signature or direct call.
-contract SessionManager is EIP712, ReentrancyGuardTransient {
+/// @title PermissionManager
+/// @notice Wallet-agnostic module that installs policies authorized by the account and executes policy-prepared
+///         calldata on the account using an authority signature or direct call.
+contract PermissionManager is EIP712, ReentrancyGuardTransient {
     /// @notice Separated contract for validating signatures and executing ERC-6492 side effects.
     PublicERC6492Validator public immutable PUBLIC_ERC6492_VALIDATOR;
 
@@ -65,10 +65,10 @@ contract SessionManager is EIP712, ReentrancyGuardTransient {
         PUBLIC_ERC6492_VALIDATOR = publicERC6492Validator;
     }
 
-    /// @notice Install a session policy via a signature from the account.
+    /// @notice Install a policy via a signature from the account.
     /// @dev Compatible with ERC-6492 signatures including side effects.
     function installPolicyWithSignature(
-        SessionTypes.Install calldata install,
+        PermissionTypes.Install calldata install,
         bytes calldata policyConfig,
         bytes calldata userSig
     ) external nonReentrant returns (bytes32 policyId) {
@@ -92,8 +92,8 @@ contract SessionManager is EIP712, ReentrancyGuardTransient {
         emit PolicyInstalled(policyId, install.account, install.policy);
     }
 
-    /// @notice Install a session policy via a direct call from the account.
-    function installPolicy(SessionTypes.Install calldata install, bytes calldata policyConfig)
+    /// @notice Install a policy via a direct call from the account.
+    function installPolicy(PermissionTypes.Install calldata install, bytes calldata policyConfig)
         external
         nonReentrant
         requireSender(install.account)
@@ -113,10 +113,10 @@ contract SessionManager is EIP712, ReentrancyGuardTransient {
         emit PolicyInstalled(policyId, install.account, install.policy);
     }
 
-    /// @notice Revoke a session policy via a signature from the account.
+    /// @notice Revoke a policy via a signature from the account.
     /// @dev Compatible with ERC-6492 signatures including side effects.
     function revokePolicyWithSignature(
-        SessionTypes.Install calldata install,
+        PermissionTypes.Install calldata install,
         bytes calldata policyConfig,
         bytes calldata userSig
     ) external nonReentrant returns (bytes32 policyId) {
@@ -139,8 +139,8 @@ contract SessionManager is EIP712, ReentrancyGuardTransient {
         emit PolicyRevoked(policyId, install.account, install.policy);
     }
 
-    /// @notice Revoke a session policy via a direct call from the account.
-    function revokePolicy(SessionTypes.Install calldata install, bytes calldata policyConfig)
+    /// @notice Revoke a policy via a direct call from the account.
+    function revokePolicy(PermissionTypes.Install calldata install, bytes calldata policyConfig)
         external
         nonReentrant
         requireSender(install.account)
@@ -159,15 +159,15 @@ contract SessionManager is EIP712, ReentrancyGuardTransient {
         emit PolicyRevoked(policyId, install.account, install.policy);
     }
 
-    /// @notice Execute an action authorized by a session signer for an installed policy instance.
-    /// @dev Policy defines session signer semantics and returns wallet-specific calldata for the account.
+    /// @notice Execute an action authorized by an authority for an installed policy instance.
+    /// @dev Policy defines authority semantics and returns wallet-specific calldata for the account.
     function execute(
-        SessionTypes.Install calldata install,
+        PermissionTypes.Install calldata install,
         bytes calldata policyConfig,
         bytes calldata policyData,
         uint256 execNonce,
         uint48 deadline,
-        bytes calldata sessionSig
+        bytes calldata authoritySig
     ) external nonReentrant {
         _checkPolicyConfigHash(install.policyConfigHash, policyConfig);
         _checkInstallWindow(install.validAfter, install.validUntil);
@@ -176,14 +176,14 @@ contract SessionManager is EIP712, ReentrancyGuardTransient {
         bytes32 policyId = getInstallStructHash(install);
         _getActivePolicyState(policyId);
 
-        address signer = _policySessionSigner(install.policy, policyConfig);
+        address authority = _policyAuthority(install.policy, policyConfig);
         bytes32 execDigest = _getExecutionDigest(policyId, install, keccak256(policyData), execNonce, deadline);
 
         if (_usedExecutionDigest[execDigest]) revert InvalidSignature();
         _usedExecutionDigest[execDigest] = true;
 
-        if (msg.sender != signer) {
-            if (!PUBLIC_ERC6492_VALIDATOR.isValidSignatureNowAllowSideEffects(signer, execDigest, sessionSig)) {
+        if (msg.sender != authority) {
+            if (!PUBLIC_ERC6492_VALIDATOR.isValidSignatureNowAllowSideEffects(authority, execDigest, authoritySig)) {
                 revert InvalidSignature();
             }
         }
@@ -196,7 +196,7 @@ contract SessionManager is EIP712, ReentrancyGuardTransient {
         emit Executed(policyId, install.account, install.policy, execNonce);
     }
 
-    function getInstallStructHash(SessionTypes.Install calldata install) public pure returns (bytes32) {
+    function getInstallStructHash(PermissionTypes.Install calldata install) public pure returns (bytes32) {
         return keccak256(
             abi.encode(
                 INSTALL_TYPEHASH,
@@ -238,7 +238,7 @@ contract SessionManager is EIP712, ReentrancyGuardTransient {
 
     function _getExecutionDigest(
         bytes32 policyId,
-        SessionTypes.Install calldata install,
+        PermissionTypes.Install calldata install,
         bytes32 policyDataHash,
         uint256 nonce,
         uint48 deadline
@@ -264,19 +264,19 @@ contract SessionManager is EIP712, ReentrancyGuardTransient {
         if (!success) revert AccountCallFailed(account, returnData);
     }
 
-    function _policySessionSigner(address policy, bytes calldata policyConfig) internal view returns (address) {
-        return SessionPolicy(policy).sessionSigner(policyConfig);
+    function _policyAuthority(address policy, bytes calldata policyConfig) internal view returns (address) {
+        return Policy(policy).authority(policyConfig);
     }
 
     function _policyOnExecute(
         address policy,
-        SessionTypes.Install calldata install,
+        PermissionTypes.Install calldata install,
         uint256 execNonce,
         bytes calldata policyConfig,
         bytes calldata policyData
     ) internal returns (bytes memory, bytes memory) {
         (bytes memory accountCallData, bytes memory postCallData) =
-            SessionPolicy(policy).onExecute(install, execNonce, policyConfig, policyData);
+            Policy(policy).onExecute(install, execNonce, policyConfig, policyData);
         return (accountCallData, postCallData);
     }
 
@@ -287,8 +287,9 @@ contract SessionManager is EIP712, ReentrancyGuardTransient {
     }
 
     function _domainNameAndVersion() internal pure override returns (string memory name, string memory version) {
-        name = "Session Manager";
+        name = "Permission Manager";
         version = "1";
     }
 }
+
 

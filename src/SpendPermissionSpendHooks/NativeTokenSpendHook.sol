@@ -3,7 +3,7 @@ pragma solidity ^0.8.28;
 
 import {CoinbaseSmartWallet} from "smart-wallet/CoinbaseSmartWallet.sol";
 
-import {SpendPermissionSessionPolicy} from "../policies/SpendPermissionSessionPolicy.sol";
+import {SpendPolicy} from "../policies/SpendPolicy.sol";
 import {SpendHook} from "./SpendHook.sol";
 
 contract NativeTokenSpendHook is SpendHook {
@@ -18,7 +18,7 @@ contract NativeTokenSpendHook is SpendHook {
     }
 
     function prepare(
-        SpendPermissionSessionPolicy.SpendPermission calldata spendPermission,
+        SpendPolicy.SpendPermission calldata spendPermission,
         uint160 value,
         bytes calldata
     ) external view override returns (CoinbaseSmartWallet.Call[] memory) {

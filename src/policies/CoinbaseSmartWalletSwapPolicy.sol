@@ -5,18 +5,18 @@ import {IERC20} from "openzeppelin-contracts/contracts/token/ERC20/IERC20.sol";
 import {SafeERC20} from "openzeppelin-contracts/contracts/token/ERC20/utils/SafeERC20.sol";
 import {CoinbaseSmartWallet} from "smart-wallet/CoinbaseSmartWallet.sol";
 
-import {SessionTypes} from "../SessionTypes.sol";
-import {SessionPolicy} from "./SessionPolicy.sol";
+import {PermissionTypes} from "../PermissionTypes.sol";
+import {Policy} from "./Policy.sol";
 
-/// @notice Session policy that allows a session signer to execute a constrained ERC20->(something) swap
+/// @notice Policy that allows an authority to execute a constrained ERC20->(something) swap
 ///         on a fixed `swapTarget`, bounded by `maxAmountIn` and checked by `minAmountOut` (balance delta on
 /// `tokenOut`).
-/// @dev This is the "session policy" equivalent of the legacy SpendPermissionSwap helper:
+/// @dev This is the "policy" equivalent of the legacy SpendPermissionSwap helper:
 ///      - wallet approves `swapTarget` for `amountIn`
 ///      - wallet calls `swapTarget` with `swapData`
 ///      - wallet resets approval to 0
 ///      - policy post-call checks tokenOut balance increased by at least minAmountOut
-contract CoinbaseSmartWalletSwapSessionPolicy is SessionPolicy {
+contract CoinbaseSmartWalletSwapPolicy is Policy {
     using SafeERC20 for IERC20;
 
     error InvalidPolicyData();
@@ -27,11 +27,11 @@ contract CoinbaseSmartWalletSwapSessionPolicy is SessionPolicy {
     error TokenOutBalanceTooLow(uint256 initialBalance, uint256 finalBalance, uint256 minAmountOut);
     error InvalidSender(address sender, address expected);
 
-    address public immutable SESSION_MANAGER;
+    address public immutable PERMISSION_MANAGER;
 
     struct Config {
         address account;
-        address sessionSigner;
+        address authority;
         address tokenIn;
         address tokenOut;
         address swapTarget;
@@ -52,24 +52,24 @@ contract CoinbaseSmartWalletSwapSessionPolicy is SessionPolicy {
         _;
     }
 
-    constructor(address sessionManager) {
-        SESSION_MANAGER = sessionManager;
+    constructor(address permissionManager) {
+        PERMISSION_MANAGER = permissionManager;
     }
 
-    function sessionSigner(bytes calldata policyConfig) external pure override returns (address) {
+    function authority(bytes calldata policyConfig) external pure override returns (address) {
         Config memory cfg = abi.decode(policyConfig, (Config));
-        return cfg.sessionSigner;
+        return cfg.authority;
     }
 
     function onExecute(
-        SessionTypes.Install calldata install,
+        PermissionTypes.Install calldata install,
         uint256 execNonce,
         bytes calldata policyConfig,
         bytes calldata policyData
     )
         external
         override
-        requireSender(SESSION_MANAGER)
+        requireSender(PERMISSION_MANAGER)
         returns (bytes memory accountCallData, bytes memory postCallData)
     {
         execNonce;
@@ -86,11 +86,8 @@ contract CoinbaseSmartWalletSwapSessionPolicy is SessionPolicy {
 
         if (data.amountIn > cfg.maxAmountIn) revert AmountInTooHigh(data.amountIn, cfg.maxAmountIn);
 
-        bytes4 actualSelector;
-        bytes memory callData = data.swapData;
-        assembly {
-            actualSelector := shr(224, mload(add(callData, 0x20)))
-        }
+        // Read the first 4 bytes of calldata and compare to the expected selector.
+        bytes4 actualSelector = bytes4(bytes32(data.swapData));
         if (actualSelector != cfg.swapSelector) revert SelectorMismatch(actualSelector, cfg.swapSelector);
 
         // Snapshot tokenOut balance before wallet execution.
@@ -116,7 +113,7 @@ contract CoinbaseSmartWalletSwapSessionPolicy is SessionPolicy {
 
     function afterExecute(address account, address tokenOut, uint256 initialOutBalance, uint256 minAmountOut)
         external
-        requireSender(SESSION_MANAGER)
+        requireSender(PERMISSION_MANAGER)
     {
         uint256 finalOutBalance = IERC20(tokenOut).balanceOf(account);
         if (finalOutBalance < initialOutBalance + minAmountOut) {
@@ -124,4 +121,5 @@ contract CoinbaseSmartWalletSwapSessionPolicy is SessionPolicy {
         }
     }
 }
+
 

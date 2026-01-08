@@ -5,26 +5,26 @@ import {MagicSpend} from "magicspend/MagicSpend.sol";
 import {IERC20} from "openzeppelin-contracts/contracts/token/ERC20/IERC20.sol";
 import {CoinbaseSmartWallet} from "smart-wallet/CoinbaseSmartWallet.sol";
 
-import {SpendPermissionSessionPolicy} from "../policies/SpendPermissionSessionPolicy.sol";
+import {SpendPolicy} from "../policies/SpendPolicy.sol";
 import {SpendHook} from "./SpendHook.sol";
 
 contract MagicSpendSpendHook is SpendHook {
     address public constant NATIVE_TOKEN = 0xEeeeeEeeeEeEeeEeEeEeeEEEeeeeEeeeeeeeEEeE;
 
     address public immutable MAGIC_SPEND;
-    SpendPermissionSessionPolicy public immutable SPEND_PERMISSION_POLICY;
+    SpendPolicy public immutable SPEND_PERMISSION_POLICY;
 
     error SpendTokenWithdrawAssetMismatch(address spendToken, address withdrawAsset);
     error SpendValueWithdrawAmountMismatch(uint256 spendValue, uint256 withdrawAmount);
     error InvalidWithdrawRequestNonce(uint128 noncePostfix, uint128 permissionHashPostfix);
 
     constructor(address spendPermissionPolicy, address magicSpend) {
-        SPEND_PERMISSION_POLICY = SpendPermissionSessionPolicy(payable(spendPermissionPolicy));
+        SPEND_PERMISSION_POLICY = SpendPolicy(payable(spendPermissionPolicy));
         MAGIC_SPEND = magicSpend;
     }
 
     function prepare(
-        SpendPermissionSessionPolicy.SpendPermission calldata spendPermission,
+        SpendPolicy.SpendPermission calldata spendPermission,
         uint160 value,
         bytes calldata hookData
     ) external override returns (CoinbaseSmartWallet.Call[] memory calls) {
@@ -43,7 +43,7 @@ contract MagicSpendSpendHook is SpendHook {
         }
 
         if (spendPermission.token == NATIVE_TOKEN) {
-            revert SpendPermissionSessionPolicy.SpendPermissionNotCallableForNativeToken();
+            revert SpendPolicy.SpendPermissionNotCallableForNativeToken();
         }
 
         calls = new CoinbaseSmartWallet.Call[](2);

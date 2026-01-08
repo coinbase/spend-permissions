@@ -3,17 +3,17 @@ pragma solidity ^0.8.28;
 
 import {CoinbaseSmartWallet} from "smart-wallet/CoinbaseSmartWallet.sol";
 
-import {SessionTypes} from "../SessionTypes.sol";
-import {SessionPolicy} from "./SessionPolicy.sol";
+import {PermissionTypes} from "../PermissionTypes.sol";
+import {Policy} from "./Policy.sol";
 
-contract CoinbaseSmartWalletSingleCallSessionPolicy is SessionPolicy {
+contract CoinbaseSmartWalletSingleCallPolicy is Policy {
     error ValueTooHigh(uint256 value, uint256 maxValue);
     error BeforeValidAfter(uint48 currentTimestamp, uint48 validAfter);
     error AfterValidUntil(uint48 currentTimestamp, uint48 validUntil);
     error InvalidRecipient();
 
     struct Config {
-        address sessionSigner;
+        address authority;
         uint256 maxValue;
         uint48 validAfter;
         uint48 validUntil;
@@ -24,13 +24,13 @@ contract CoinbaseSmartWalletSingleCallSessionPolicy is SessionPolicy {
         uint256 value;
     }
 
-    function sessionSigner(bytes calldata policyConfig) external pure override returns (address) {
+    function authority(bytes calldata policyConfig) external pure override returns (address) {
         Config memory cfg = abi.decode(policyConfig, (Config));
-        return cfg.sessionSigner;
+        return cfg.authority;
     }
 
     function onExecute(
-        SessionTypes.Install calldata install,
+        PermissionTypes.Install calldata install,
         uint256 execNonce,
         bytes calldata policyConfig,
         bytes calldata policyData
@@ -57,4 +57,5 @@ contract CoinbaseSmartWalletSingleCallSessionPolicy is SessionPolicy {
         postCallData = "";
     }
 }
+
 

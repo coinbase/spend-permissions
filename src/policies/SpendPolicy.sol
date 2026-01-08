@@ -7,14 +7,13 @@ import {IERC721} from "openzeppelin-contracts/contracts/token/ERC721/IERC721.sol
 import {ERC165Checker} from "openzeppelin-contracts/contracts/utils/introspection/ERC165Checker.sol";
 import {CoinbaseSmartWallet} from "smart-wallet/CoinbaseSmartWallet.sol";
 import {EIP712} from "solady/utils/EIP712.sol";
-// import {SafeTransferLib} from "solady/utils/SafeTransferLib.sol";
 
-import {SessionTypes} from "../SessionTypes.sol";
+import {PermissionTypes} from "../PermissionTypes.sol";
 import {SpendHook} from "../SpendPermissionSpendHooks/SpendHook.sol";
-import {SessionPolicy} from "./SessionPolicy.sol";
+import {Policy} from "./Policy.sol";
 
-/// @notice Spend permissions session policy.
-contract SpendPermissionSessionPolicy is EIP712, SessionPolicy {
+/// @notice Spend permissions policy.
+contract SpendPolicy is EIP712, Policy {
     using SafeERC20 for IERC20;
 
     struct SpendPermission {
@@ -43,7 +42,7 @@ contract SpendPermissionSessionPolicy is EIP712, SessionPolicy {
 
     address public constant NATIVE_TOKEN = 0xEeeeeEeeeEeEeeEeEeEeeEEEeeeeEeeeeeeeEEeE;
 
-    address public immutable SESSION_MANAGER;
+    address public immutable PERMISSION_MANAGER;
 
     mapping(bytes32 policyId => PeriodSpend) internal _lastUpdatedPeriod;
 
@@ -78,27 +77,27 @@ contract SpendPermissionSessionPolicy is EIP712, SessionPolicy {
         _;
     }
 
-    constructor(address sessionManager) {
-        SESSION_MANAGER = sessionManager;
+    constructor(address permissionManager) {
+        PERMISSION_MANAGER = permissionManager;
     }
 
     receive() external payable {}
 
-    function sessionSigner(bytes calldata policyConfig) external pure override returns (address) {
+    function authority(bytes calldata policyConfig) external pure override returns (address) {
         SpendPermission memory sp = abi.decode(policyConfig, (SpendPermission));
         return sp.spender;
     }
 
     /// @dev `policyConfig` is encoded SpendPermission. `policyData` encodes `(uint160 value, bytes prepData)`.
     function onExecute(
-        SessionTypes.Install calldata install,
+        PermissionTypes.Install calldata install,
         uint256 execNonce,
         bytes calldata policyConfig,
         bytes calldata policyData
     )
         external
         override
-        requireSender(SESSION_MANAGER)
+        requireSender(PERMISSION_MANAGER)
         returns (bytes memory accountCallData, bytes memory postCallData)
     {
         SpendPermission memory sp = abi.decode(policyConfig, (SpendPermission));
@@ -133,7 +132,7 @@ contract SpendPermissionSessionPolicy is EIP712, SessionPolicy {
 
     function afterExecute(address account, address token, address recipient, uint160 value)
         external
-        requireSender(SESSION_MANAGER)
+        requireSender(PERMISSION_MANAGER)
     {
         if (token != NATIVE_TOKEN) {
             IERC20(token).safeTransferFrom(account, recipient, value);
@@ -207,7 +206,7 @@ contract SpendPermissionSessionPolicy is EIP712, SessionPolicy {
         );
     }
 
-    function _getPolicyId(SessionTypes.Install calldata install) internal pure returns (bytes32) {
+    function _getPolicyId(PermissionTypes.Install calldata install) internal pure returns (bytes32) {
         return keccak256(
             abi.encode(
                 keccak256(
@@ -224,8 +223,9 @@ contract SpendPermissionSessionPolicy is EIP712, SessionPolicy {
     }
 
     function _domainNameAndVersion() internal pure override returns (string memory name, string memory version) {
-        name = "Spend Permission Session Policy";
+        name = "Spend Policy";
         version = "1";
     }
 }
+
 
