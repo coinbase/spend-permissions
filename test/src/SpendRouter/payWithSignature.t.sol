@@ -21,10 +21,10 @@ contract PayWithSignatureTest is SpendRouterTestBase {
         router.spendAndRouteWithSignature(permission, 0.5 ether, signature);
     }
 
-    /// @notice Reverts with UnauthorizedSender when msg.sender does not match the app decoded from extraData.
-    /// @dev Second check in payWithSignature(). Fuzz the unauthorized sender, excluding the actual app address.
+    /// @notice Reverts with UnauthorizedSender when msg.sender does not match the executor decoded from extraData.
+    /// @dev Second check in payWithSignature(). Fuzz the unauthorized sender, excluding the actual executor address.
     function test_reverts_whenSenderUnauthorized(address sender) public {
-        vm.assume(sender != app);
+        vm.assume(sender != executor);
 
         SpendPermissionManager.SpendPermission memory permission = _createPermission(
             NATIVE_TOKEN, 1 ether, 1 days, uint48(block.timestamp), uint48(block.timestamp + 1 days), 0
@@ -32,20 +32,20 @@ contract PayWithSignatureTest is SpendRouterTestBase {
         bytes memory signature = _signPermission(permission);
 
         vm.prank(sender);
-        vm.expectRevert(abi.encodeWithSelector(SpendRouter.UnauthorizedSender.selector, sender, app));
+        vm.expectRevert(abi.encodeWithSelector(SpendRouter.UnauthorizedSender.selector, sender, executor));
         router.spendAndRouteWithSignature(permission, 0.5 ether, signature);
     }
 
     /// @notice Reverts with ZeroAddress when the decoded recipient is address(0).
-    /// @dev Third check in payWithSignature(). Uses manually crafted extraData with abi.encode(app, address(0)).
+    /// @dev Third check in payWithSignature(). Uses manually crafted extraData with abi.encode(executor, address(0)).
     function test_reverts_whenRecipientIsZeroAddress() public {
         SpendPermissionManager.SpendPermission memory permission = _createPermission(
             NATIVE_TOKEN, 1 ether, 1 days, uint48(block.timestamp), uint48(block.timestamp + 1 days), 0
         );
-        permission.extraData = abi.encode(app, address(0));
+        permission.extraData = abi.encode(executor, address(0));
         bytes memory signature = _signPermission(permission);
 
-        vm.prank(app);
+        vm.prank(executor);
         vm.expectRevert(SpendRouter.ZeroAddress.selector);
         router.spendAndRouteWithSignature(permission, 0.5 ether, signature);
     }
@@ -62,7 +62,7 @@ contract PayWithSignatureTest is SpendRouterTestBase {
 
         vm.deal(address(account), 1 ether);
 
-        vm.prank(app);
+        vm.prank(executor);
         router.spendAndRouteWithSignature(permission, 0.5 ether, signature);
 
         assertEq(address(recipient).balance, 0.5 ether);
@@ -83,7 +83,7 @@ contract PayWithSignatureTest is SpendRouterTestBase {
 
         vm.deal(address(account), allowance);
 
-        vm.prank(app);
+        vm.prank(executor);
         router.spendAndRouteWithSignature(permission, spendAmount, signature);
 
         assertEq(address(recipient).balance, spendAmount);
@@ -104,7 +104,7 @@ contract PayWithSignatureTest is SpendRouterTestBase {
 
         token.mint(address(account), allowance);
 
-        vm.prank(app);
+        vm.prank(executor);
         router.spendAndRouteWithSignature(permission, spendAmount, signature);
 
         assertEq(token.balanceOf(recipient), spendAmount);

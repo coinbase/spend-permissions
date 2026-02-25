@@ -21,7 +21,7 @@ contract PayTest is SpendRouterTestBase {
 
         // Execute spend
         uint160 spendAmount = 0.5 ether;
-        vm.prank(app);
+        vm.prank(executor);
         router.spendAndRoute(permission, spendAmount);
 
         // Verify results
@@ -44,7 +44,7 @@ contract PayTest is SpendRouterTestBase {
 
         // Execute spend
         uint160 spendAmount = 500e18;
-        vm.prank(app);
+        vm.prank(executor);
         router.spendAndRoute(permission, spendAmount);
 
         // Verify results
@@ -60,7 +60,7 @@ contract PayTest is SpendRouterTestBase {
 
         address unauthorizedSender = makeAddr("unauthorized");
         vm.prank(unauthorizedSender);
-        vm.expectRevert(abi.encodeWithSelector(SpendRouter.UnauthorizedSender.selector, unauthorizedSender, app));
+        vm.expectRevert(abi.encodeWithSelector(SpendRouter.UnauthorizedSender.selector, unauthorizedSender, executor));
         router.spendAndRoute(permission, 0.5 ether);
     }
 }

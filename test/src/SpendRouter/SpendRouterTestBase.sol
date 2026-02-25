@@ -21,8 +21,8 @@ contract SpendRouterTestBase is Test {
     // Test accounts
     uint256 internal ownerPk;
     address internal owner;
-    uint256 internal appPk;
-    address internal app;
+    uint256 internal executorPk;
+    address internal executor;
     uint256 internal recipientPk;
     address internal recipient;
     CoinbaseSmartWallet internal account;
@@ -34,8 +34,8 @@ contract SpendRouterTestBase is Test {
         // Generate test accounts
         ownerPk = uint256(keccak256("owner"));
         owner = vm.addr(ownerPk);
-        appPk = uint256(keccak256("app"));
-        app = vm.addr(appPk);
+        executorPk = uint256(keccak256("executor"));
+        executor = vm.addr(executorPk);
         recipientPk = uint256(keccak256("recipient"));
         recipient = vm.addr(recipientPk);
 
@@ -75,7 +75,7 @@ contract SpendRouterTestBase is Test {
             start: start,
             end: end,
             salt: salt,
-            extraData: router.encodeExtraData(app, recipient)
+            extraData: router.encodeExtraData(executor, recipient)
         });
     }
 

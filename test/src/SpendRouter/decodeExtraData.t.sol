@@ -35,13 +35,13 @@ contract DecodeExtraDataTest is SpendRouterTestBase {
         router.decodeExtraData(extraData);
     }
 
-    /// @notice Successfully decodes a valid 64-byte ABI-encoded payload into (app, recipient).
+    /// @notice Successfully decodes a valid 64-byte ABI-encoded payload into (executor, recipient).
     /// @dev Fuzz both addresses (including address(0) since decodeExtraData does not check for zero).
     ///      Asserts decoded values match the ABI-encoded inputs.
-    function test_decodesCorrectly(address fuzzApp, address fuzzRecipient) public view {
-        bytes memory extraData = abi.encode(fuzzApp, fuzzRecipient);
-        (address decodedApp, address decodedRecipient) = router.decodeExtraData(extraData);
-        assertEq(decodedApp, fuzzApp);
+    function test_decodesCorrectly(address fuzzExecutor, address fuzzRecipient) public view {
+        bytes memory extraData = abi.encode(fuzzExecutor, fuzzRecipient);
+        (address decodedExecutor, address decodedRecipient) = router.decodeExtraData(extraData);
+        assertEq(decodedExecutor, fuzzExecutor);
         assertEq(decodedRecipient, fuzzRecipient);
     }
 }

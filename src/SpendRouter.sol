@@ -1,31 +1,28 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.28;
 
-import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
-import {SafeERC20} from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 import {SafeTransferLib} from "solady/utils/SafeTransferLib.sol";
+import {Multicallable} from "solady/utils/Multicallable.sol";
 import {SpendPermissionManager} from "./SpendPermissionManager.sol";
 
 /// @title SpendRouter
 /// @author Coinbase
 /// @notice A singleton router contract that spends and routes funds to designated recipients.
 ///
-/// @dev Decodes routing metadata (authorized app, recipient) from a SpendPermission's extraData field,
+/// @dev Decodes routing metadata (authorized executor, recipient) from a SpendPermission's extraData field,
 ///      pulls tokens from a user's account via SpendPermissionManager, and forwards them to the recipient.
 ///      Supports both native ETH (ERC-7528) and ERC-20 tokens.
-contract SpendRouter {
-    using SafeERC20 for IERC20;
-
+contract SpendRouter is Multicallable {
     /// @notice The SpendPermissionManager used for all permission approvals and spend executions.
     SpendPermissionManager public immutable PERMISSION_MANAGER;
 
     /// @notice ERC-7528 native token address used by SpendPermissionManager.
     address public constant NATIVE_TOKEN_ADDRESS = 0xEeeeeEeeeEeEeeEeEeEeeEEEeeeeEeeeeeeeEEeE;
 
-    /// @notice Thrown when `msg.sender` does not match the authorized app decoded from `extraData`.
+    /// @notice Thrown when `msg.sender` does not match the authorized executor decoded from `extraData`.
     ///
     /// @param caller The actual `msg.sender`.
-    /// @param expected The authorized app address decoded from the permission's `extraData`.
+    /// @param expected The authorized executor address decoded from the permission's `extraData`.
     error UnauthorizedSender(address caller, address expected);
 
     /// @notice Thrown when `extraData` is not exactly 64 bytes (two ABI-encoded addresses).
@@ -54,7 +51,7 @@ contract SpendRouter {
     /// @notice Spends tokens from the user's account via an already-approved permission and forwards them
     ///         to the recipient encoded in `permission.extraData`.
     ///
-    /// @dev Decodes `(app, recipient)` from `permission.extraData`, verifies `msg.sender == app`,
+    /// @dev Decodes `(executor, recipient)` from `permission.extraData`, verifies `msg.sender == executor`,
     ///      calls `SpendPermissionManager.spend` to pull tokens into this contract, then transfers
     ///      them to `recipient`. The permission must already be approved on-chain.
     ///
@@ -62,8 +59,8 @@ contract SpendRouter {
     ///        start, end, salt, and extraData fields.
     /// @param value The amount of tokens to spend and forward.
     function spendAndRoute(SpendPermissionManager.SpendPermission calldata permission, uint160 value) external {
-        (address app, address recipient) = decodeExtraData(permission.extraData);
-        if (msg.sender != app) revert UnauthorizedSender(msg.sender, app);
+        (address executor, address recipient) = decodeExtraData(permission.extraData);
+        if (msg.sender != executor) revert UnauthorizedSender(msg.sender, executor);
         if (recipient == address(0)) revert ZeroAddress();
 
         PERMISSION_MANAGER.spend(permission, value);
@@ -71,7 +68,7 @@ contract SpendRouter {
         if (permission.token == NATIVE_TOKEN_ADDRESS) {
             SafeTransferLib.safeTransferETH(payable(recipient), value);
         } else {
-            IERC20(permission.token).safeTransfer(recipient, value);
+            SafeTransferLib.safeTransfer(permission.token, recipient, value);
         }
     }
 
@@ -90,8 +87,8 @@ contract SpendRouter {
         uint160 value,
         bytes calldata signature
     ) external {
-        (address app, address recipient) = decodeExtraData(permission.extraData);
-        if (msg.sender != app) revert UnauthorizedSender(msg.sender, app);
+        (address executor, address recipient) = decodeExtraData(permission.extraData);
+        if (msg.sender != executor) revert UnauthorizedSender(msg.sender, executor);
         if (recipient == address(0)) revert ZeroAddress();
 
         bool approved = PERMISSION_MANAGER.approveWithSignature(permission, signature);
@@ -102,7 +99,7 @@ contract SpendRouter {
         if (permission.token == NATIVE_TOKEN_ADDRESS) {
             SafeTransferLib.safeTransferETH(payable(recipient), value);
         } else {
-            IERC20(permission.token).safeTransfer(recipient, value);
+            SafeTransferLib.safeTransfer(permission.token, recipient, value);
         }
     }
 
@@ -110,27 +107,27 @@ contract SpendRouter {
     ///
     /// @dev ABI-encodes two addresses into a 64-byte payload. Reverts if either address is zero.
     ///
-    /// @param app The authorized application address that will call `pay` or `payWithSignature`.
+    /// @param executor The authorized application address that will call `pay` or `payWithSignature`.
     /// @param recipient The address that will receive the forwarded tokens.
     ///
     /// @return extraData The 64-byte ABI-encoded payload to set as `SpendPermission.extraData`.
-    function encodeExtraData(address app, address recipient) public pure returns (bytes memory extraData) {
-        if (app == address(0)) revert ZeroAddress();
+    function encodeExtraData(address executor, address recipient) public pure returns (bytes memory extraData) {
+        if (executor == address(0)) revert ZeroAddress();
         if (recipient == address(0)) revert ZeroAddress();
 
-        return abi.encode(app, recipient);
+        return abi.encode(executor, recipient);
     }
 
-    /// @notice Decodes the authorized app and recipient addresses from a permission's `extraData`.
+    /// @notice Decodes the authorized executor and recipient addresses from a permission's `extraData`.
     ///
     /// @dev Reverts if `extraData` is not exactly 64 bytes.
     ///
     /// @param extraData The raw `extraData` bytes from a `SpendPermission`.
     ///
-    /// @return app The authorized application address.
+    /// @return executor The authorized application address.
     /// @return recipient The address that will receive the forwarded tokens.
-    function decodeExtraData(bytes memory extraData) public pure returns (address app, address recipient) {
+    function decodeExtraData(bytes memory extraData) public pure returns (address executor, address recipient) {
         if (extraData.length != 64) revert MalformedExtraData(extraData.length, extraData);
-        (app, recipient) = abi.decode(extraData, (address, address));
+        (executor, recipient) = abi.decode(extraData, (address, address));
     }
 }
