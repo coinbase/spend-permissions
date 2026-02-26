@@ -1,9 +1,9 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.28;
 
-import {SpendPermissionManager} from "../../../src/SpendPermissionManager.sol";
-import {SpendRouter} from "../../../src/SpendRouter.sol";
-import {SpendRouterTestBase} from "./SpendRouterTestBase.sol";
+import {SpendPermissionManager} from "src/SpendPermissionManager.sol";
+import {SpendRouter} from "src/SpendRouter.sol";
+import {SpendRouterTestBase} from "test/src/SpendRouter/SpendRouterTestBase.sol";
 
 contract PayTest is SpendRouterTestBase {
     function test_pay_nativeToken() public {

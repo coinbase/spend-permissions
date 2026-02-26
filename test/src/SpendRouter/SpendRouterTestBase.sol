@@ -2,10 +2,10 @@
 pragma solidity ^0.8.28;
 
 import {Test} from "forge-std/Test.sol";
-import {PublicERC6492Validator} from "../../../src/PublicERC6492Validator.sol";
-import {SpendPermissionManager} from "../../../src/SpendPermissionManager.sol";
-import {SpendRouter} from "../../../src/SpendRouter.sol";
-import {MockCoinbaseSmartWallet} from "../../mocks/MockCoinbaseSmartWallet.sol";
+import {PublicERC6492Validator} from "src/PublicERC6492Validator.sol";
+import {SpendPermissionManager} from "src/SpendPermissionManager.sol";
+import {SpendRouter} from "src/SpendRouter.sol";
+import {MockCoinbaseSmartWallet} from "test/mocks/MockCoinbaseSmartWallet.sol";
 import {CoinbaseSmartWallet} from "smart-wallet/CoinbaseSmartWallet.sol";
 import {MockERC20} from "solady/../test/utils/mocks/MockERC20.sol";
 

@@ -1,8 +1,8 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.28;
 
-import {SpendRouter} from "../../../src/SpendRouter.sol";
-import {SpendRouterTestBase} from "./SpendRouterTestBase.sol";
+import {SpendRouter} from "src/SpendRouter.sol";
+import {SpendRouterTestBase} from "test/src/SpendRouter/SpendRouterTestBase.sol";
 
 contract DecodeExtraDataTest is SpendRouterTestBase {
     /// @notice Reverts with MalformedExtraData when extraData is empty.

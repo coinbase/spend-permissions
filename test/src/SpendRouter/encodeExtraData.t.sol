@@ -1,8 +1,8 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.28;
 
-import {SpendRouter} from "../../../src/SpendRouter.sol";
-import {SpendRouterTestBase} from "./SpendRouterTestBase.sol";
+import {SpendRouter} from "src/SpendRouter.sol";
+import {SpendRouterTestBase} from "test/src/SpendRouter/SpendRouterTestBase.sol";
 
 contract EncodeExtraDataTest is SpendRouterTestBase {
     /// @notice Reverts with ZeroAddress when executor is address(0).
