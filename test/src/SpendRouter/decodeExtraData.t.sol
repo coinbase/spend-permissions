@@ -44,4 +44,22 @@ contract DecodeExtraDataTest is SpendRouterTestBase {
         assertEq(decodedExecutor, fuzzExecutor);
         assertEq(decodedRecipient, fuzzRecipient);
     }
+
+    // --- Edge-case tests ---
+
+    /// @notice Reverts with MalformedExtraData at exactly 63 bytes (off-by-one below valid length).
+    /// @dev Boundary test: 64 - 1 = 63 bytes should still be rejected.
+    function test_reverts_whenExtraDataIs63Bytes() public {
+        bytes memory extraData = new bytes(63);
+        vm.expectRevert(abi.encodeWithSelector(SpendRouter.MalformedExtraData.selector, 63, extraData));
+        router.decodeExtraData(extraData);
+    }
+
+    /// @notice Reverts with MalformedExtraData at exactly 65 bytes (off-by-one above valid length).
+    /// @dev Boundary test: 64 + 1 = 65 bytes should still be rejected.
+    function test_reverts_whenExtraDataIs65Bytes() public {
+        bytes memory extraData = new bytes(65);
+        vm.expectRevert(abi.encodeWithSelector(SpendRouter.MalformedExtraData.selector, 65, extraData));
+        router.decodeExtraData(extraData);
+    }
 }

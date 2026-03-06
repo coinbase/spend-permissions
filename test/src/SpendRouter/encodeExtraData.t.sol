@@ -32,4 +32,13 @@ contract EncodeExtraDataTest is SpendRouterTestBase {
         assertEq(decodedExecutor, fuzzExecutor);
         assertEq(decodedRecipient, fuzzRecipient);
     }
+
+    // --- Edge-case tests ---
+
+    /// @notice Reverts with ZeroAddress when both executor and recipient are address(0).
+    /// @dev Hits the executor == address(0) check first since it is the first guard in encodeExtraData().
+    function test_reverts_whenBothZeroAddress() public {
+        vm.expectRevert(SpendRouter.ZeroAddress.selector);
+        router.encodeExtraData(address(0), address(0));
+    }
 }

@@ -4,6 +4,7 @@ pragma solidity ^0.8.28;
 import {SpendPermissionManager} from "src/SpendPermissionManager.sol";
 import {SpendRouter} from "src/SpendRouter.sol";
 import {SpendRouterTestBase} from "test/src/SpendRouter/SpendRouterTestBase.sol";
+import {MockERC20MissingReturn} from "test/mocks/MockERC20MissingReturn.sol";
 
 contract PayWithSignatureTest is SpendRouterTestBase {
     /// @notice Reverts with MalformedExtraData when permission.extraData is not exactly 64 bytes.
@@ -109,5 +110,158 @@ contract PayWithSignatureTest is SpendRouterTestBase {
 
         assertEq(token.balanceOf(recipient), spendAmount);
         assertEq(token.balanceOf(address(account)), allowance - spendAmount);
+    }
+
+    // --- Edge-case tests ---
+
+    /// @notice Reverts with InvalidSignature when the signature is from a non-owner key.
+    /// @dev Signs with a key that is not an owner of the account. approveWithSignature should reject.
+    function test_reverts_whenSignatureInvalid() public {
+        SpendPermissionManager.SpendPermission memory permission = _createPermission(
+            NATIVE_TOKEN, 1 ether, 1 days, uint48(block.timestamp), uint48(block.timestamp + 1 days), 0
+        );
+
+        uint256 wrongPk = uint256(keccak256("wrong_signer"));
+        bytes32 permissionHash = permissionManager.getHash(permission);
+        bytes32 replaySafeHash = account.replaySafeHash(permissionHash);
+        (uint8 v, bytes32 r, bytes32 s) = vm.sign(wrongPk, replaySafeHash);
+        bytes memory wrappedBadSig = _applySignatureWrapper(0, abi.encodePacked(r, s, v));
+
+        vm.prank(executor);
+        vm.expectRevert(SpendPermissionManager.InvalidSignature.selector);
+        router.spendAndRouteWithSignature(permission, 0.5 ether, wrappedBadSig);
+    }
+
+    /// @notice Reverts with ZeroValue when spend amount is zero.
+    /// @dev Permission approves successfully, but SpendPermissionManager._useSpendPermission reverts on zero value.
+    function test_reverts_whenSpendAmountIsZero() public {
+        SpendPermissionManager.SpendPermission memory permission = _createPermission(
+            NATIVE_TOKEN, 1 ether, 1 days, uint48(block.timestamp), uint48(block.timestamp + 1 days), 0
+        );
+        bytes memory signature = _signPermission(permission);
+
+        vm.prank(executor);
+        vm.expectRevert(SpendPermissionManager.ZeroValue.selector);
+        router.spendAndRouteWithSignature(permission, 0, signature);
+    }
+
+    /// @notice Reverts with ExceededSpendPermission when spend amount exceeds the period allowance.
+    /// @dev Attempts to spend allowance + 1 wei in a single call.
+    function test_reverts_whenExceedsAllowance() public {
+        uint160 allowance = 1 ether;
+        SpendPermissionManager.SpendPermission memory permission = _createPermission(
+            NATIVE_TOKEN, allowance, 1 days, uint48(block.timestamp), uint48(block.timestamp + 1 days), 0
+        );
+        bytes memory signature = _signPermission(permission);
+        vm.deal(address(account), 10 ether);
+
+        vm.prank(executor);
+        vm.expectRevert(
+            abi.encodeWithSelector(
+                SpendPermissionManager.ExceededSpendPermission.selector,
+                uint256(allowance) + 1,
+                allowance
+            )
+        );
+        router.spendAndRouteWithSignature(permission, allowance + 1, signature);
+    }
+
+    /// @notice Reverts with BeforeSpendPermissionStart when permission has not started yet.
+    /// @dev Sets start 1 hour in the future, attempts to spend at current timestamp.
+    function test_reverts_whenPermissionNotStarted() public {
+        uint48 start = uint48(block.timestamp) + 1 hours;
+        uint48 end = start + 1 days;
+        SpendPermissionManager.SpendPermission memory permission =
+            _createPermission(NATIVE_TOKEN, 1 ether, 1 days, start, end, 0);
+        bytes memory signature = _signPermission(permission);
+
+        vm.prank(executor);
+        vm.expectRevert(
+            abi.encodeWithSelector(
+                SpendPermissionManager.BeforeSpendPermissionStart.selector, uint48(block.timestamp), start
+            )
+        );
+        router.spendAndRouteWithSignature(permission, 0.5 ether, signature);
+    }
+
+    /// @notice Reverts with AfterSpendPermissionEnd when permission has expired.
+    /// @dev Warps to exactly the end timestamp (exclusive), so the permission is no longer valid.
+    function test_reverts_whenPermissionExpired() public {
+        uint48 start = uint48(block.timestamp);
+        uint48 end = start + 1 days;
+        SpendPermissionManager.SpendPermission memory permission =
+            _createPermission(NATIVE_TOKEN, 1 ether, 1 days, start, end, 0);
+        bytes memory signature = _signPermission(permission);
+
+        vm.warp(end);
+
+        vm.prank(executor);
+        vm.expectRevert(
+            abi.encodeWithSelector(SpendPermissionManager.AfterSpendPermissionEnd.selector, uint48(block.timestamp), end)
+        );
+        router.spendAndRouteWithSignature(permission, 0.5 ether, signature);
+    }
+
+    /// @notice Reverts with PermissionApprovalFailed when permission was revoked after first use.
+    /// @dev Spends once successfully, revokes via account, then a second spendAndRouteWithSignature
+    ///      fails because approveWithSignature returns false for revoked permissions.
+    function test_reverts_whenPermissionRevoked() public {
+        SpendPermissionManager.SpendPermission memory permission = _createPermission(
+            NATIVE_TOKEN, 1 ether, 1 days, uint48(block.timestamp), uint48(block.timestamp + 1 days), 0
+        );
+        bytes memory signature = _signPermission(permission);
+        vm.deal(address(account), 1 ether);
+
+        // First spend succeeds
+        vm.prank(executor);
+        router.spendAndRouteWithSignature(permission, 0.5 ether, signature);
+
+        // Account revokes the permission
+        vm.prank(address(account));
+        permissionManager.revoke(permission);
+
+        // Second spend fails — revoked permission cannot be re-approved
+        vm.prank(executor);
+        vm.expectRevert(SpendRouter.PermissionApprovalFailed.selector);
+        router.spendAndRouteWithSignature(permission, 0.5 ether, signature);
+    }
+
+    /// @notice Emits SpendRouted event with correct indexed and non-indexed parameters.
+    /// @dev Verifies all four indexed topics plus the non-indexed value field.
+    function test_emitsSpendRouted() public {
+        uint160 spendAmount = 0.5 ether;
+        SpendPermissionManager.SpendPermission memory permission = _createPermission(
+            NATIVE_TOKEN, 1 ether, 1 days, uint48(block.timestamp), uint48(block.timestamp + 1 days), 0
+        );
+        bytes memory signature = _signPermission(permission);
+        vm.deal(address(account), 1 ether);
+
+        bytes32 permHash = permissionManager.getHash(permission);
+
+        vm.prank(executor);
+        vm.expectEmit(true, true, true, true);
+        emit SpendRouter.SpendRouted(permHash, executor, recipient, NATIVE_TOKEN, spendAmount);
+        router.spendAndRouteWithSignature(permission, spendAmount, signature);
+    }
+
+    /// @notice ERC-20 tokens with missing return values still transfer correctly via SafeTransferLib.
+    /// @dev Uses MockERC20MissingReturn which returns no data from transfer/transferFrom.
+    ///      Verifies SafeTransferLib handles the non-standard behavior gracefully.
+    function test_erc20MissingReturn() public {
+        MockERC20MissingReturn badToken = new MockERC20MissingReturn("Bad", "BAD", 18);
+        uint160 allowance = 1000e18;
+        uint160 spendAmount = 500e18;
+
+        SpendPermissionManager.SpendPermission memory permission = _createPermission(
+            address(badToken), allowance, 1 days, uint48(block.timestamp), uint48(block.timestamp + 1 days), 0
+        );
+        bytes memory signature = _signPermission(permission);
+        badToken.mint(address(account), allowance);
+
+        vm.prank(executor);
+        router.spendAndRouteWithSignature(permission, spendAmount, signature);
+
+        assertEq(badToken.balanceOf(recipient), spendAmount);
+        assertEq(badToken.balanceOf(address(account)), allowance - spendAmount);
     }
 }
