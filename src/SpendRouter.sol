@@ -37,6 +37,23 @@ contract SpendRouter is Multicallable {
     /// @notice Thrown when `SpendPermissionManager.approveWithSignature` returns false.
     error PermissionApprovalFailed();
 
+    /// @notice Emitted when a spend operation is successfully routed.
+    ///
+    /// @param account The account from which tokens were spent.
+    /// @param executor The authorized executor address.
+    /// @param recipient The recipient address.
+    /// @param permissionHash The hash of the spend permission used.
+    /// @param token The token address.
+    /// @param value The amount of tokens routed.
+    event SpendRouted(
+        address indexed account,
+        address indexed executor,
+        address indexed recipient,
+        bytes32 permissionHash,
+        address token,
+        uint256 value
+    );
+
     /// @notice Deploys a new SpendRouter bound to the given SpendPermissionManager.
     ///
     /// @param spendPermissionManager The SpendPermissionManager instance this router will use
@@ -65,6 +82,10 @@ contract SpendRouter is Multicallable {
 
         PERMISSION_MANAGER.spend(permission, value);
 
+        emit SpendRouted(
+            permission.account, executor, recipient, PERMISSION_MANAGER.getHash(permission), permission.token, value
+        );
+
         if (permission.token == NATIVE_TOKEN_ADDRESS) {
             SafeTransferLib.safeTransferETH(payable(recipient), value);
         } else {
@@ -75,7 +96,7 @@ contract SpendRouter is Multicallable {
     /// @notice Approves a permission with the user's signature, spends tokens, and forwards them to the
     ///         recipient — all in a single transaction.
     ///
-    /// @dev Same flow as `pay`, but first calls `SpendPermissionManager.approveWithSignature` to approve
+    /// @dev Same flow as `spendAndRoute`, but first calls `SpendPermissionManager.approveWithSignature` to approve
     ///      the permission on-chain using the user's EIP-712 signature before spending.
     ///
     /// @param permission The spend permission containing account, spender, token, allowance, period,
@@ -96,6 +117,10 @@ contract SpendRouter is Multicallable {
 
         PERMISSION_MANAGER.spend(permission, value);
 
+        emit SpendRouted(
+            permission.account, executor, recipient, PERMISSION_MANAGER.getHash(permission), permission.token, value
+        );
+
         if (permission.token == NATIVE_TOKEN_ADDRESS) {
             SafeTransferLib.safeTransferETH(payable(recipient), value);
         } else {
@@ -107,7 +132,7 @@ contract SpendRouter is Multicallable {
     ///
     /// @dev ABI-encodes two addresses into a 64-byte payload. Reverts if either address is zero.
     ///
-    /// @param executor The authorized application address that will call `pay` or `payWithSignature`.
+    /// @param executor The authorized executor address that will call `spendAndRoute` or `spendAndRouteWithSignature`.
     /// @param recipient The address that will receive the forwarded tokens.
     ///
     /// @return extraData The 64-byte ABI-encoded payload to set as `SpendPermission.extraData`.
@@ -124,7 +149,7 @@ contract SpendRouter is Multicallable {
     ///
     /// @param extraData The raw `extraData` bytes from a `SpendPermission`.
     ///
-    /// @return executor The authorized application address.
+    /// @return executor The authorized executor address.
     /// @return recipient The address that will receive the forwarded tokens.
     function decodeExtraData(bytes memory extraData) public pure returns (address executor, address recipient) {
         if (extraData.length != 64) revert MalformedExtraData(extraData.length, extraData);
