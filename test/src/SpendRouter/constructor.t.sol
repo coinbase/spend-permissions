@@ -18,14 +18,26 @@ contract ConstructorTest is SpendRouterTestBase {
 }
 
 contract ReceiveTest is SpendRouterTestBase {
-    /// @notice Router accepts native ETH via the receive() fallback.
-    /// @dev Fuzz the ETH amount. Asserts the call succeeds and router balance increases.
-    function test_acceptsNativeToken(uint96 amount) public {
+    /// @notice Router accepts native ETH from SpendPermissionManager.
+    function test_acceptsETH_fromPermissionManager(uint96 amount) public {
         vm.assume(amount > 0);
-        
+        vm.deal(address(permissionManager), amount);
+
         uint256 preBalance = address(router).balance;
-        (bool success, ) = address(router).call{value: amount}("");
+        vm.prank(address(permissionManager));
+        (bool success,) = address(router).call{value: amount}("");
         assertTrue(success);
         assertEq(address(router).balance, preBalance + amount);
+    }
+
+    /// @notice Router rejects native ETH from arbitrary senders.
+    function test_rejectsETH_fromNonPermissionManager(address sender, uint96 amount) public {
+        vm.assume(sender != address(permissionManager));
+        vm.assume(amount > 0);
+        vm.deal(sender, amount);
+
+        vm.prank(sender);
+        (bool success,) = address(router).call{value: amount}("");
+        assertFalse(success);
     }
 }

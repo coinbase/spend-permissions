@@ -8,7 +8,7 @@ import {MockERC20MissingReturn} from "test/mocks/MockERC20MissingReturn.sol";
 
 contract PayWithSignatureTest is SpendRouterTestBase {
     /// @notice Reverts with MalformedExtraData when permission.extraData is not exactly 64 bytes.
-    /// @dev First check in payWithSignature() via decodeExtraData. Fuzz extraData to any length != 64.
+    /// @dev First check in spendAndRouteWithSignature() via decodeExtraData. Fuzz extraData to any length != 64.
     function test_reverts_whenExtraDataMalformed(bytes memory extraData) public {
         vm.assume(extraData.length != 64);
 
@@ -23,7 +23,7 @@ contract PayWithSignatureTest is SpendRouterTestBase {
     }
 
     /// @notice Reverts with UnauthorizedSender when msg.sender does not match the executor decoded from extraData.
-    /// @dev Second check in payWithSignature(). Fuzz the unauthorized sender, excluding the actual executor address.
+    /// @dev Second check in spendAndRouteWithSignature(). Fuzz the unauthorized sender, excluding the actual executor address.
     function test_reverts_whenSenderUnauthorized(address sender) public {
         vm.assume(sender != executor);
 
@@ -38,7 +38,7 @@ contract PayWithSignatureTest is SpendRouterTestBase {
     }
 
     /// @notice Reverts with ZeroAddress when the decoded recipient is address(0).
-    /// @dev Third check in payWithSignature(). Uses manually crafted extraData with abi.encode(executor, address(0)).
+    /// @dev Third check in spendAndRouteWithSignature(). Uses manually crafted extraData with abi.encode(executor, address(0)).
     function test_reverts_whenRecipientIsZeroAddress() public {
         SpendPermissionManager.SpendPermission memory permission = _createPermission(
             NATIVE_TOKEN, 1 ether, 1 days, uint48(block.timestamp), uint48(block.timestamp + 1 days), 0
@@ -240,7 +240,7 @@ contract PayWithSignatureTest is SpendRouterTestBase {
 
         vm.prank(executor);
         vm.expectEmit(true, true, true, true);
-        emit SpendRouter.SpendRouted(permHash, executor, recipient, NATIVE_TOKEN, spendAmount);
+        emit SpendRouter.SpendRouted(address(account), executor, recipient, permHash, NATIVE_TOKEN, spendAmount);
         router.spendAndRouteWithSignature(permission, spendAmount, signature);
     }
 
