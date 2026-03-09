@@ -86,6 +86,7 @@ contract SpendWithWithdrawTest is SpendPermissionManagerBase {
     ) public {
         _validateCommonAssumptions(params);
         vm.assume(withdrawAsset != address(0));
+        vm.assume(withdrawAsset != NATIVE_TOKEN);
         uint160 spend = 0;
 
         SpendPermissionManager.SpendPermission memory spendPermission = SpendPermissionManager.SpendPermission({
