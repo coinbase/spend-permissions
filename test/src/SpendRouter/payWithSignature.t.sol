@@ -3,12 +3,13 @@ pragma solidity ^0.8.28;
 
 import {SpendPermissionManager} from "src/SpendPermissionManager.sol";
 import {SpendRouter} from "src/SpendRouter.sol";
-import {SpendRouterTestBase} from "test/src/SpendRouter/SpendRouterTestBase.sol";
 import {MockERC20MissingReturn} from "test/mocks/MockERC20MissingReturn.sol";
+import {SpendRouterTestBase} from "test/src/SpendRouter/SpendRouterTestBase.sol";
 
 contract PayWithSignatureTest is SpendRouterTestBase {
     /// @notice Reverts with MalformedExtraData when permission.extraData is not exactly 64 bytes.
     /// @dev First check in spendAndRouteWithSignature() via decodeExtraData. Fuzz extraData to any length != 64.
+    /// @param extraData Fuzzed bytes payload (excluded: length == 64).
     function test_reverts_whenExtraDataMalformed(bytes memory extraData) public {
         vm.assume(extraData.length != 64);
 
@@ -23,7 +24,8 @@ contract PayWithSignatureTest is SpendRouterTestBase {
     }
 
     /// @notice Reverts with UnauthorizedSender when msg.sender does not match the executor decoded from extraData.
-    /// @dev Second check in spendAndRouteWithSignature(). Fuzz the unauthorized sender, excluding the actual executor address.
+    /// @dev Second check in spendAndRouteWithSignature(). Fuzz the unauthorized sender, excluding the actual executor
+    /// address. @param sender Fuzzed caller address (excluded: executor).
     function test_reverts_whenSenderUnauthorized(address sender) public {
         vm.assume(sender != executor);
 
@@ -38,7 +40,8 @@ contract PayWithSignatureTest is SpendRouterTestBase {
     }
 
     /// @notice Reverts with ZeroAddress when the decoded recipient is address(0).
-    /// @dev Third check in spendAndRouteWithSignature(). Uses manually crafted extraData with abi.encode(executor, address(0)).
+    /// @dev Third check in spendAndRouteWithSignature(). Uses manually crafted extraData with abi.encode(executor,
+    /// address(0)).
     function test_reverts_whenRecipientIsZeroAddress() public {
         SpendPermissionManager.SpendPermission memory permission = _createPermission(
             NATIVE_TOKEN, 1 ether, 1 days, uint48(block.timestamp), uint48(block.timestamp + 1 days), 0
@@ -73,6 +76,7 @@ contract PayWithSignatureTest is SpendRouterTestBase {
     /// @notice Successfully approves, spends, and forwards native ETH from account to recipient in one tx.
     /// @dev Fuzz spendAmount within [1, allowance]. Signs permission but does NOT pre-approve.
     ///      Asserts recipient credited and account debited.
+    /// @param spendAmount Fuzzed spend value (bounded: 1 to allowance).
     function test_transfersNativeToken(uint160 spendAmount) public {
         uint160 allowance = 100 ether;
         vm.assume(spendAmount > 0 && spendAmount <= allowance);
@@ -94,6 +98,7 @@ contract PayWithSignatureTest is SpendRouterTestBase {
     /// @notice Successfully approves, spends, and forwards ERC-20 tokens from account to recipient in one tx.
     /// @dev Fuzz spendAmount within [1, allowance]. Signs permission but does NOT pre-approve.
     ///      Asserts recipient credited and account debited.
+    /// @param spendAmount Fuzzed spend value (bounded: 1 to allowance).
     function test_transfersERC20(uint160 spendAmount) public {
         uint160 allowance = 1000e18;
         vm.assume(spendAmount > 0 && spendAmount <= allowance);
@@ -158,9 +163,7 @@ contract PayWithSignatureTest is SpendRouterTestBase {
         vm.prank(executor);
         vm.expectRevert(
             abi.encodeWithSelector(
-                SpendPermissionManager.ExceededSpendPermission.selector,
-                uint256(allowance) + 1,
-                allowance
+                SpendPermissionManager.ExceededSpendPermission.selector, uint256(allowance) + 1, allowance
             )
         );
         router.spendAndRouteWithSignature(permission, allowance + 1, signature);
@@ -197,7 +200,9 @@ contract PayWithSignatureTest is SpendRouterTestBase {
 
         vm.prank(executor);
         vm.expectRevert(
-            abi.encodeWithSelector(SpendPermissionManager.AfterSpendPermissionEnd.selector, uint48(block.timestamp), end)
+            abi.encodeWithSelector(
+                SpendPermissionManager.AfterSpendPermissionEnd.selector, uint48(block.timestamp), end
+            )
         );
         router.spendAndRouteWithSignature(permission, 0.5 ether, signature);
     }

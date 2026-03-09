@@ -1,0 +1,113 @@
+---
+description: Foundry Solidity testing conventions (base harness, structure, stub-first)
+alwaysApply: true
+---
+
+# Solidity Testing Conventions (Foundry)
+
+Applies to first-party tests under `test/` (do not modify dependency tests under `lib/`).
+
+## Directory structure (required)
+
+- `test/base/`
+  - Base test harness contracts (shared fixtures + helpers)
+  - e.g. `SpendPermissionManagerBase.sol`, `Base.sol`, `Static.sol`
+- `test/mocks/`
+  - Shared mocks/utilities used across multiple suites
+- `test/src/<Area>/`
+  - Unit tests scoped to a single contract/function/feature area
+  - Prefer one `.t.sol` per function or tightly-related group of functions unless contract is quite small (less than 4 testable functions)
+
+Recommended shape (examples):
+- `test/base/SpendPermissionManagerBase.sol`
+- `test/mocks/MockCoinbaseSmartWallet.sol`
+- `test/src/SpendRouter/spendAndRoute.t.sol`
+- `test/src/SpendPermissions/approve.t.sol`
+
+## Base harness pattern (required)
+
+- Put shared deployment/setup/helpers in an `abstract contract <X>TestBase is Test` (or `<X>Base`) under `test/base/` or co-located with the test suite.
+- Child unit tests inherit the base and call a single base setup entrypoint from `setUp()`.
+- Centralize "builders" and helpers in the base:
+  - Signature helpers (`_signPermission`, `_applySignatureWrapper`, etc.)
+  - Common fixtures (accounts, deployed contracts, default configs)
+  - Fuzz bounds helpers (wrap `bound()` into semantically-named helpers)
+
+## Naming + organization
+
+- **Test file names**:
+  - Contract-scoped suites: `ContractName.t.sol`
+  - Function-scoped suites: `functionName.t.sol` (lower camelCase; matches the Solidity function name)
+- **Test contract names**:
+  - Contract-scoped suites: `ContractNameTest`
+  - Function-scoped suites: `FunctionNameTest` (CapWords, even when the file is lower camelCase like `spendAndRoute.t.sol`)
+- **Test function names**:
+  - If contract name already scopes the function, use `test_outcome_optionalContext`
+  - Otherwise use `test_functionName_outcome_optionalContext`
+
+Keep separation of concerns:
+- Core protocol tests (SpendPermissionManager) separate from router-specific tests (SpendRouter).
+
+## NatSpec for tests (required)
+
+- Test functions MUST have a NatSpec `@notice` that describes the case being asserted.
+- Any fuzzed test function MUST NatSpec every parameter with `@param <name> ...` (no unnamed parameters).
+- Use `@dev` only when it adds durable clarity (e.g., expected typed error, important invariants, or why a bound/transform is used).
+
+## Reverts + events (preferred patterns)
+
+- Reverts:
+  - Prefer typed errors: `vm.expectRevert(SomeError.selector)`
+  - If args matter: `vm.expectRevert(abi.encodeWithSelector(SomeError.selector, ...))`
+- Events:
+  - Use `vm.expectEmit(...)` and emit the event with expected args immediately before the call.
+  - Give **each unique event emission** its own dedicated test (do not bundle event assertions with state/happy-path assertions, even if redundant).
+  - For "should not emit" cases, prefer `vm.recordLogs()` + scan for the signature.
+
+## Assertion scope (preferred)
+
+- Prefer **one thing per test**:
+  - A test should usually validate a single expected outcome (one revert, one event emission, or one state transition).
+  - Avoid packing multiple unrelated subcases into a single test.
+- Multiple assertions are fine when they are all part of probing the **same desired end state** (e.g., several state fields that jointly define correctness).
+
+## Fuzzing conventions (required)
+
+- Prefer `bound()` over `vm.assume()` when possible.
+- Define meaningful constants for fuzz bounds (no magic numbers).
+- Every fuzz parameter must be used (or be explicitly part of the stub-only phase; see below).
+- Keep assumptions minimal and targeted (e.g., inequality between two bounded addresses).
+
+## Stub-first workflow (required)
+
+When creating new coverage, **stub the full case matrix first** (tests compile, run, and are explicitly skipped), then implement bodies in a later pass.
+
+### Stub rule
+
+- A stub test MUST call `vm.skip(true);` to keep `forge test` green while the case is still being specified.
+- The stub's NatSpec/docstring should clearly state the expected revert/event/state transitions (this is the "spec").
+
+Example stub shape:
+
+```solidity
+function test_reverts_whenFooIsBar(uint256 x) public {
+    vm.skip(true);
+}
+```
+
+## Test Implementation Rules (implementing pre-written test stubs)
+- Only implement existing test stubs, never create new test functions
+- Only modify specified test files
+- Use inherited test library functions; add utilities to base classes if needed
+- Run `forge fmt` after code changes
+- For revert tests, find typed errors in contract or dependencies
+
+## Test Quality
+- Run tests after implementation with `-vvvv` for debugging
+- Fix all failures systematically until 100% pass
+- Assert everything necessary to verify expected behavior
+- Comment only non-obvious or crucial setup, avoid narration
+- Run full test suite before finishing to ensure no regressions
+
+## Bug Reporting
+- If you suspect a protocol bug during testing, stop immediately and report findings with reasoning

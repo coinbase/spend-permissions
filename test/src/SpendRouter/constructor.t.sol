@@ -1,9 +1,8 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.28;
 
-import {SpendPermissionManager} from "../../../src/SpendPermissionManager.sol";
-import {SpendRouter} from "../../../src/SpendRouter.sol";
-import {SpendRouterTestBase} from "./SpendRouterTestBase.sol";
+import {SpendRouter} from "src/SpendRouter.sol";
+import {SpendRouterTestBase} from "test/src/SpendRouter/SpendRouterTestBase.sol";
 
 contract ConstructorTest is SpendRouterTestBase {
     /// @notice PERMISSION_MANAGER is set to the SpendPermissionManager passed to the constructor.
@@ -19,6 +18,7 @@ contract ConstructorTest is SpendRouterTestBase {
 
 contract ReceiveTest is SpendRouterTestBase {
     /// @notice Router accepts native ETH from SpendPermissionManager.
+    /// @param amount Fuzzed ETH amount to send (excluded: 0).
     function test_acceptsETH_fromPermissionManager(uint96 amount) public {
         vm.assume(amount > 0);
         vm.deal(address(permissionManager), amount);
@@ -31,6 +31,8 @@ contract ReceiveTest is SpendRouterTestBase {
     }
 
     /// @notice Router rejects native ETH from arbitrary senders.
+    /// @param sender Fuzzed sender address (excluded: permissionManager).
+    /// @param amount Fuzzed ETH amount to send (excluded: 0).
     function test_rejectsETH_fromNonPermissionManager(address sender, uint96 amount) public {
         vm.assume(sender != address(permissionManager));
         vm.assume(amount > 0);

@@ -1,9 +1,9 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.28;
 
-import {SafeTransferLib} from "solady/utils/SafeTransferLib.sol";
-import {Multicallable} from "solady/utils/Multicallable.sol";
 import {SpendPermissionManager} from "./SpendPermissionManager.sol";
+import {Multicallable} from "solady/utils/Multicallable.sol";
+import {SafeTransferLib} from "solady/utils/SafeTransferLib.sol";
 
 /// @title SpendRouter
 /// @author Coinbase
@@ -56,18 +56,6 @@ contract SpendRouter is Multicallable {
         address token,
         uint256 value
     );
-
-    /// @notice Revokes a spend permission where this contract is the spender.
-    ///
-    /// @dev Decodes `executor` from `permission.extraData` and verifies `msg.sender == executor`.
-    ///      Delegates to `SpendPermissionManager.revokeAsSpender` to permanently revoke the permission.
-    ///
-    /// @param permission The spend permission to revoke.
-    function revokeAsSpender(SpendPermissionManager.SpendPermission calldata permission) external {
-        (address executor,) = decodeExtraData(permission.extraData);
-        if (msg.sender != executor) revert UnauthorizedSender(msg.sender, executor);
-        PERMISSION_MANAGER.revokeAsSpender(permission);
-    }
 
     /// @notice Deploys a new SpendRouter bound to the given SpendPermissionManager.
     ///
@@ -145,6 +133,18 @@ contract SpendRouter is Multicallable {
         } else {
             SafeTransferLib.safeTransfer(permission.token, recipient, value);
         }
+    }
+
+    /// @notice Revokes a spend permission where this contract is the spender.
+    ///
+    /// @dev Decodes `executor` from `permission.extraData` and verifies `msg.sender == executor`.
+    ///      Delegates to `SpendPermissionManager.revokeAsSpender` to permanently revoke the permission.
+    ///
+    /// @param permission The spend permission to revoke.
+    function revokeAsSpender(SpendPermissionManager.SpendPermission calldata permission) external {
+        (address executor,) = decodeExtraData(permission.extraData);
+        if (msg.sender != executor) revert UnauthorizedSender(msg.sender, executor);
+        PERMISSION_MANAGER.revokeAsSpender(permission);
     }
 
     /// @notice Constructs a properly formatted `SpendPermission.extraData` payload.

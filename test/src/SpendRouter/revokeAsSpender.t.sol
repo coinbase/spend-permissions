@@ -39,6 +39,7 @@ contract RevokeAsSpenderTest is SpendRouterTestBase {
     }
 
     /// @notice Reverts when msg.sender is not the executor encoded in extraData.
+    /// @param sender Fuzzed caller address (excluded: executor).
     function test_reverts_whenSenderUnauthorized(address sender) public {
         vm.assume(sender != executor);
 
@@ -53,6 +54,7 @@ contract RevokeAsSpenderTest is SpendRouterTestBase {
     }
 
     /// @notice Reverts when extraData is malformed.
+    /// @param extraData Fuzzed bytes payload (excluded: length == 64).
     function test_reverts_whenExtraDataMalformed(bytes memory extraData) public {
         vm.assume(extraData.length != 64);
 

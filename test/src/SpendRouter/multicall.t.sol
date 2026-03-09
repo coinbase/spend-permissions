@@ -1,9 +1,9 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.28;
 
-import {SpendPermissionManager} from "../../../src/SpendPermissionManager.sol";
-import {SpendRouter} from "../../../src/SpendRouter.sol";
-import {SpendRouterTestBase} from "./SpendRouterTestBase.sol";
+import {SpendPermissionManager} from "src/SpendPermissionManager.sol";
+import {SpendRouter} from "src/SpendRouter.sol";
+import {SpendRouterTestBase} from "test/src/SpendRouter/SpendRouterTestBase.sol";
 
 contract MulticallTest is SpendRouterTestBase {
     function test_multicall_batchSpend() public {
@@ -67,9 +67,8 @@ contract MulticallTest is SpendRouterTestBase {
         data[0] = abi.encodeWithSelector(
             SpendRouter.spendAndRouteWithSignature.selector, permissionA, uint160(0.5 ether), sigA
         );
-        data[1] = abi.encodeWithSelector(
-            SpendRouter.spendAndRouteWithSignature.selector, permissionB, uint160(500e18), sigB
-        );
+        data[1] =
+            abi.encodeWithSelector(SpendRouter.spendAndRouteWithSignature.selector, permissionB, uint160(500e18), sigB);
 
         // 4. Execute multicall
         vm.prank(executor);

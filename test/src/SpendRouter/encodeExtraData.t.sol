@@ -21,6 +21,8 @@ contract EncodeExtraDataTest is SpendRouterTestBase {
 
     /// @notice Encodes two addresses into a 64-byte payload that roundtrips correctly through decodeExtraData.
     /// @dev Fuzz both addresses, excluding address(0). Asserts decoded values match inputs and length is 64.
+    /// @param fuzzExecutor Fuzzed executor address (excluded: address(0)).
+    /// @param fuzzRecipient Fuzzed recipient address (excluded: address(0)).
     function test_encodesAndDecodesCorrectly(address fuzzExecutor, address fuzzRecipient) public view {
         vm.assume(fuzzExecutor != address(0));
         vm.assume(fuzzRecipient != address(0));

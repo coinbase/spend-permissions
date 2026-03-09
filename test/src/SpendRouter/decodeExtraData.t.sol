@@ -29,6 +29,7 @@ contract DecodeExtraDataTest is SpendRouterTestBase {
 
     /// @notice Reverts with MalformedExtraData for any extraData that is not exactly 64 bytes.
     /// @dev Fuzz arbitrary bytes, excluding those with length == 64.
+    /// @param extraData Fuzzed bytes payload (excluded: length == 64).
     function test_reverts_whenExtraDataNotSixtyFourBytes(bytes memory extraData) public {
         vm.assume(extraData.length != 64);
         vm.expectRevert(abi.encodeWithSelector(SpendRouter.MalformedExtraData.selector, extraData.length, extraData));
@@ -38,6 +39,8 @@ contract DecodeExtraDataTest is SpendRouterTestBase {
     /// @notice Successfully decodes a valid 64-byte ABI-encoded payload into (executor, recipient).
     /// @dev Fuzz both addresses (including address(0) since decodeExtraData does not check for zero).
     ///      Asserts decoded values match the ABI-encoded inputs.
+    /// @param fuzzExecutor Fuzzed executor address.
+    /// @param fuzzRecipient Fuzzed recipient address.
     function test_decodesCorrectly(address fuzzExecutor, address fuzzRecipient) public view {
         bytes memory extraData = abi.encode(fuzzExecutor, fuzzRecipient);
         (address decodedExecutor, address decodedRecipient) = router.decodeExtraData(extraData);

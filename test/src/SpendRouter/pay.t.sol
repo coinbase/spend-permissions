@@ -3,8 +3,8 @@ pragma solidity ^0.8.28;
 
 import {SpendPermissionManager} from "src/SpendPermissionManager.sol";
 import {SpendRouter} from "src/SpendRouter.sol";
-import {SpendRouterTestBase} from "test/src/SpendRouter/SpendRouterTestBase.sol";
 import {MockERC20MissingReturn} from "test/mocks/MockERC20MissingReturn.sol";
+import {SpendRouterTestBase} from "test/src/SpendRouter/SpendRouterTestBase.sol";
 
 contract PayTest is SpendRouterTestBase {
     function test_pay_nativeToken() public {
@@ -67,6 +67,8 @@ contract PayTest is SpendRouterTestBase {
 
     // --- Edge-case tests ---
 
+    /// @notice Reverts with MalformedExtraData when extraData is not exactly 64 bytes.
+    /// @param extraData Fuzzed bytes payload (excluded: length == 64).
     function test_pay_revert_malformedExtraData(bytes memory extraData) public {
         vm.assume(extraData.length != 64);
 
@@ -114,9 +116,7 @@ contract PayTest is SpendRouterTestBase {
         vm.prank(executor);
         vm.expectRevert(
             abi.encodeWithSelector(
-                SpendPermissionManager.ExceededSpendPermission.selector,
-                uint256(allowance) + 1,
-                allowance
+                SpendPermissionManager.ExceededSpendPermission.selector, uint256(allowance) + 1, allowance
             )
         );
         router.spendAndRoute(permission, allowance + 1);
@@ -161,7 +161,9 @@ contract PayTest is SpendRouterTestBase {
         // Execute spend — should revert as expired
         vm.prank(executor);
         vm.expectRevert(
-            abi.encodeWithSelector(SpendPermissionManager.AfterSpendPermissionEnd.selector, uint48(block.timestamp), end)
+            abi.encodeWithSelector(
+                SpendPermissionManager.AfterSpendPermissionEnd.selector, uint48(block.timestamp), end
+            )
         );
         router.spendAndRoute(permission, 0.5 ether);
     }

@@ -2,12 +2,12 @@
 pragma solidity ^0.8.28;
 
 import {Test} from "forge-std/Test.sol";
+import {CoinbaseSmartWallet} from "smart-wallet/CoinbaseSmartWallet.sol";
+import {MockERC20} from "solady/../test/utils/mocks/MockERC20.sol";
 import {PublicERC6492Validator} from "src/PublicERC6492Validator.sol";
 import {SpendPermissionManager} from "src/SpendPermissionManager.sol";
 import {SpendRouter} from "src/SpendRouter.sol";
 import {MockCoinbaseSmartWallet} from "test/mocks/MockCoinbaseSmartWallet.sol";
-import {CoinbaseSmartWallet} from "smart-wallet/CoinbaseSmartWallet.sol";
-import {MockERC20} from "solady/../test/utils/mocks/MockERC20.sol";
 
 contract SpendRouterTestBase is Test {
     // Core contracts
@@ -44,7 +44,7 @@ contract SpendRouterTestBase is Test {
 
         // Deploy core contracts
         validator = new PublicERC6492Validator();
-        permissionManager = new SpendPermissionManager(validator, address(0)); 
+        permissionManager = new SpendPermissionManager(validator, address(0));
         router = new SpendRouter(permissionManager);
 
         // Deploy and initialize account
