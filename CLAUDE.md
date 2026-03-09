@@ -103,31 +103,35 @@ Unless an exception or addition is specifically noted, we follow the [Solidity S
 
 **Names of internal functions in a library should NOT have an underscore prefix.**
 
-##### 2. Error Handling
+##### 2. Terminology
+
+- **Use "onchain"** (one word, no hyphen) instead of "on-chain" or "on chain". Same for "offchain".
+
+##### 3. Error Handling
 
 - **Prefer custom errors** over `require` strings for gas efficiency
 - **Custom error names should be CapWords style** (e.g., `InsufficientBalance`, `Unauthorized`)
 
-##### 3. Events
+##### 4. Events
 
 - **Event names should be past tense** - Events track things that _happened_
 - Example: `TokenTransferred` not `TokenTransfer`
 
-##### 4. Mappings
+##### 5. Mappings
 
 **Prefer named parameters in mapping types** for clarity.
 
-##### 5. Contract Architecture
+##### 6. Contract Architecture
 
 - **Prefer composition over inheritance** when functions could reasonably be in separate contracts
 - **Avoid writing interfaces** unless absolutely necessary - they separate NatSpec from logic
 - **Avoid using assembly** unless gas savings are very consequential (>25%)
 
-##### 6. Imports
+##### 7. Imports
 
 **Use named imports** and order alphabetically.
 
-##### 7. Testing Standards
+##### 8. Testing Standards
 
 - **Test file names**: `ContractName.t.sol` or `functionName.t.sol`
 - **Test contract names**: `ContractNameTest` or `FunctionNameTest` (CapWords)

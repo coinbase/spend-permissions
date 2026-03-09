@@ -77,7 +77,7 @@ contract SpendRouter is Multicallable {
     ///
     /// @dev Decodes `(executor, recipient)` from `permission.extraData`, verifies `msg.sender == executor`,
     ///      calls `SpendPermissionManager.spend` to pull tokens into this contract, then transfers
-    ///      them to `recipient`. The permission must already be approved on-chain.
+    ///      them to `recipient`. The permission must already be approved onchain.
     ///
     /// @param permission The spend permission containing account, spender, token, allowance, period,
     ///        start, end, salt, and extraData fields.
@@ -104,7 +104,7 @@ contract SpendRouter is Multicallable {
     ///         recipient — all in a single transaction.
     ///
     /// @dev Same flow as `spendAndRoute`, but first calls `SpendPermissionManager.approveWithSignature` to approve
-    ///      the permission on-chain using the user's EIP-712 signature before spending.
+    ///      the permission onchain using the user's EIP-712 signature before spending.
     ///
     /// @param permission The spend permission containing account, spender, token, allowance, period,
     ///        start, end, salt, and extraData fields.
