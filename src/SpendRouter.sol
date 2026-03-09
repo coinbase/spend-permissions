@@ -54,6 +54,18 @@ contract SpendRouter is Multicallable {
         uint256 value
     );
 
+    /// @notice Revokes a spend permission where this contract is the spender.
+    ///
+    /// @dev Decodes `executor` from `permission.extraData` and verifies `msg.sender == executor`.
+    ///      Delegates to `SpendPermissionManager.revokeAsSpender` to permanently revoke the permission.
+    ///
+    /// @param permission The spend permission to revoke.
+    function revokeAsSpender(SpendPermissionManager.SpendPermission calldata permission) external {
+        (address executor,) = decodeExtraData(permission.extraData);
+        if (msg.sender != executor) revert UnauthorizedSender(msg.sender, executor);
+        PERMISSION_MANAGER.revokeAsSpender(permission);
+    }
+
     /// @notice Deploys a new SpendRouter bound to the given SpendPermissionManager.
     ///
     /// @param spendPermissionManager The SpendPermissionManager instance this router will use
