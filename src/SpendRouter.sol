@@ -74,8 +74,12 @@ contract SpendRouter is Multicallable {
         PERMISSION_MANAGER = spendPermissionManager;
     }
 
-    /// @notice Accepts native ETH so the contract can receive funds from SpendPermissionManager before forwarding.
-    receive() external payable {}
+    /// @notice Accepts native ETH from SpendPermissionManager during spend-and-forward flows.
+    ///
+    /// @dev Restricts to PERMISSION_MANAGER to prevent accidental ETH loss from direct sends.
+    receive() external payable {
+        if (msg.sender != address(PERMISSION_MANAGER)) revert();
+    }
 
     /// @notice Spends tokens from the user's account via an already-approved permission and forwards them
     ///         to the recipient encoded in `permission.extraData`.
