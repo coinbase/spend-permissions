@@ -37,6 +37,9 @@ contract SpendRouter is Multicallable {
     /// @notice Thrown when `SpendPermissionManager.approveWithSignature` returns false.
     error PermissionApprovalFailed();
 
+    /// @notice Thrown when the contract receives ETH from an address other than PERMISSION_MANAGER.
+    error UnauthorizedETHSender();
+
     /// @notice Emitted when a spend operation is successfully routed.
     ///
     /// @param account The account from which tokens were spent.
@@ -78,7 +81,7 @@ contract SpendRouter is Multicallable {
     ///
     /// @dev Restricts to PERMISSION_MANAGER to prevent accidental ETH loss from direct sends.
     receive() external payable {
-        if (msg.sender != address(PERMISSION_MANAGER)) revert();
+        if (msg.sender != address(PERMISSION_MANAGER)) revert UnauthorizedETHSender();
     }
 
     /// @notice Spends tokens from the user's account via an already-approved permission and forwards them
