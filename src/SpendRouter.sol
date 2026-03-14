@@ -41,6 +41,12 @@ contract SpendRouter is Multicallable {
     /// @notice Thrown when the contract receives ETH from an address other than PERMISSION_MANAGER.
     error UnauthorizedETHSender();
 
+    /// @notice Thrown when the SpendPermissionManager address has no deployed code or has an EIP-7702 delegation
+    ///         indicator, meaning it is not a persistently deployed contract.
+    ///
+    /// @param permissionManager The address that failed the persistent code check.
+    error NotPersistentCode(address permissionManager);
+
     /// @notice Emitted when a spend operation is successfully routed.
     ///
     /// @param account The account from which tokens were spent.
@@ -60,9 +66,18 @@ contract SpendRouter is Multicallable {
 
     /// @notice Deploys a new SpendRouter bound to the given SpendPermissionManager.
     ///
+    /// @dev Reverts if the SpendPermissionManager address has no code or has an EIP-7702 delegation indicator,
+    ///      as such addresses are not persistently deployed contracts.
+    ///
     /// @param spendPermissionManager The SpendPermissionManager instance this router will use
     ///        for all permission approvals and spend executions.
     constructor(SpendPermissionManager spendPermissionManager) {
+        address addr = address(spendPermissionManager);
+        bytes memory code = addr.code;
+        if (code.length == 0 || (code.length == 23 && code[0] == 0xef && code[1] == 0x01 && code[2] == 0x00)) {
+            revert NotPersistentCode(addr);
+        }
+
         PERMISSION_MANAGER = spendPermissionManager;
     }
 
