@@ -2,6 +2,7 @@
 pragma solidity ^0.8.28;
 
 import {SpendPermissionManager} from "./SpendPermissionManager.sol";
+import {MagicSpend} from "magicspend/MagicSpend.sol";
 import {Multicallable} from "solady/utils/Multicallable.sol";
 import {SafeTransferLib} from "solady/utils/SafeTransferLib.sol";
 
@@ -40,6 +41,12 @@ contract SpendRouter is Multicallable {
     /// @notice Thrown when the contract receives ETH from an address other than PERMISSION_MANAGER.
     error UnauthorizedETHSender();
 
+    /// @notice Thrown when the SpendPermissionManager address has no deployed code or has an EIP-7702 delegation
+    ///         indicator, meaning it is not a persistently deployed contract.
+    ///
+    /// @param permissionManager The address that failed the persistent code check.
+    error NotPersistentCode(address permissionManager);
+
     /// @notice Emitted when a spend operation is successfully routed.
     ///
     /// @param account The account from which tokens were spent.
@@ -59,9 +66,18 @@ contract SpendRouter is Multicallable {
 
     /// @notice Deploys a new SpendRouter bound to the given SpendPermissionManager.
     ///
+    /// @dev Reverts if the SpendPermissionManager address has no code or has an EIP-7702 delegation indicator,
+    ///      as such addresses are not persistently deployed contracts.
+    ///
     /// @param spendPermissionManager The SpendPermissionManager instance this router will use
     ///        for all permission approvals and spend executions.
     constructor(SpendPermissionManager spendPermissionManager) {
+        address addr = address(spendPermissionManager);
+        bytes memory code = addr.code;
+        if (code.length == 0 || (code.length == 23 && code[0] == 0xef && code[1] == 0x01 && code[2] == 0x00)) {
+            revert NotPersistentCode(addr);
+        }
+
         PERMISSION_MANAGER = spendPermissionManager;
     }
 
@@ -123,6 +139,76 @@ contract SpendRouter is Multicallable {
         if (!approved) revert PermissionApprovalFailed();
 
         PERMISSION_MANAGER.spend(permission, value);
+
+        emit SpendRouted(
+            permission.account, executor, recipient, PERMISSION_MANAGER.getHash(permission), permission.token, value
+        );
+
+        if (permission.token == NATIVE_TOKEN_ADDRESS) {
+            SafeTransferLib.safeTransferETH(payable(recipient), value);
+        } else {
+            SafeTransferLib.safeTransfer(permission.token, recipient, value);
+        }
+    }
+
+    /// @notice Spends tokens from the user's account via an already-approved permission, atomically funding the
+    ///         account from MagicSpend, and forwards the tokens to the recipient encoded in `permission.extraData`.
+    ///
+    /// @dev Decodes `(executor, recipient)` from `permission.extraData`, verifies `msg.sender == executor`,
+    ///      calls `SpendPermissionManager.spendWithWithdraw` to atomically withdraw from MagicSpend and pull tokens
+    ///      into this contract, then transfers them to `recipient`. The permission must already be approved onchain.
+    ///
+    /// @param permission The spend permission containing account, spender, token, allowance, period,
+    ///        start, end, salt, and extraData fields.
+    /// @param value The amount of tokens to spend and forward.
+    /// @param withdrawRequest The MagicSpend withdraw request to fund the account.
+    function spendWithWithdrawAndRoute(
+        SpendPermissionManager.SpendPermission calldata permission,
+        uint160 value,
+        MagicSpend.WithdrawRequest memory withdrawRequest
+    ) external {
+        (address executor, address recipient) = decodeExtraData(permission.extraData);
+        if (msg.sender != executor) revert UnauthorizedSender(msg.sender, executor);
+        if (recipient == address(0)) revert ZeroAddress();
+
+        PERMISSION_MANAGER.spendWithWithdraw(permission, value, withdrawRequest);
+
+        emit SpendRouted(
+            permission.account, executor, recipient, PERMISSION_MANAGER.getHash(permission), permission.token, value
+        );
+
+        if (permission.token == NATIVE_TOKEN_ADDRESS) {
+            SafeTransferLib.safeTransferETH(payable(recipient), value);
+        } else {
+            SafeTransferLib.safeTransfer(permission.token, recipient, value);
+        }
+    }
+
+    /// @notice Approves a permission with the user's signature, spends tokens with an atomic MagicSpend withdraw,
+    ///         and forwards them to the recipient — all in a single transaction.
+    ///
+    /// @dev Same flow as `spendWithWithdrawAndRoute`, but first calls `SpendPermissionManager.approveWithSignature`
+    ///      to approve the permission onchain using the user's EIP-712 signature before spending.
+    ///
+    /// @param permission The spend permission containing account, spender, token, allowance, period,
+    ///        start, end, salt, and extraData fields.
+    /// @param value The amount of tokens to spend and forward.
+    /// @param withdrawRequest The MagicSpend withdraw request to fund the account.
+    /// @param signature The user's EIP-712 signature authorizing the permission.
+    function spendWithWithdrawAndRouteWithSignature(
+        SpendPermissionManager.SpendPermission calldata permission,
+        uint160 value,
+        MagicSpend.WithdrawRequest memory withdrawRequest,
+        bytes calldata signature
+    ) external {
+        (address executor, address recipient) = decodeExtraData(permission.extraData);
+        if (msg.sender != executor) revert UnauthorizedSender(msg.sender, executor);
+        if (recipient == address(0)) revert ZeroAddress();
+
+        bool approved = PERMISSION_MANAGER.approveWithSignature(permission, signature);
+        if (!approved) revert PermissionApprovalFailed();
+
+        PERMISSION_MANAGER.spendWithWithdraw(permission, value, withdrawRequest);
 
         emit SpendRouted(
             permission.account, executor, recipient, PERMISSION_MANAGER.getHash(permission), permission.token, value
