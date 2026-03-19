@@ -13,6 +13,10 @@ import {SafeTransferLib} from "solady/utils/SafeTransferLib.sol";
 /// @dev Decodes routing metadata (authorized executor, recipient) from a SpendPermission's extraData field,
 ///      pulls tokens from a user's account via SpendPermissionManager, and forwards them to the recipient.
 ///      Supports both native ETH (ERC-7528) and ERC-20 tokens.
+///
+/// @dev Fee-on-transfer ERC-20 tokens are unsupported. Routing forwards exactly `value`, so if the inbound
+///      transfer credits less than `value`, the outbound transfer reverts. Rebasing or shares-based tokens
+///      (e.g. stETH) may deliver up to a few wei less than `value` due to rounding in the two-hop transfer path.
 contract SpendRouter is Multicallable {
     /// @notice The SpendPermissionManager used for all permission approvals and spend executions.
     SpendPermissionManager public immutable PERMISSION_MANAGER;
