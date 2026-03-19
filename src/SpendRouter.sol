@@ -99,9 +99,7 @@ contract SpendRouter is Multicallable {
     ///        start, end, salt, and extraData fields.
     /// @param value The amount of tokens to spend and forward.
     function spendAndRoute(SpendPermissionManager.SpendPermission calldata permission, uint160 value) external {
-        (address executor, address recipient) = decodeExtraData(permission.extraData);
-        if (msg.sender != executor) revert UnauthorizedSender(msg.sender, executor);
-        if (recipient == address(0)) revert ZeroAddress();
+        (address executor, address recipient) = _validateAndDecodeExtraData(permission.extraData);
 
         PERMISSION_MANAGER.spend(permission, value);
 
@@ -109,11 +107,7 @@ contract SpendRouter is Multicallable {
             permission.account, executor, recipient, PERMISSION_MANAGER.getHash(permission), permission.token, value
         );
 
-        if (permission.token == NATIVE_TOKEN_ADDRESS) {
-            SafeTransferLib.safeTransferETH(payable(recipient), value);
-        } else {
-            SafeTransferLib.safeTransfer(permission.token, recipient, value);
-        }
+        _routeTokens(permission.token, recipient, value);
     }
 
     /// @notice Approves a permission with the user's signature, spends tokens, and forwards them to the
@@ -131,9 +125,7 @@ contract SpendRouter is Multicallable {
         uint160 value,
         bytes calldata signature
     ) external {
-        (address executor, address recipient) = decodeExtraData(permission.extraData);
-        if (msg.sender != executor) revert UnauthorizedSender(msg.sender, executor);
-        if (recipient == address(0)) revert ZeroAddress();
+        (address executor, address recipient) = _validateAndDecodeExtraData(permission.extraData);
 
         bool approved = PERMISSION_MANAGER.approveWithSignature(permission, signature);
         if (!approved) revert PermissionApprovalFailed();
@@ -144,11 +136,7 @@ contract SpendRouter is Multicallable {
             permission.account, executor, recipient, PERMISSION_MANAGER.getHash(permission), permission.token, value
         );
 
-        if (permission.token == NATIVE_TOKEN_ADDRESS) {
-            SafeTransferLib.safeTransferETH(payable(recipient), value);
-        } else {
-            SafeTransferLib.safeTransfer(permission.token, recipient, value);
-        }
+        _routeTokens(permission.token, recipient, value);
     }
 
     /// @notice Spends tokens from the user's account via an already-approved permission, atomically funding the
@@ -167,9 +155,7 @@ contract SpendRouter is Multicallable {
         uint160 value,
         MagicSpend.WithdrawRequest memory withdrawRequest
     ) external {
-        (address executor, address recipient) = decodeExtraData(permission.extraData);
-        if (msg.sender != executor) revert UnauthorizedSender(msg.sender, executor);
-        if (recipient == address(0)) revert ZeroAddress();
+        (address executor, address recipient) = _validateAndDecodeExtraData(permission.extraData);
 
         PERMISSION_MANAGER.spendWithWithdraw(permission, value, withdrawRequest);
 
@@ -177,11 +163,7 @@ contract SpendRouter is Multicallable {
             permission.account, executor, recipient, PERMISSION_MANAGER.getHash(permission), permission.token, value
         );
 
-        if (permission.token == NATIVE_TOKEN_ADDRESS) {
-            SafeTransferLib.safeTransferETH(payable(recipient), value);
-        } else {
-            SafeTransferLib.safeTransfer(permission.token, recipient, value);
-        }
+        _routeTokens(permission.token, recipient, value);
     }
 
     /// @notice Approves a permission with the user's signature, spends tokens with an atomic MagicSpend withdraw,
@@ -201,9 +183,7 @@ contract SpendRouter is Multicallable {
         MagicSpend.WithdrawRequest memory withdrawRequest,
         bytes calldata signature
     ) external {
-        (address executor, address recipient) = decodeExtraData(permission.extraData);
-        if (msg.sender != executor) revert UnauthorizedSender(msg.sender, executor);
-        if (recipient == address(0)) revert ZeroAddress();
+        (address executor, address recipient) = _validateAndDecodeExtraData(permission.extraData);
 
         bool approved = PERMISSION_MANAGER.approveWithSignature(permission, signature);
         if (!approved) revert PermissionApprovalFailed();
@@ -214,11 +194,7 @@ contract SpendRouter is Multicallable {
             permission.account, executor, recipient, PERMISSION_MANAGER.getHash(permission), permission.token, value
         );
 
-        if (permission.token == NATIVE_TOKEN_ADDRESS) {
-            SafeTransferLib.safeTransferETH(payable(recipient), value);
-        } else {
-            SafeTransferLib.safeTransfer(permission.token, recipient, value);
-        }
+        _routeTokens(permission.token, recipient, value);
     }
 
     /// @notice Revokes a spend permission where this contract is the spender.
@@ -231,6 +207,37 @@ contract SpendRouter is Multicallable {
         (address executor,) = decodeExtraData(permission.extraData);
         if (msg.sender != executor) revert UnauthorizedSender(msg.sender, executor);
         PERMISSION_MANAGER.revokeAsSpender(permission);
+    }
+
+    /// @notice Decodes and validates the executor and recipient from `extraData`.
+    ///
+    /// @dev Reverts if `msg.sender` does not match the decoded executor or if the recipient is the zero address.
+    ///
+    /// @param extraData The raw `extraData` bytes from a `SpendPermission`.
+    ///
+    /// @return executor The authorized executor address.
+    /// @return recipient The address that will receive the forwarded tokens.
+    function _validateAndDecodeExtraData(bytes memory extraData)
+        internal
+        view
+        returns (address executor, address recipient)
+    {
+        (executor, recipient) = decodeExtraData(extraData);
+        if (msg.sender != executor) revert UnauthorizedSender(msg.sender, executor);
+        if (recipient == address(0)) revert ZeroAddress();
+    }
+
+    /// @notice Transfers tokens to the recipient, branching on native ETH vs ERC-20.
+    ///
+    /// @param token The token address (ERC-7528 sentinel for native ETH).
+    /// @param recipient The address to forward tokens to.
+    /// @param value The amount to transfer.
+    function _routeTokens(address token, address recipient, uint256 value) internal {
+        if (token == NATIVE_TOKEN_ADDRESS) {
+            SafeTransferLib.safeTransferETH(payable(recipient), value);
+        } else {
+            SafeTransferLib.safeTransfer(token, recipient, value);
+        }
     }
 
     /// @notice Constructs a properly formatted `SpendPermission.extraData` payload.
