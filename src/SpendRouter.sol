@@ -248,7 +248,7 @@ contract SpendRouter is Multicallable {
     ///
     /// @dev ABI-encodes two addresses into a 64-byte payload. Reverts if either address is zero.
     ///
-    /// @param executor The authorized executor address that will call `spendAndRoute` or `spendAndRouteWithSignature`.
+    /// @param executor The authorized executor address that will call routing or revocation functions on this contract.
     /// @param recipient The address that will receive the forwarded tokens.
     ///
     /// @return extraData The 64-byte ABI-encoded payload to set as `SpendPermission.extraData`.
