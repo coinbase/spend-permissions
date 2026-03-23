@@ -4,7 +4,7 @@
 
 ## Deployments
 
-The following contracts are deployed on the following chains:
+### SpendPermissionManager
 
 `SpendPermissionManager`: `0xf85210B21cC50302F477BA56686d2019dC9b67Ad`
 
@@ -26,6 +26,10 @@ Mainnets:
 - Zora
 - Binance Smart Chain
 - Avalanche
+
+### SpendRouter
+
+`SpendRouter`: TBD
 
 ## Design Overview
 
@@ -136,10 +140,19 @@ sequenceDiagram
 
 ## Security
 
-Audited by [Spearbit](https://spearbit.com/).
+Audited by [Cantina](https://cantina.xyz/).
+
+### SpendPermissionManager
 
 | Audit | Date | Report |
 |--------|---------|---------|
-| First private audit | 10/29/2024 | [Report](audits/Cantina-October-2024.pdf) |
-| Public competition || [Report](audits/Cantina-November-2024.pdf) |
-| Private audit | 12/10/2024 | [Report](audits/Cantina-December-2024.pdf) |
+| Private audit 1 | 10/29/2024 | [Report](audits/Cantina-October-2024.pdf) |
+| Public competition | 11/2024 | [Report](audits/Cantina-November-2024.pdf) |
+| Private audit 2 | 12/10/2024 | [Report](audits/Cantina-December-2024.pdf) |
+
+### SpendRouter
+
+| Audit | Date | Report |
+|--------|---------|---------|
+| Private audit 1 | 03/18/2026 | [Report](audits/Cantina-March-2026-SpendRouter.pdf) |
+| Private audit 2 | 03/21/2026 | [Report](audits/Cantina-March-2026-SpendRouter-2.pdf) |
