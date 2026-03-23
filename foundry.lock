@@ -1,0 +1,29 @@
+{
+  "lib/account-abstraction": {
+    "branch": {
+      "name": "releases/v0.6",
+      "rev": "fa61290d37d079e928d92d53a122efcc63822214"
+    }
+  },
+  "lib/forge-std": {
+    "rev": "58d30519826c313ce47345abedfdc07679e944d1"
+  },
+  "lib/magicspend": {
+    "rev": "4ce54f16c53c8031d2168a1b7c3e83648a323019"
+  },
+  "lib/openzeppelin-contracts": {
+    "rev": "1edc2ae004974ebf053f4eba26b45469937b9381"
+  },
+  "lib/smart-wallet": {
+    "branch": {
+      "name": "caret-0.8.23",
+      "rev": "1bc2d0aa3b7dc6f73bf2029c848cfb88c1104901"
+    }
+  },
+  "lib/solady": {
+    "rev": "5ea5d9f57ed6d24a27d00934f4a3448def931415"
+  },
+  "lib/webauthn-sol": {
+    "rev": "619f20ab0f074fef41066ee4ab24849a913263b2"
+  }
+}
