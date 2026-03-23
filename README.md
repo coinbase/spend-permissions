@@ -140,7 +140,7 @@ sequenceDiagram
 
 ## Security
 
-Audited by [Cantina](https://cantina.xyz/).
+Audited by [Spearbit](https://spearbit.com/) via [Cantina](https://cantina.xyz/).
 
 ### SpendPermissionManager
 
