@@ -7,6 +7,7 @@ evm_version = "cancun"
 [profile.deploy]
 optimizer = true
 optimizer_runs = 999999
+build_info = true
 
 [fmt]
 sort_imports = true
